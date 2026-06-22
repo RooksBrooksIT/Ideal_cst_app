@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "887150380409",
+    "project_id": "cst-pratap-demo",
+    "storage_bucket": "cst-pratap-demo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:887150380409:android:7122e9df75a3ce4ad75ba8",
+        "android_client_info": {
+          "package_name": "com.example.ideal_cst"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASdzUm5g8ov_kCkS-Lv7PupcyBfztjuPY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
