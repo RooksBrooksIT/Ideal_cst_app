@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ideal_cst/screens/Organisation_LoginPage.dart';
 import 'package:ideal_cst/screens/config_login.dart';
-import 'package:ideal_cst/screens/customer_login_page.dart';
 import 'package:ideal_cst/screens/supervisor_login_page.dart';
 
 class AppColors {
@@ -157,21 +156,6 @@ class _MainDashboardState extends State<MainDashboard>
                                         AppColors.primaryGradientEnd,
                                       ],
                                       destination: const Supervisor_LoginPage(),
-                                    ),
-                                    SizedBox(
-                                      height: screenWidth > 600 ? 30 : 20,
-                                    ),
-                                    _buildDashboardCard(
-                                      context: context,
-                                      theme: theme,
-                                      title: 'Customers',
-                                      subtitle: 'See your beautiful creation',
-                                      icon: Icons.dashboard_customize,
-                                      colors: [
-                                        const Color.fromARGB(255, 19, 126, 219),
-                                        const Color.fromARGB(255, 3, 48, 83),
-                                      ],
-                                      destination: const CustomerLoginPage(),
                                     ),
                                   ],
                                 ),
