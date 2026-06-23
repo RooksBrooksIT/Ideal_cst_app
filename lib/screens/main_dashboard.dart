@@ -174,21 +174,6 @@ class _MainDashboardState extends State<MainDashboard>
                                       ],
                                       destination: const ContractorLoginPage(),
                                     ),
-                                    SizedBox(
-                                      height: screenWidth > 600 ? 30 : 20,
-                                    ),
-                                    _buildDashboardCard(
-                                      context: context,
-                                      theme: theme,
-                                      title: 'Customers',
-                                      subtitle: 'See your beautiful creation',
-                                      icon: Icons.dashboard_customize,
-                                      colors: [
-                                        const Color.fromARGB(255, 19, 126, 219),
-                                        const Color.fromARGB(255, 3, 48, 83),
-                                      ],
-                                      destination: const CustomerLoginPage(),
-                                    ),
                                   ],
                                 ),
                               ),

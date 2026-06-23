@@ -49,8 +49,9 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
   Future<void> fetchWorkers() async {
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('workers')
+          .collection('workersConfig')
           .where('contractorId', isEqualTo: widget.contractorId)
+          .orderBy('workerId')
           .get();
 
       setState(() {
@@ -112,7 +113,9 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
               await prefs.clear();
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const ContractorLoginPage()),
+                MaterialPageRoute(
+                  builder: (context) => const ContractorLoginPage(),
+                ),
                 (route) => false,
               );
             },
@@ -220,10 +223,10 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
                     GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.4,
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.0,
                       children: [
                         _buildStatCard(
                           'Total Workers',
@@ -293,7 +296,7 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
                               ),
                             ),
                             title: Text(
-                              data['workerName'] ?? 'Unknown',
+                              data['name'] ?? 'Unknown',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -301,8 +304,9 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(data['category'] ?? ''),
-                                Text('Mobile: ${data['mobile'] ?? ''}'),
+                                Text(data['designation'] ?? ''),
+                                Text('Mobile: ${data['phoneNumber'] ?? ''}'),
+                                Text('ID: ${data['workerId'] ?? ''}'),
                               ],
                             ),
                           ),
@@ -325,35 +329,47 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 32),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF222222),
+            Flexible(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+            Flexible(
+              flex: 2,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF222222),
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Flexible(
+              flex: 2,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],

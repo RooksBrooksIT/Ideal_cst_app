@@ -22,15 +22,12 @@ class MyApp extends StatelessWidget {
       title: 'Construct Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: const Color.fromARGB(255, 2, 32, 116),
-        hintColor: Colors.grey,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          iconTheme: IconThemeData(color: Colors.blueGrey),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 2, 32, 116),
+          brightness: Brightness.light,
         ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       // Define initial route
       initialRoute: '/',

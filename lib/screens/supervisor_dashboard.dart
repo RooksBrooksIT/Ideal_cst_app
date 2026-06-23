@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/screens/site_selection_screen.dart';
 import 'package:ideal_cst/screens/supervisor_login_page.dart';
+import 'package:ideal_cst/screens/workers_config_page.dart';
+import 'package:ideal_cst/screens/contractor_page.dart';
+import 'package:ideal_cst/screens/contractor_dashboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -338,10 +341,10 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         GridView.count(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.4,
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 1.0,
                           children: [
                             _buildStatCard(
                               'Total Workers',
@@ -419,6 +422,43 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+
+                        // Sub Contractor Config Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ContractorPage(
+                                    supervisorId: widget.supervisorId,
+                                    supervisorName: widget.supervisorName,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.settings,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Sub Contractor Config',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 24),
 
                         // Assigned Contractors Section
@@ -451,12 +491,27 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                           ...assignedContractors.map((contractor) {
                             final data =
                                 contractor.data() as Map<String, dynamic>;
+                            final contractorId =
+                                data['contractorId'] as String? ?? '';
+                            final contractorName =
+                                data['contractorName'] as String? ?? 'Unknown';
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: ListTile(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ContractorDashboard(
+                                        contractorId: contractorId,
+                                        contractorName: contractorName,
+                                      ),
+                                    ),
+                                  );
+                                },
                                 leading: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
@@ -469,7 +524,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                   ),
                                 ),
                                 title: Text(
-                                  data['contractorName'] ?? 'Unknown',
+                                  contractorName,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -480,6 +535,10 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                     Text(data['contractorField'] ?? ''),
                                     Text('Contact: ${data['contactNo'] ?? ''}'),
                                   ],
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: primaryColor,
                                 ),
                               ),
                             );
@@ -504,35 +563,47 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 32),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF222222),
+            Flexible(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+            Flexible(
+              flex: 2,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF222222),
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Flexible(
+              flex: 2,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
