@@ -5,6 +5,8 @@ import 'package:ideal_cst/screens/supervisor_login_page.dart';
 import 'package:ideal_cst/screens/workers_config_page.dart';
 import 'package:ideal_cst/screens/contractor_page.dart';
 import 'package:ideal_cst/screens/contractor_dashboard.dart';
+import 'package:ideal_cst/screens/sub_contractor_management_screen.dart';
+import 'package:ideal_cst/screens/daily_attendance_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -424,6 +426,50 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         ),
                         const SizedBox(height: 16),
 
+                        // Salary Management Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              // Convert DocumentSnapshot list to Map list
+                              final sitesList = assignedSites.map((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                return {'id': doc.id, ...data};
+                              }).toList();
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DailyAttendanceScreen(
+                                    supervisorId: widget.supervisorId,
+                                    supervisorName: widget.supervisorName,
+                                    sites: sitesList,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.attach_money,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Salary Management',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
                         // Sub Contractor Config Button
                         SizedBox(
                           width: double.infinity,
@@ -432,19 +478,20 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ContractorPage(
-                                    supervisorId: widget.supervisorId,
-                                    supervisorName: widget.supervisorName,
-                                  ),
+                                  builder: (context) =>
+                                      SubContractorManagementScreen(
+                                        supervisorId: widget.supervisorId,
+                                        supervisorName: widget.supervisorName,
+                                      ),
                                 ),
                               );
                             },
                             icon: const Icon(
-                              Icons.settings,
+                              Icons.engineering,
                               color: Colors.white,
                             ),
                             label: const Text(
-                              'Sub Contractor Config',
+                              'Sub Contractor Management',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
