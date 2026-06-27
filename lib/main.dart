@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'screens/lets_start_page.dart';
 import 'screens/main_dashboard.dart';
+import 'screens/site_labour_attendance_report_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,8 @@ class MyApp extends StatelessWidget {
         '/': (context) => const SplashScreen(),
         '/letsStart': (context) => const LetsStartPage(),
         '/dashboard': (context) => MainDashboard(),
+        '/reports/site-labour-report': (context) =>
+            const SiteLabourAttendanceReportScreen(),
       },
     );
   }

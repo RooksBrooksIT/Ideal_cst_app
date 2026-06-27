@@ -790,10 +790,15 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
 
     final logo = await _getLogoImage();
 
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final pdfTheme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
     pdf.addPage(
       pw.MultiPage(
+        theme: pdfTheme,
         pageFormat: PdfPageFormat.a4,
-        margin: pw.EdgeInsets.all(32),
+        margin: const pw.EdgeInsets.all(32),
         build: (context) => [
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

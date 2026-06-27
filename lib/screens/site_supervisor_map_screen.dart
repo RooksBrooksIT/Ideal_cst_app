@@ -13,7 +13,7 @@ class SiteSupervisorMapScreen extends StatefulWidget {
 class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
   bool isEntrySelected = true;
 
-  String? selectedSite;
+  List<String> selectedSites = []; // Now multiple sites
   String? selectedSupervisor;
   String? selectedSupervisorId;
   String? selectedProjectStage;
@@ -31,6 +31,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
   List<String> projectStageList = [];
 
   final Color primaryColor = Color(0xFF0b3470);
+  final Color mutedColor = Colors.grey;
 
   @override
   void initState() {
@@ -139,8 +140,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
 
           if (!mounted) return;
           if (projQuery.docs.isNotEmpty) {
-            final projectData =
-                projQuery.docs.first.data();
+            final projectData = projQuery.docs.first.data();
             final stage = projectData['projectStage']?.toString();
             if (stage != null && stage.isNotEmpty) {
               setState(() {
@@ -183,7 +183,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
 
   void resetForm() {
     setState(() {
-      selectedSite = null;
+      selectedSites = [];
       selectedSupervisor = null;
       selectedProjectStage = null;
       selectedSupervisorId = null;
@@ -196,20 +196,23 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
     });
   }
 
-  Future<String?> findDocIdBySiteId(String siteId) async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('siteSupervisorMap')
-        .get();
-    for (var doc in querySnapshot.docs) {
-      if (doc.id.startsWith(siteId)) {
-        return doc.id;
+  Future<Map<String, dynamic>?> fetchSiteDataFromFirestore(
+    String siteId,
+  ) async {
+    try {
+      DocumentSnapshot siteSnapshot = await FirebaseFirestore.instance
+          .collection('Site')
+          .doc(siteId)
+          .get();
+      if (siteSnapshot.exists) {
+        return siteSnapshot.data() as Map<String, dynamic>?;
       }
-    }
+    } catch (_) {}
     return null;
   }
 
   void saveForm() async {
-    if (selectedSite == null ||
+    if (selectedSites.isEmpty ||
         selectedSupervisor == null ||
         selectedProjectStage == null ||
         locationController.text.isEmpty ||
@@ -218,62 +221,63 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
         endDate == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all required fields.')),
+        SnackBar(
+          content: Text(
+            'Please fill all required fields and select at least one site.',
+          ),
+        ),
       );
       return;
     }
     try {
-      String siteId = selectedSite ?? '';
-      String? docId = await findDocIdBySiteId(siteId);
-      String sanitizedLocation = locationController.text
-          .replaceAll('/', '_')
-          .replaceAll(',', '')
-          .replaceAll(' ', '_');
-      String sanitizedSupervisor = (selectedSupervisor ?? '')
-          .replaceAll('/', '_')
-          .replaceAll(',', '')
-          .replaceAll(' ', '_');
-      String sanitizedSupervisorId = (selectedSupervisorId ?? '')
-          .replaceAll('/', '_')
-          .replaceAll(',', '')
-          .replaceAll(' ', '_');
-      docId ??=
-          '${siteId}_${sanitizedLocation}_${sanitizedSupervisorId}_$sanitizedSupervisor';
-      Map<String, dynamic> data = {
-        "joinedOn": joinedDate!.toIso8601String(),
-        "startDate": startDate!.toIso8601String(),
-        "endDate": endDate!.toIso8601String(),
-        "location": locationController.text,
-        "projectStage": selectedProjectStage,
-        "site": selectedSite,
-        "projectName": projectName ?? '',
-        "siteComments": commentsController.text,
-        "supervisor": selectedSupervisor,
-        "Supervisor ID": selectedSupervisorId,
-      };
-      DocumentReference docRef = FirebaseFirestore.instance
-          .collection('siteSupervisorMap')
-          .doc(docId);
-      DocumentSnapshot docSnapshot = await docRef.get();
-      if (!mounted) return;
-      if (docSnapshot.exists) {
-        await docRef.update(data);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Entry updated successfully!')));
-      } else {
-        await docRef.set(data);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Entry created successfully!')));
+      for (String siteId in selectedSites) {
+        // Get site-specific data
+        Map<String, dynamic>? siteData = await fetchSiteDataFromFirestore(
+          siteId,
+        );
+        String projName = siteData?['siteName'] ?? '';
+        String loc = siteData?['location'] ?? locationController.text;
+
+        // Doc ID = siteId_supervisorId
+        String docId = '${siteId}_${selectedSupervisorId}';
+
+        Map<String, dynamic> data = {
+          "joinedOn": joinedDate!.toIso8601String(),
+          "startDate": startDate!.toIso8601String(),
+          "endDate": endDate!.toIso8601String(),
+          "location": loc,
+          "projectStage": selectedProjectStage,
+          "siteId": siteId,
+          "site": siteId,
+          "projectName": projName,
+          "siteComments": commentsController.text,
+          "supervisor": selectedSupervisor,
+          "supervisorId": selectedSupervisorId,
+          "Supervisor ID": selectedSupervisorId,
+        };
+
+        DocumentReference docRef = FirebaseFirestore.instance
+            .collection('siteSupervisorMap')
+            .doc(docId);
+        DocumentSnapshot docSnapshot = await docRef.get();
+        if (docSnapshot.exists) {
+          await docRef.update(data);
+        } else {
+          await docRef.set(data);
+        }
       }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Assignments saved successfully!')),
+      );
       resetForm();
     } catch (e) {
       print('Error saving form: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error saving form.')));
+      ).showSnackBar(SnackBar(content: Text('Error saving assignments.')));
     }
   }
 
@@ -407,50 +411,55 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
                   ),
                 ),
                 SizedBox(height: 28),
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  value: selectedSite,
-                  hint: Text(
-                    'Select Site',
-                    style: TextStyle(color: primaryColor, fontSize: fontSize),
-                  ),
-                  items: siteList.map((site) {
-                    return DropdownMenuItem(
-                      value: site,
-                      child: Text(
-                        site,
-                        style: TextStyle(fontSize: fontSize),
-                        overflow: TextOverflow.ellipsis,
+                // Multi-select for sites
+                InkWell(
+                  onTap: () async {
+                    final result = await showDialog<List<String>>(
+                      context: context,
+                      builder: (context) => MultiSelectDialog(
+                        items: siteList,
+                        initialSelected: selectedSites,
+                        title: 'Select Sites',
                       ),
                     );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedSite = value;
-                    });
-                    if (value != null) {
-                      fetchSiteData(value);
+                    if (result != null) {
+                      setState(() {
+                        selectedSites = result;
+                      });
+                      // Fetch data for first selected site to fill common fields
+                      if (result.isNotEmpty) {
+                        fetchSiteData(result.first);
+                      }
                     }
                   },
-                  decoration: InputDecoration(
-                    labelText: 'Site',
-                    prefixIcon: Icon(
-                      Icons.location_on_outlined,
-                      color: primaryColor,
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Sites (${selectedSites.length} selected)',
+                      prefixIcon: Icon(
+                        Icons.location_on_outlined,
+                        color: primaryColor,
+                      ),
+                      border: inputBorder,
+                      filled: true,
+                      fillColor: filledBackground,
+                      labelStyle: TextStyle(color: primaryColor),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 18,
+                      ),
                     ),
-                    border: inputBorder,
-                    filled: true,
-                    fillColor: filledBackground,
-                    labelStyle: TextStyle(color: primaryColor),
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 18,
+                    child: Text(
+                      selectedSites.isEmpty
+                          ? 'Tap to select sites'
+                          : selectedSites.join(', '),
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        color: selectedSites.isEmpty
+                            ? mutedColor
+                            : Colors.black87,
+                      ),
                     ),
                   ),
-                  icon: Icon(Icons.arrow_drop_down, color: primaryColor),
-                  borderRadius: BorderRadius.circular(12),
-                  dropdownColor: Colors.white,
-                  elevation: 4,
                 ),
                 SizedBox(height: 20),
                 TextFormField(
@@ -692,7 +701,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
 
   Widget _buildInfoTableSection(BuildContext context, double fontSize) {
     return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance.collection('Site').get(),
+      future: FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(
@@ -710,7 +719,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 32.0),
               child: Text(
-                'Error loading site info.',
+                'Error loading mappings.',
                 style: TextStyle(color: primaryColor, fontSize: fontSize),
               ),
             ),
@@ -722,7 +731,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 32.0),
               child: Text(
-                'No site information available.',
+                'No site-supervisor mappings available.',
                 style: TextStyle(color: primaryColor, fontSize: fontSize),
               ),
             ),
@@ -740,39 +749,42 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
               fontSize: fontSize + 1,
             ),
             dataTextStyle: TextStyle(fontSize: fontSize),
-            columnSpacing: 30,
+            columnSpacing: 20,
             dividerThickness: 1.7,
             columns: [
               DataColumn(label: Text('Site ID')),
               DataColumn(label: Text('Site Name')),
-              DataColumn(label: Text('Start Date')),
-              DataColumn(label: Text('End Date')),
+              DataColumn(label: Text('Supervisor')),
+              DataColumn(label: Text('Project Stage')),
+              DataColumn(label: Text('Joined On')),
             ],
             rows: docs.map((doc) {
-              String siteId = doc.id;
               final data = doc.data() as Map<String, dynamic>? ?? {};
-              String siteName = data.containsKey('siteName')
-                  ? data['siteName'].toString()
-                  : '-';
+              String siteId =
+                  data['siteId']?.toString() ?? data['site']?.toString() ?? '-';
+              String siteName = data['projectName']?.toString() ?? '-';
+              String supervisor = data['supervisor']?.toString() ?? '-';
+              String projectStage = data['projectStage']?.toString() ?? '-';
 
-              DateTime? start = data.containsKey('startDate')
-                  ? _parseDate(data['startDate'])
-                  : null;
-              DateTime? end = data.containsKey('endDate')
-                  ? _parseDate(data['endDate'])
-                  : null;
-              String startDateStr = start != null
-                  ? DateFormat('yyyy-MM-dd').format(start)
-                  : '-';
-              String endDateStr = end != null
-                  ? DateFormat('yyyy-MM-dd').format(end)
-                  : '-';
+              String joinedDateStr = '-';
+              final joinedRaw = data['joinedOn'];
+              if (joinedRaw != null) {
+                try {
+                  if (joinedRaw is String) {
+                    joinedDateStr = DateFormat(
+                      'yyyy-MM-dd',
+                    ).format(DateTime.parse(joinedRaw));
+                  }
+                } catch (_) {}
+              }
+
               return DataRow(
                 cells: [
                   DataCell(Text(siteId)),
                   DataCell(Text(siteName)),
-                  DataCell(Text(startDateStr)),
-                  DataCell(Text(endDateStr)),
+                  DataCell(Text(supervisor)),
+                  DataCell(Text(projectStage)),
+                  DataCell(Text(joinedDateStr)),
                 ],
               );
             }).toList(),
@@ -933,7 +945,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
             ),
           ),
           content: Text(
-            'Your details will be saved. Do you want to continue?',
+            'Assignments will be saved for selected sites. Do you want to continue?',
             style: TextStyle(fontSize: 16),
           ),
           actionsPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -970,6 +982,73 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+class MultiSelectDialog extends StatefulWidget {
+  final List<String> items;
+  final List<String> initialSelected;
+  final String title;
+
+  const MultiSelectDialog({
+    super.key,
+    required this.items,
+    required this.initialSelected,
+    required this.title,
+  });
+
+  @override
+  State<MultiSelectDialog> createState() => _MultiSelectDialogState();
+}
+
+class _MultiSelectDialogState extends State<MultiSelectDialog> {
+  late List<String> selectedItems;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedItems = List.from(widget.initialSelected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: widget.items.length,
+          itemBuilder: (context, index) {
+            final item = widget.items[index];
+            final isSelected = selectedItems.contains(item);
+            return CheckboxListTile(
+              title: Text(item),
+              value: isSelected,
+              onChanged: (checked) {
+                setState(() {
+                  if (checked == true) {
+                    selectedItems.add(item);
+                  } else {
+                    selectedItems.remove(item);
+                  }
+                });
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, selectedItems),
+          child: const Text('OK'),
+        ),
+      ],
     );
   }
 }

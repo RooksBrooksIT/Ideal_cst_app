@@ -5,6 +5,7 @@ import 'package:ideal_cst/screens/projectStage_insights_dashboard.dart';
 import 'package:ideal_cst/screens/project_financial_status_report_page.dart';
 import 'package:ideal_cst/screens/site_status_report.dart';
 import 'package:ideal_cst/screens/site_labour_details_report_screen.dart';
+import 'package:ideal_cst/screens/site_labour_attendance_report_screen.dart';
 
 class InsightsDashboard extends StatelessWidget {
   const InsightsDashboard({super.key});
@@ -143,6 +144,23 @@ class InsightsDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const SiteLabourDetailsReportScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
+              context,
+              icon: Icons.badge_outlined,
+              title: 'Site Labour Attendance Report',
+              description:
+                  'View daily site-wise labour allocation, contractor details, manpower count, overtime, and shift information.',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const SiteLabourAttendanceReportScreen(),
                   ),
                 );
               },

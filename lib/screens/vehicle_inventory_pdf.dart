@@ -21,7 +21,10 @@ class InventoryReportPdf {
     required String title,
     required List<Map<String, dynamic>> rows,
   }) async {
-    // You can provide custom fonts here if needed using ThemeData.withFont(...)
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final pdfTheme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
     final doc = pw.Document();
 
     final dateFmt = DateFormat('yyyy-MM-dd HH:mm');
@@ -81,6 +84,7 @@ class InventoryReportPdf {
 
     doc.addPage(
       pw.MultiPage(
+        theme: pdfTheme,
         pageTheme: const pw.PageTheme(margin: pw.EdgeInsets.all(24)),
         header: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,

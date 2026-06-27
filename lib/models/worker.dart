@@ -8,6 +8,7 @@ class Worker {
   final String salaryType;
   final double basicSalary;
   final double overtimeRate;
+  final double defaultHours;
   final String mobileNumber;
   final String? emergencyContact;
   final String? aadharNumber;
@@ -35,6 +36,7 @@ class Worker {
     required this.salaryType,
     required this.basicSalary,
     required this.overtimeRate,
+    this.defaultHours = 8.0,
     required this.mobileNumber,
     this.emergencyContact,
     this.aadharNumber,
@@ -63,6 +65,7 @@ class Worker {
       'salaryType': salaryType,
       'basicSalary': basicSalary,
       'overtimeRate': overtimeRate,
+      'defaultHours': defaultHours,
       'mobileNumber': mobileNumber,
       'emergencyContact': emergencyContact,
       'aadharNumber': aadharNumber,
@@ -93,6 +96,7 @@ class Worker {
       salaryType: json['salaryType'] ?? 'Daily Wage',
       basicSalary: (json['basicSalary'] as num?)?.toDouble() ?? 0.0,
       overtimeRate: (json['overtimeRate'] as num?)?.toDouble() ?? 0.0,
+      defaultHours: (json['defaultHours'] as num?)?.toDouble() ?? 8.0,
       mobileNumber: json['mobileNumber'] ?? '',
       emergencyContact: json['emergencyContact'],
       aadharNumber: json['aadharNumber'],

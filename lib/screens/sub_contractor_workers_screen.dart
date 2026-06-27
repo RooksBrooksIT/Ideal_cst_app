@@ -597,15 +597,19 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
   final TextEditingController _aadharController = TextEditingController();
   final TextEditingController _basicSalaryController = TextEditingController();
   final TextEditingController _overtimeRateController = TextEditingController();
-  String _selectedCategory = 'Mason';
+  final TextEditingController _defaultHoursController = TextEditingController();
+  String? _selectedCategory;
   String _selectedSalaryType = 'Daily Wage';
   List<String> _selectedSiteIds = [];
   DateTime _selectedDate = DateTime.now();
   bool _isActive = true;
+  bool _isLoadingLabours = true;
+  List<Map<String, dynamic>> _labours = [];
 
   @override
   void initState() {
     super.initState();
+    _loadLabours();
     if (widget.worker != null) {
       final w = widget.worker!;
       _nameController.text = w.name;
@@ -614,11 +618,83 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       _aadharController.text = w.aadharNumber ?? '';
       _basicSalaryController.text = w.basicSalary.toString();
       _overtimeRateController.text = w.overtimeRate.toString();
+      _defaultHoursController.text = w.defaultHours?.toString() ?? '8.0';
       _selectedCategory = w.workerType;
       _selectedSalaryType = w.salaryType;
       _selectedSiteIds = List.from(w.assignedSiteIds);
       _selectedDate = w.joiningDate;
       _isActive = w.isActive;
+    }
+  }
+
+  Future<void> _loadLabours() async {
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('labours')
+          .get();
+      final laboursData = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'designation': (data['designation']?.toString()) ?? 'Uncategorized',
+          'salary': data['salary'] ?? 0.0,
+          'defaultHours': (data['defaultHours'] is num)
+              ? (data['defaultHours'] as num).toDouble()
+              : 8.0,
+        };
+      }).toList();
+
+      final uniqueDesignations = <String, Map<String, dynamic>>{};
+      for (var labour in laboursData) {
+        final designation = labour['designation'];
+        if (!uniqueDesignations.containsKey(designation)) {
+          uniqueDesignations[designation] = {
+            'salary': labour['salary'],
+            'defaultHours': labour['defaultHours'],
+          };
+        }
+      }
+
+      final uniqueLabours = uniqueDesignations.entries
+          .map(
+            (entry) => {
+              'designation': entry.key,
+              'salary': entry.value['salary'],
+              'defaultHours': entry.value['defaultHours'],
+            },
+          )
+          .toList();
+
+      setState(() {
+        _labours = uniqueLabours;
+        _isLoadingLabours = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading labours: $e');
+      setState(() {
+        _isLoadingLabours = false;
+      });
+    }
+  }
+
+  void _onCategoryChanged(String? newValue) {
+    if (newValue != null) {
+      setState(() {
+        _selectedCategory = newValue;
+        final selectedLabour = _labours.firstWhere(
+          (labour) => labour['designation'] == newValue,
+          orElse: () => {'salary': 0, 'defaultHours': 8.0},
+        );
+        final salaryValue = selectedLabour['salary'];
+        final salaryStr = salaryValue is num
+            ? salaryValue.toString()
+            : salaryValue.toString();
+        _basicSalaryController.text = salaryStr;
+        final defaultHoursValue = selectedLabour['defaultHours'];
+        final defaultHoursStr = defaultHoursValue is num
+            ? defaultHoursValue.toString()
+            : defaultHoursValue.toString();
+        _defaultHoursController.text = defaultHoursStr;
+      });
     }
   }
 
@@ -644,27 +720,27 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                 },
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                items:
-                    const [
-                      'Mason',
-                      'Painter',
-                      'Helper',
-                      'Electrician',
-                      'Carpenter',
-                      'Plumber',
-                      'Welder',
-                      'Bar Bender',
-                      'Operator',
-                    ].map((cat) {
-                      return DropdownMenuItem(value: cat, child: Text(cat));
-                    }).toList(),
-                onChanged: (value) => setState(() {
-                  _selectedCategory = value!;
-                }),
-                decoration: const InputDecoration(labelText: 'Category *'),
-              ),
+              _isLoadingLabours
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String>(
+                      value: _selectedCategory,
+                      items: _labours.map<DropdownMenuItem<String>>((labour) {
+                        return DropdownMenuItem(
+                          value: labour['designation'],
+                          child: Text(labour['designation']),
+                        );
+                      }).toList(),
+                      onChanged: _onCategoryChanged,
+                      decoration: const InputDecoration(
+                        labelText: 'Category *',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a category';
+                        }
+                        return null;
+                      },
+                    ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _mobileController,
@@ -707,14 +783,20 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _basicSalaryController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Basic Salary *'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a basic salary';
-                  }
-                  return null;
-                },
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Basic Salary (Auto-filled)',
+                  suffixText: 'Auto',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _defaultHoursController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Default Working Hours (Auto-filled)',
+                  suffixText: 'hrs',
+                ),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -819,10 +901,11 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       id: widget.worker?.id,
       name: _nameController.text.trim(),
       workerId: workerId,
-      workerType: _selectedCategory,
+      workerType: _selectedCategory!,
       salaryType: _selectedSalaryType,
       basicSalary: double.tryParse(_basicSalaryController.text) ?? 0.0,
       overtimeRate: double.tryParse(_overtimeRateController.text) ?? 0.0,
+      defaultHours: double.tryParse(_defaultHoursController.text) ?? 8.0,
       mobileNumber: _mobileController.text.trim(),
       emergencyContact: _emergencyContactController.text.trim().isEmpty
           ? null

@@ -306,14 +306,17 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _salaryRateController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  String _selectedCategory = 'Painter';
-  String _selectedSalaryType = 'Daily Wage';
+  String? _selectedCategory;
+  String _selectedSalaryType = 'Daily Wages';
   List<String> _selectedSiteIds = [];
   DateTime _selectedDate = DateTime.now();
+  bool _isLoadingLabours = true;
+  List<Map<String, dynamic>> _labours = [];
 
   @override
   void initState() {
     super.initState();
+    _loadLabours();
     if (widget.contractor != null) {
       final c = widget.contractor!;
       _nameController.text = c.name;
@@ -325,6 +328,61 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
       _selectedSalaryType = c.salaryType;
       _selectedSiteIds = List.from(c.assignedSiteIds);
       _selectedDate = c.joiningDate;
+    }
+  }
+
+  Future<void> _loadLabours() async {
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('labours')
+          .get();
+      final laboursData = snapshot.docs
+          .map(
+            (doc) => {
+              'designation': doc['designation'].toString(),
+              'salary': doc['salary'],
+            },
+          )
+          .toList();
+
+      final uniqueDesignations = <String, dynamic>{};
+      for (var labour in laboursData) {
+        final designation = labour['designation'];
+        if (!uniqueDesignations.containsKey(designation)) {
+          uniqueDesignations[designation] = labour['salary'];
+        }
+      }
+
+      final uniqueLabours = uniqueDesignations.entries
+          .map((entry) => {'designation': entry.key, 'salary': entry.value})
+          .toList();
+
+      setState(() {
+        _labours = uniqueLabours;
+        _isLoadingLabours = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading labours: $e');
+      setState(() {
+        _isLoadingLabours = false;
+      });
+    }
+  }
+
+  void _onCategoryChanged(String? newValue) {
+    if (newValue != null) {
+      setState(() {
+        _selectedCategory = newValue;
+        final selectedLabour = _labours.firstWhere(
+          (labour) => labour['designation'] == newValue,
+          orElse: () => {'salary': 0},
+        );
+        final salaryValue = selectedLabour['salary'];
+        final salaryStr = salaryValue is num
+            ? salaryValue.toString()
+            : salaryValue.toString();
+        _salaryRateController.text = salaryStr;
+      });
     }
   }
 
@@ -356,24 +414,27 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
                 },
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                items:
-                    const [
-                      'Painter',
-                      'Mason',
-                      'Electrician',
-                      'Plumber',
-                      'Carpenter',
-                      'Helper',
-                    ].map((cat) {
-                      return DropdownMenuItem(value: cat, child: Text(cat));
-                    }).toList(),
-                onChanged: (value) => setState(() {
-                  _selectedCategory = value!;
-                }),
-                decoration: const InputDecoration(labelText: 'Category *'),
-              ),
+              _isLoadingLabours
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String>(
+                      value: _selectedCategory,
+                      items: _labours.map<DropdownMenuItem<String>>((labour) {
+                        return DropdownMenuItem(
+                          value: labour['designation'],
+                          child: Text(labour['designation']),
+                        );
+                      }).toList(),
+                      onChanged: _onCategoryChanged,
+                      decoration: const InputDecoration(
+                        labelText: 'Category *',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a category';
+                        }
+                        return null;
+                      },
+                    ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _mobileController,
@@ -395,7 +456,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedSalaryType,
-                items: const ['Daily Wage', 'Monthly Wage']
+                items: const ['Daily Wages', 'Sub Contract']
                     .map(
                       (type) =>
                           DropdownMenuItem(value: type, child: Text(type)),
@@ -404,19 +465,16 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
                 onChanged: (value) => setState(() {
                   _selectedSalaryType = value!;
                 }),
-                decoration: const InputDecoration(labelText: 'Salary Type *'),
+                decoration: const InputDecoration(labelText: 'Group *'),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _salaryRateController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Salary Rate *'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a salary rate';
-                  }
-                  return null;
-                },
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Salary Rate (Auto-filled)',
+                  suffixText: 'Auto',
+                ),
               ),
               const SizedBox(height: 12),
               const Text('Assigned Sites'),
@@ -503,7 +561,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
       id: widget.contractor?.id,
       name: _nameController.text.trim(),
       contractorId: contractorId,
-      category: _selectedCategory,
+      category: _selectedCategory!,
       mobileNumber: _mobileController.text.trim(),
       address: _addressController.text.trim().isEmpty
           ? null

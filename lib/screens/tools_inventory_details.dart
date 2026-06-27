@@ -79,9 +79,14 @@ class _ToolsInventoryDetailsPageState extends State<ToolsInventoryDetailsPage> {
   }
 
   Future<void> _generatePdf(BuildContext context) async {
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final pdfTheme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
+        theme: pdfTheme,
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {

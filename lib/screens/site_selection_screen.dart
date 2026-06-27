@@ -53,9 +53,7 @@ class _SiteSelectionScreenState extends State<SiteSelectionScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          siteData['siteName'] ??
-                              siteData['Site Name'] ??
-                              'Unknown Site',
+                          _getDisplaySiteName(siteData, site.id),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -108,10 +106,7 @@ class _SiteSelectionScreenState extends State<SiteSelectionScreen> {
                                     supervisorId: widget.supervisorId,
                                     supervisorName: widget.supervisorName,
                                     siteId: site.id,
-                                    siteName:
-                                        siteData['siteName'] ??
-                                        siteData['Site Name'] ??
-                                        'Unknown Site',
+                                    siteName: _getDisplaySiteName(siteData, site.id),
                                   ),
                                 ),
                               );
@@ -133,6 +128,18 @@ class _SiteSelectionScreenState extends State<SiteSelectionScreen> {
               },
             ),
     );
+  }
+
+  String _getDisplaySiteName(Map<String, dynamic> siteData, String docId) {
+    final name = siteData['siteName'] ?? siteData['Site Name'];
+    if (name != null && name.toString().trim().isNotEmpty && name.toString() != 'Unknown Site') {
+      return name.toString();
+    }
+    final siteId = siteData['site'] ?? siteData['siteId'] ?? siteData['Site ID'];
+    if (siteId != null && siteId.toString().trim().isNotEmpty) {
+      return siteId.toString();
+    }
+    return docId.split('_').first;
   }
 
   Widget _buildInfoRow(String label, String value) {

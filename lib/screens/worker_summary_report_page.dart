@@ -318,8 +318,8 @@ class _WorkerAttendanceSalaryPageState
     final pdf = pw.Document();
 
     // Load custom font that supports Indian Rupee symbol
-    final font = await PdfGoogleFonts.tinosRegular();
-    final fontBold = await PdfGoogleFonts.tinosBold();
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
 
     final attendance = worker['attendance'] as Map<String, dynamic>;
 
@@ -329,6 +329,7 @@ class _WorkerAttendanceSalaryPageState
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,

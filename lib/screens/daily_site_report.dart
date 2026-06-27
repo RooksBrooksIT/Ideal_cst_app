@@ -191,8 +191,13 @@ class _DailySiteExpensesReportPageState
     final pdf = pw.Document();
     final formattedDate = DateFormat('yyyy-MM-dd').format(widget.date);
 
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final pdfTheme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
     pdf.addPage(
       pw.MultiPage(
+        theme: pdfTheme,
         build: (pw.Context context) => [
           pw.Text(
             'Daily Site Expenses Report',
