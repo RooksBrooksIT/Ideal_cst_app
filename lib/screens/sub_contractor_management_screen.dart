@@ -233,6 +233,7 @@ class _SubContractorManagementScreenState
       category: contractor.category,
       mobileNumber: contractor.mobileNumber,
       address: contractor.address,
+      labourType: contractor.labourType,
       salaryType: contractor.salaryType,
       salaryRate: contractor.salaryRate,
       assignedSiteIds: contractor.assignedSiteIds,
@@ -307,7 +308,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
   final TextEditingController _salaryRateController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   String? _selectedCategory;
-  String _selectedSalaryType = 'Daily Wages';
+  String _selectedGroup = 'Daily Wages';
   List<String> _selectedSiteIds = [];
   DateTime _selectedDate = DateTime.now();
   bool _isLoadingLabours = true;
@@ -325,9 +326,22 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
       _salaryRateController.text = c.salaryRate.toString();
       _notesController.text = c.notes ?? '';
       _selectedCategory = c.category;
-      _selectedSalaryType = c.salaryType;
+      _selectedGroup = _normaliseLabourType(c.labourType);
       _selectedSiteIds = List.from(c.assignedSiteIds);
       _selectedDate = c.joiningDate;
+    }
+  }
+
+  String _normaliseLabourType(String? value) {
+    switch (value) {
+      case 'Sub Contractor':
+      case 'Sub Contract':
+        return 'Sub Contractor';
+      case 'Daily Wages':
+      case 'Daily Wage':
+        return 'Daily Wages';
+      default:
+        return 'Daily Wages';
     }
   }
 
@@ -455,15 +469,15 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedSalaryType,
-                items: const ['Daily Wages', 'Sub Contract']
+                value: _selectedGroup,
+                items: const ['Daily Wages', 'Sub Contractor']
                     .map(
                       (type) =>
                           DropdownMenuItem(value: type, child: Text(type)),
                     )
                     .toList(),
                 onChanged: (value) => setState(() {
-                  _selectedSalaryType = value!;
+                  _selectedGroup = value!;
                 }),
                 decoration: const InputDecoration(labelText: 'Group *'),
               ),
@@ -566,7 +580,8 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
       address: _addressController.text.trim().isEmpty
           ? null
           : _addressController.text.trim(),
-      salaryType: _selectedSalaryType,
+      labourType: _selectedGroup,
+      salaryType: _selectedGroup,
       salaryRate: double.tryParse(_salaryRateController.text) ?? 0.0,
       assignedSiteIds: List.from(_selectedSiteIds),
       isActive: true,

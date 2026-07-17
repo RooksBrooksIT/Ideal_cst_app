@@ -7,6 +7,7 @@ class SubContractor {
   final String category;
   final String mobileNumber;
   final String? address;
+  final String labourType;
   final String salaryType;
   final double salaryRate;
   final List<String> assignedSiteIds;
@@ -25,6 +26,7 @@ class SubContractor {
     required this.category,
     required this.mobileNumber,
     this.address,
+    required this.labourType,
     required this.salaryType,
     required this.salaryRate,
     required this.assignedSiteIds,
@@ -37,6 +39,19 @@ class SubContractor {
     this.updatedAt,
   });
 
+  static String normaliseLabourType(String? value) {
+    switch (value) {
+      case 'Sub Contractor':
+      case 'Sub Contract':
+        return 'Sub Contractor';
+      case 'Daily Wages':
+      case 'Daily Wage':
+        return 'Daily Wages';
+      default:
+        return 'Daily Wages';
+    }
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'name': name,
@@ -44,6 +59,7 @@ class SubContractor {
       'category': category,
       'mobileNumber': mobileNumber,
       'address': address,
+      'labourType': labourType,
       'salaryType': salaryType,
       'salaryRate': salaryRate,
       'assignedSiteIds': assignedSiteIds,
@@ -65,6 +81,7 @@ class SubContractor {
       category: json['category'] ?? '',
       mobileNumber: json['mobileNumber'] ?? '',
       address: json['address'],
+      labourType: normaliseLabourType(json['labourType'] ?? json['salaryType']),
       salaryType: json['salaryType'] ?? 'Daily Wage',
       salaryRate: (json['salaryRate'] as num?)?.toDouble() ?? 0.0,
       assignedSiteIds: List<String>.from(json['assignedSiteIds'] ?? []),
