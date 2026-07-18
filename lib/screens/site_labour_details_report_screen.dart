@@ -183,14 +183,39 @@ class _SiteLabourDetailsReportScreenState
 
       final snap = await query.get();
 
+      // SC attendance entries may not carry a salary because the contractor
+      // master stores it as `salaryRate`. Load that master data once so the
+      // report can display and total the subcontractor's labour cost.
+      final subContractorsSnap = await FirebaseFirestore.instance
+          .collection('sub_contractors')
+          .get();
+      final subContractorSalaryById = <String, double>{};
+      final subContractorSalaryByName = <String, double>{};
+      for (final doc in subContractorsSnap.docs) {
+        final data = doc.data();
+        final salary =
+            data['salaryRate'] ?? data['basicSalary'] ?? data['salary'];
+        final salaryValue = salary is num
+            ? salary.toDouble()
+            : double.tryParse(salary?.toString() ?? '') ?? 0.0;
+        final name = (data['name'] ?? data['contractorName'])
+            ?.toString()
+            .trim();
+        final contractorId = data['contractorId']?.toString().trim();
+        subContractorSalaryById[doc.id] = salaryValue;
+        if (contractorId != null && contractorId.isNotEmpty) {
+          subContractorSalaryById[contractorId] = salaryValue;
+        }
+        if (name != null && name.isNotEmpty) {
+          subContractorSalaryByName[name.toLowerCase()] = salaryValue;
+        }
+      }
+
       List<Map<String, dynamic>> entries = snap.docs.map((d) {
         final data = Map<String, dynamic>.from(d.data());
         data['_docId'] = d.id;
         return data;
       }).toList();
-
-      // Group entries by key fields: siteId, siteName, subContractor, group, category
-      Map<String, Map<String, dynamic>> groupedMap = {};
 
       // Calculate overall totals
       double costTotal = 0;
@@ -199,6 +224,10 @@ class _SiteLabourDetailsReportScreenState
       double busAmountTotal = 0;
       int busCountTotal = 0;
 
+      // Keep one report row for every source entry.  In particular, SC and DW
+      // are classifications of a labour record, not keys for combining records.
+      final List<Map<String, dynamic>> reportRows = [];
+
       for (final e in entries) {
         final siteId = e['siteId']?.toString() ?? '-';
         final siteName = e['siteName']?.toString() ?? '-';
@@ -206,48 +235,35 @@ class _SiteLabourDetailsReportScreenState
             (e['contractorName']?.toString() ??
             e['subContractorName']?.toString() ??
             '-');
+        final labourType =
+            (e['labourType'] ?? e['salaryType'])?.toString().trim().toLowerCase() ??
+            '';
         final group =
-            ((e['labourType'] ?? e['salaryType'])?.toString() == 'Daily Wage' ||
-                (e['labourType'] ?? e['salaryType'])?.toString() == 'Daily')
-            ? 'DW'
-            : 'SC';
+            labourType == 'dw' || labourType.contains('daily') ? 'DW' : 'SC';
         final category = e['category']?.toString() ?? '-';
-
-        final key = '$siteId|$siteName|$subContractor|$group|$category';
-        if (!groupedMap.containsKey(key)) {
-          groupedMap[key] = {
-            'siteId': siteId,
-            'siteName': siteName,
-            'subContractor': subContractor,
-            'group': group,
-            'category': category,
-            'workers': [],
-            'labourCount': 0,
-            'salaryBasic': 0.0,
-            'totalSalary': 0.0,
-            'hours': 0.0,
-            'otSalaryBasic': 0.0,
-            'otTotalAmount': 0.0,
-            'mealsExpense': 0.0,
-            'mealsCount': 0,
-            'totalMealsAmount': 0.0,
-            'busFare': 0.0,
-            'busCount': 0,
-            'totalBusAmount': 0.0,
-          };
-        }
-
-        final groupEntry = groupedMap[key]!;
-        groupEntry['workers'].add(e);
-        groupEntry['labourCount']++;
+        // Worker Name belongs to the attendance record. It must not be
+        // replaced with the subcontractor name for SC workers.
+        final workerName = (e['workerName'] ?? e['name'] ?? '-').toString();
+        final subContractorSalary = group == 'SC'
+            ? (subContractorSalaryById[e['contractorId']?.toString()] ??
+                  subContractorSalaryByName[subContractor.toLowerCase()] ??
+                  0.0)
+            : 0.0;
 
         // Extract fields from entry
-        final salaryBasic = (e['basicSalary'] as num?)?.toDouble() ?? 0.0;
+        final entrySalaryBasic = (e['basicSalary'] as num?)?.toDouble() ?? 0.0;
+        final salaryBasic =
+            group == 'SC' && subContractorSalary > 0
+                ? subContractorSalary
+                : entrySalaryBasic;
         final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? 0.0;
-        final overtimeAmount = (e['totalSalary'] as num?)?.toDouble() ?? 0.0;
-        final overtimeHours = (e['overtimeHours'] as num?)?.toDouble() ?? 0.0;
+        final recordedTotalSalary =
+            (e['totalSalary'] as num?)?.toDouble() ?? 0.0;
+        final totalSalary =
+            group == 'SC' && recordedTotalSalary == 0 && subContractorSalary > 0
+                ? subContractorSalary
+                : recordedTotalSalary;
         final overtimeAmt = (e['overtimeAmount'] as num?)?.toDouble() ?? 0.0;
-
         final otRate = (e['overtimeRate'] as num?)?.toDouble() ?? 0.0;
 
         final mealsCount = (e['mealsCount'] as num?)?.toInt() ?? 0;
@@ -258,34 +274,38 @@ class _SiteLabourDetailsReportScreenState
         final busAmount = (e['busAmount'] as num?)?.toDouble() ?? 0.0;
         final totalBusAmount = busCount * busAmount;
 
-        // Accumulate into group entry
-        groupEntry['salaryBasic'] =
-            salaryBasic; // assuming all in group have same basic
-        groupEntry['totalSalary'] += overtimeAmount;
-        groupEntry['hours'] += hoursWorked;
-        groupEntry['otSalaryBasic'] = otRate;
-        groupEntry['otTotalAmount'] += overtimeAmt;
-        groupEntry['mealsExpense'] =
-            mealsAmount; // assuming same per worker in group
-        groupEntry['mealsCount'] += mealsCount;
-        groupEntry['totalMealsAmount'] += totalMealsAmount;
-        groupEntry['busFare'] = busAmount; // assuming same per worker in group
-        groupEntry['busCount'] += busCount;
-        groupEntry['totalBusAmount'] += totalBusAmount;
+        reportRows.add({
+          'siteId': siteId,
+          'siteName': siteName,
+          'subContractor': subContractor,
+          'workerName': workerName,
+          'group': group,
+          'category': category,
+          'labourCount': 1,
+          'salaryBasic': salaryBasic,
+          'totalSalary': totalSalary,
+          'hours': hoursWorked,
+          'otSalaryBasic': otRate,
+          'otTotalAmount': overtimeAmt,
+          'mealsExpense': mealsAmount,
+          'mealsCount': mealsCount,
+          'totalMealsAmount': totalMealsAmount,
+          'busFare': busAmount,
+          'busCount': busCount,
+          'totalBusAmount': totalBusAmount,
+          'otHours': e['otHours'] ?? e['overtimeHours'],
+        });
 
         // Overall totals
-        costTotal += overtimeAmount;
+        costTotal += totalSalary;
         mealsAmountTotal += totalMealsAmount;
         mealsCountTotal += mealsCount;
         busAmountTotal += totalBusAmount;
         busCountTotal += busCount;
       }
 
-      // Convert grouped map to list
-      final List<Map<String, dynamic>> groupedData = groupedMap.values.toList();
-
       setState(() {
-        reportData = groupedData;
+        reportData = reportRows;
         totalWorkers = entries.length;
         totalLabourCost = costTotal;
         totalMealsAmount = mealsAmountTotal;
@@ -908,10 +928,12 @@ class _SiteLabourDetailsReportScreenState
       filteredReportData = reportData.where((entry) {
         final subContractor =
             entry['subContractor']?.toString().toLowerCase() ?? '';
+        final workerName = entry['workerName']?.toString().toLowerCase() ?? '';
         final siteName = entry['siteName']?.toString().toLowerCase() ?? '';
         final category = entry['category']?.toString().toLowerCase() ?? '';
         final query = searchQuery.toLowerCase();
         return subContractor.contains(query) ||
+            workerName.contains(query) ||
             siteName.contains(query) ||
             category.contains(query);
       }).toList();
@@ -1008,6 +1030,16 @@ class _SiteLabourDetailsReportScreenState
                 DataColumn(
                   label: Text(
                     'Sub Contractor',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Worker Name',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -1196,6 +1228,12 @@ class _SiteLabourDetailsReportScreenState
                     DataCell(
                       Text(
                         entry['subContractor']?.toString() ?? '-',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                    DataCell(
+                      Text(
+                        entry['workerName']?.toString() ?? '-',
                         style: const TextStyle(fontSize: 11),
                       ),
                     ),
@@ -1637,19 +1675,12 @@ class _SiteLabourDetailsReportScreenState
     // Calculate overall totals
     double totalOTHours = 0;
     for (final entry in reportData) {
-      final otRaw =
-          (entry['workers'] as List?)?.fold(0.0, (sum, w) {
-            final wOtRaw = w['otHours'];
-            double wOt = 0.0;
-            if (wOtRaw is num) {
-              wOt = wOtRaw.toDouble();
-            } else if (wOtRaw is String) {
-              wOt = double.tryParse(wOtRaw.split(' ').first) ?? 0.0;
-            }
-            return (sum ?? 0.0) + wOt;
-          }) ??
-          0.0;
-      totalOTHours += otRaw;
+      final otRaw = entry['otHours'];
+      if (otRaw is num) {
+        totalOTHours += otRaw.toDouble();
+      } else if (otRaw is String) {
+        totalOTHours += double.tryParse(otRaw.split(' ').first) ?? 0.0;
+      }
     }
 
     final font = await PdfGoogleFonts.notoSansRegular();
@@ -1750,6 +1781,7 @@ class _SiteLabourDetailsReportScreenState
             final siteId = e['siteId']?.toString() ?? '-';
             final siteName = e['siteName']?.toString() ?? '-';
             final subContractorName = e['subContractor']?.toString() ?? '-';
+            final workerName = e['workerName']?.toString() ?? '-';
             final group = e['group']?.toString() ?? '-';
             final category = e['category']?.toString() ?? '-';
             final labourCount = e['labourCount']?.toString() ?? '0';
@@ -1778,6 +1810,7 @@ class _SiteLabourDetailsReportScreenState
               siteId,
               siteName,
               subContractorName,
+              workerName,
               group,
               category,
               labourCount,
@@ -1925,6 +1958,7 @@ class _SiteLabourDetailsReportScreenState
                 'Site Code',
                 'Site Name',
                 'Sub Contractor',
+                'Worker Name',
                 'Group',
                 'Type / Category',
                 'Labour Count',
@@ -1945,9 +1979,9 @@ class _SiteLabourDetailsReportScreenState
                 1: pw.Alignment.center,
                 2: pw.Alignment.centerLeft,
                 3: pw.Alignment.centerLeft,
-                4: pw.Alignment.center,
+                4: pw.Alignment.centerLeft,
                 5: pw.Alignment.center,
-                6: pw.Alignment.centerRight,
+                6: pw.Alignment.center,
                 7: pw.Alignment.centerRight,
                 8: pw.Alignment.centerRight,
                 9: pw.Alignment.centerRight,
@@ -1959,6 +1993,7 @@ class _SiteLabourDetailsReportScreenState
                 15: pw.Alignment.centerRight,
                 16: pw.Alignment.centerRight,
                 17: pw.Alignment.centerRight,
+                18: pw.Alignment.centerRight,
               },
               headerStyle: pw.TextStyle(
                 fontSize: 7,
@@ -2045,6 +2080,7 @@ class _SiteLabourDetailsReportScreenState
         excel.TextCellValue('Site Code'),
         excel.TextCellValue('Site Name'),
         excel.TextCellValue('Sub Contractor'),
+        excel.TextCellValue('Worker Name'),
         excel.TextCellValue('Group'),
         excel.TextCellValue('Type / Category'),
         excel.TextCellValue('Labour Count'),
@@ -2068,6 +2104,7 @@ class _SiteLabourDetailsReportScreenState
           excel.TextCellValue(entry['siteId']?.toString() ?? '-'),
           excel.TextCellValue(entry['siteName']?.toString() ?? '-'),
           excel.TextCellValue(entry['subContractor']?.toString() ?? '-'),
+          excel.TextCellValue(entry['workerName']?.toString() ?? '-'),
           excel.TextCellValue(entry['group']?.toString() ?? '-'),
           excel.TextCellValue(entry['category']?.toString() ?? '-'),
           excel.IntCellValue((entry['labourCount'] as int?) ?? 0),
@@ -2105,6 +2142,7 @@ class _SiteLabourDetailsReportScreenState
 
       // Add totals row
       sheet.appendRow([
+        excel.TextCellValue(''),
         excel.TextCellValue(''),
         excel.TextCellValue(''),
         excel.TextCellValue(''),
@@ -2155,7 +2193,7 @@ class _SiteLabourDetailsReportScreenState
 
       // Headers
       csvBuffer.writeln(
-        'Sl. No.,Site Code,Site Name,Sub Contractor,Group,Type / Category,Labour Count,Salary (Basic),Total Salary,Hours,OT Salary (Basic),OT Total Amount,Meals Expense,Meals Count,Total Meals Amount,Bus Fare,Bus Count,Total Bus Amount',
+        'Sl. No.,Site Code,Site Name,Sub Contractor,Worker Name,Group,Type / Category,Labour Count,Salary (Basic),Total Salary,Hours,OT Salary (Basic),OT Total Amount,Meals Expense,Meals Count,Total Meals Amount,Bus Fare,Bus Count,Total Bus Amount',
       );
 
       for (int i = 0; i < reportData.length; i++) {
@@ -2166,6 +2204,7 @@ class _SiteLabourDetailsReportScreenState
             '"${entry['siteId']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['siteName']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['subContractor']?.toString().replaceAll('"', '""') ?? '-'}"',
+            '"${entry['workerName']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['group']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['category']?.toString().replaceAll('"', '""') ?? '-'}"',
             entry['labourCount']?.toString() ?? '0',
@@ -2187,6 +2226,7 @@ class _SiteLabourDetailsReportScreenState
       // Add totals row
       csvBuffer.writeln(
         [
+          '',
           '',
           '',
           '',
