@@ -82,12 +82,14 @@ class WorkforceService {
   }
 
   Future<void> updateWorker(Worker worker) async {
+    final workerData = worker.toJson()
+      ..['updatedAt'] = DateTime.now().toIso8601String()
+      // Remove the legacy field once a worker record is next updated.
+      ..['salaryType'] = FieldValue.delete();
     await _db
         .collection('workers')
         .doc(worker.id)
-        .update(
-          worker.toJson()..['updatedAt'] = DateTime.now().toIso8601String(),
-        );
+        .update(workerData);
   }
 
   Future<void> softDeleteWorker(String id, String deletedBy) async {

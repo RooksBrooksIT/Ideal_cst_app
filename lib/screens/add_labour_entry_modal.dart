@@ -409,6 +409,40 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     }
   }
 
+  double _configuredDefaultHours() {
+    if (isAddingNewWorker) {
+      final labour = _labours.firstWhere(
+        (item) => item['designation'] == selectedCategory,
+        orElse: () => const {'defaultHours': 8.0},
+      );
+      return (labour['defaultHours'] as num?)?.toDouble() ?? 8.0;
+    }
+
+    final data = selectedWorker?.data();
+    if (data is Map<String, dynamic>) {
+      return (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
+    }
+    return 8.0;
+  }
+
+  /// Keeps the OT input in sync with the selected worker's configured hours.
+  void _recalculateOtHours() {
+    final inTime = inTimeController.text.trim();
+    final outTime = outTimeController.text.trim();
+    if (inTime.isEmpty || outTime.isEmpty) {
+      otHoursController.text = '0';
+      return;
+    }
+
+    final hoursWorked = calculateHoursWorked(inTime, outTime);
+    final overtimeHours = hoursWorked > _configuredDefaultHours()
+        ? hoursWorked - _configuredDefaultHours()
+        : 0.0;
+    otHoursController.text = overtimeHours == 0
+        ? '0'
+        : overtimeHours.toStringAsFixed(2);
+  }
+
   Map<String, double> calculateSalary({
     required double basicSalary,
     required double defaultHours,
@@ -422,10 +456,14 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     double regularHours = hoursWorked > defaultHours
         ? defaultHours
         : hoursWorked;
-    double overtimeHours = hoursWorked > defaultHours
+    final automaticOvertimeHours = hoursWorked > defaultHours
         ? hoursWorked - defaultHours
         : 0.0;
-    overtimeHours += otHours;
+    // OT is populated from the time fields. Keep manually entered OT working
+    // for entries without times, without double-counting calculated OT.
+    final overtimeHours = automaticOvertimeHours > otHours
+        ? automaticOvertimeHours
+        : otHours;
 
     double regularSalary = regularHours * hourlyRate;
     double overtimeSalary = overtimeHours * overtimeRateToUse;
@@ -455,6 +493,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         final minute = picked.minute.toString().padLeft(2, '0');
         final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
         controller.text = "$hour:$minute $period";
+        _recalculateOtHours();
       }
     }
   }
@@ -972,6 +1011,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                                         setState(() {
                                           selectedWorker = doc;
                                         });
+                                        _recalculateOtHours();
                                       },
                                     );
                                   }).toList(),
@@ -1048,6 +1088,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                                         setState(() {
                                           selectedWorker = doc;
                                         });
+                                        _recalculateOtHours();
                                       },
                                     );
                                   }).toList(),
@@ -1095,6 +1136,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                               setState(() {
                                 selectedCategory = value!;
                               });
+                              _recalculateOtHours();
                             },
                             decoration: const InputDecoration(
                               labelText: 'Category',

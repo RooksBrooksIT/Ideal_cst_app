@@ -214,8 +214,8 @@ class SalaryService {
         }
       }
 
-      // Calculate salary based on worker's salary type
-      if (worker.salaryType == 'Daily Wage') {
+      // Calculate salary based on worker's labour type.
+      if (worker.labourType == 'Daily Wage') {
         // Daily wage: use days worked * daily rate + overtime
         basicSalary = attendanceDays * worker.basicSalary;
         overtimeSalary = totalOvertimeHours * worker.overtimeRate;

@@ -207,8 +207,8 @@ class _SiteLabourDetailsReportScreenState
             e['subContractorName']?.toString() ??
             '-');
         final group =
-            (e['salaryType']?.toString() == 'Daily Wage' ||
-                e['salaryType']?.toString() == 'Daily')
+            ((e['labourType'] ?? e['salaryType'])?.toString() == 'Daily Wage' ||
+                (e['labourType'] ?? e['salaryType'])?.toString() == 'Daily')
             ? 'DW'
             : 'SC';
         final category = e['category']?.toString() ?? '-';

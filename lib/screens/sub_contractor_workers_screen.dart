@@ -36,7 +36,7 @@ class _SubContractorWorkersScreenState
   String? selectedCategory;
   String? selectedStatus;
   String? selectedSiteId;
-  String? selectedSalaryType;
+  String? selectedLabourType;
 
   @override
   void initState() {
@@ -94,14 +94,14 @@ class _SubContractorWorkersScreenState
         selectedCategory: selectedCategory,
         selectedStatus: selectedStatus,
         selectedSiteId: selectedSiteId,
-        selectedSalaryType: selectedSalaryType,
+        selectedLabourType: selectedLabourType,
         sites: sites,
-        onApply: (category, status, siteId, salaryType) {
+        onApply: (category, status, siteId, labourType) {
           setState(() {
             selectedCategory = category;
             selectedStatus = status;
             selectedSiteId = siteId;
-            selectedSalaryType = salaryType;
+            selectedLabourType = labourType;
           });
         },
       ),
@@ -327,15 +327,15 @@ class _SubContractorWorkersScreenState
                               selectedSiteId == null ||
                               worker.assignedSiteIds.contains(selectedSiteId);
 
-                          final matchesSalaryType =
-                              selectedSalaryType == null ||
-                              worker.salaryType == selectedSalaryType;
+                          final matchesLabourType =
+                              selectedLabourType == null ||
+                              worker.labourType == selectedLabourType;
 
                           return matchesSearch &&
                               matchesCategory &&
                               matchesStatus &&
                               matchesSite &&
-                              matchesSalaryType;
+                              matchesLabourType;
                         }).toList();
 
                         if (workers.isEmpty) {
@@ -385,7 +385,7 @@ class _SubContractorWorkersScreenState
                                   children: [
                                     Text(worker.workerType),
                                     Text(
-                                      '${worker.salaryType}: ₹${worker.basicSalary}',
+                                      '${worker.labourType}: ₹${worker.basicSalary}',
                                     ),
                                     Text(
                                       'Sites: ${worker.assignedSiteIds.map((id) => getSiteName(id)).join(', ')}',
@@ -504,7 +504,7 @@ class _SubContractorWorkersScreenState
       name: worker.name,
       workerId: worker.workerId,
       workerType: worker.workerType,
-      salaryType: worker.salaryType,
+      labourType: worker.labourType,
       basicSalary: worker.basicSalary,
       overtimeRate: worker.overtimeRate,
       mobileNumber: worker.mobileNumber,
@@ -599,7 +599,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
   final TextEditingController _overtimeRateController = TextEditingController();
   final TextEditingController _defaultHoursController = TextEditingController();
   String? _selectedCategory;
-  String _selectedSalaryType = 'Daily Wage';
+  String _selectedLabourType = 'Daily Wage';
   List<String> _selectedSiteIds = [];
   DateTime _selectedDate = DateTime.now();
   bool _isActive = true;
@@ -620,7 +620,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       _overtimeRateController.text = w.overtimeRate.toString();
       _defaultHoursController.text = w.defaultHours?.toString() ?? '8.0';
       _selectedCategory = w.workerType;
-      _selectedSalaryType = w.salaryType;
+      _selectedLabourType = w.labourType;
       _selectedSiteIds = List.from(w.assignedSiteIds);
       _selectedDate = w.joiningDate;
       _isActive = w.isActive;
@@ -768,17 +768,20 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedSalaryType,
-                items: const ['Daily Wage', 'Monthly Wage']
+                value: _selectedLabourType,
+                items: const ['Daily Wage', 'Sub contract']
                     .map(
                       (type) =>
                           DropdownMenuItem(value: type, child: Text(type)),
                     )
                     .toList(),
                 onChanged: (value) => setState(() {
-                  _selectedSalaryType = value!;
+                  _selectedLabourType = value!;
                 }),
-                decoration: const InputDecoration(labelText: 'Salary Type *'),
+                decoration: const InputDecoration(labelText: 'Labour Type *'),
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Please select a labour type'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -902,7 +905,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       name: _nameController.text.trim(),
       workerId: workerId,
       workerType: _selectedCategory!,
-      salaryType: _selectedSalaryType,
+      labourType: _selectedLabourType,
       basicSalary: double.tryParse(_basicSalaryController.text) ?? 0.0,
       overtimeRate: double.tryParse(_overtimeRateController.text) ?? 0.0,
       defaultHours: double.tryParse(_defaultHoursController.text) ?? 8.0,
@@ -955,7 +958,7 @@ class _FiltersBottomSheet extends StatefulWidget {
   final String? selectedCategory;
   final String? selectedStatus;
   final String? selectedSiteId;
-  final String? selectedSalaryType;
+  final String? selectedLabourType;
   final List<Map<String, dynamic>> sites;
   final Function(String?, String?, String?, String?) onApply;
 
@@ -963,7 +966,7 @@ class _FiltersBottomSheet extends StatefulWidget {
     this.selectedCategory,
     this.selectedStatus,
     this.selectedSiteId,
-    this.selectedSalaryType,
+    this.selectedLabourType,
     required this.sites,
     required this.onApply,
   });
@@ -976,7 +979,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
   String? _selectedCategory;
   String? _selectedStatus;
   String? _selectedSiteId;
-  String? _selectedSalaryType;
+  String? _selectedLabourType;
 
   @override
   void initState() {
@@ -984,7 +987,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
     _selectedCategory = widget.selectedCategory;
     _selectedStatus = widget.selectedStatus;
     _selectedSiteId = widget.selectedSiteId;
-    _selectedSalaryType = widget.selectedSalaryType;
+    _selectedLabourType = widget.selectedLabourType;
   }
 
   @override
@@ -1063,19 +1066,19 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _selectedSalaryType,
+            value: _selectedLabourType,
             items: const [
-              DropdownMenuItem(value: null, child: Text('All Salary Types')),
+              DropdownMenuItem(value: null, child: Text('All Labour Types')),
               DropdownMenuItem(value: 'Daily Wage', child: Text('Daily Wage')),
               DropdownMenuItem(
-                value: 'Monthly Wage',
-                child: Text('Monthly Wage'),
+                value: 'Sub contract',
+                child: Text('Sub Contract'),
               ),
             ],
             onChanged: (value) => setState(() {
-              _selectedSalaryType = value;
+              _selectedLabourType = value;
             }),
-            decoration: const InputDecoration(labelText: 'Salary Type'),
+            decoration: const InputDecoration(labelText: 'Labour Type'),
           ),
           const SizedBox(height: 24),
           Row(
@@ -1087,7 +1090,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
                       _selectedCategory = null;
                       _selectedStatus = null;
                       _selectedSiteId = null;
-                      _selectedSalaryType = null;
+                      _selectedLabourType = null;
                     });
                     widget.onApply(null, null, null, null);
                     Navigator.pop(context);
@@ -1103,7 +1106,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
                       _selectedCategory,
                       _selectedStatus,
                       _selectedSiteId,
-                      _selectedSalaryType,
+                      _selectedLabourType,
                     );
                     Navigator.pop(context);
                   },
@@ -1308,7 +1311,7 @@ class __TransferWorkerDialogState extends State<_TransferWorkerDialog> {
               name: widget.worker.name,
               workerId: widget.worker.workerId,
               workerType: widget.worker.workerType,
-              salaryType: widget.worker.salaryType,
+              labourType: widget.worker.labourType,
               basicSalary: widget.worker.basicSalary,
               overtimeRate: widget.worker.overtimeRate,
               mobileNumber: widget.worker.mobileNumber,

@@ -147,7 +147,7 @@ class _OverviewTab extends StatelessWidget {
                 label: 'Sub Contractor',
                 value: worker.subContractorName ?? 'N/A',
               ),
-              _InfoRow(label: 'Salary Type', value: worker.salaryType),
+              _InfoRow(label: 'Labour Type', value: worker.labourType),
               _InfoRow(label: 'Basic Salary', value: '₹${worker.basicSalary}'),
               _InfoRow(
                 label: 'Overtime Rate',
