@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ideal_cst/screens/Organisation_LoginPage.dart';
 import 'package:ideal_cst/screens/config_login.dart';
-import 'package:ideal_cst/screens/customer_login_page.dart';
 import 'package:ideal_cst/screens/supervisor_login_page.dart';
+import 'package:ideal_cst/screens/contractor_login_page.dart';
 
 class AppColors {
   static const primaryColor = Color(0xFF003768);
@@ -164,14 +164,15 @@ class _MainDashboardState extends State<MainDashboard>
                                     _buildDashboardCard(
                                       context: context,
                                       theme: theme,
-                                      title: 'Customers',
-                                      subtitle: 'See your beautiful creation',
-                                      icon: Icons.dashboard_customize,
+                                      title: 'Sub-Contractor',
+                                      subtitle:
+                                          'Manage your workers and activities',
+                                      icon: Icons.engineering,
                                       colors: [
-                                        const Color.fromARGB(255, 19, 126, 219),
-                                        const Color.fromARGB(255, 3, 48, 83),
+                                        AppColors.primaryColor,
+                                        AppColors.primaryGradientEnd,
                                       ],
-                                      destination: const CustomerLoginPage(),
+                                      destination: const ContractorLoginPage(),
                                     ),
                                   ],
                                 ),

@@ -434,6 +434,7 @@ class _ConfigAccountDashboardState extends State<ConfigAccountDashboard> {
       'Tools Inventory': const ToolsInventoryPage(),
       'Material Master': const MatlsScreen(),
       'Material Sub Category': const MatlsSubCat(),
+      'Material Config': const MaterialScreen(),
       'Material Movements': const MaterialInfoScreen(),
       "Material Availability": const MaterialAvailability(),
       'Contractor': const ContractorPage(),

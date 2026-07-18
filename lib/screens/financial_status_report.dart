@@ -49,8 +49,13 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
     final endDate = _formatDate(project['plannedEndDate']);
     final currentDate = _formatDate(DateTime.now());
 
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final pdfTheme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
     pdf.addPage(
       pw.MultiPage(
+        theme: pdfTheme,
         build: (pw.Context context) => [
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

@@ -149,16 +149,23 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
     try {
       final contractor =
           _selectedContractorName ?? widget.userDetails['contractorName'];
-      final snapshot = await FirebaseFirestore.instance
-          .collection('projects')
-          .where('isContractWork', isEqualTo: true)
+      // Get contractor document from contractors collection
+      final contractorSnapshot = await FirebaseFirestore.instance
+          .collection('contractors')
           .where('contractorName', isEqualTo: contractor)
+          .limit(1)
           .get();
       final ids = <String>[];
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final id = data['siteId']?.toString() ?? '';
-        if (id.isNotEmpty) ids.add(id);
+      if (contractorSnapshot.docs.isNotEmpty) {
+        final contractorData = contractorSnapshot.docs.first.data();
+        final assignedSiteIds = contractorData['assignedSiteIds'] as List?;
+        if (assignedSiteIds != null) {
+          for (var id in assignedSiteIds) {
+            if (id is String && id.isNotEmpty) {
+              ids.add(id);
+            }
+          }
+        }
       }
       setState(() {
         siteIdOptions = ids;

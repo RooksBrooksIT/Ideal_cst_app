@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'screens/lets_start_page.dart';
 import 'screens/main_dashboard.dart';
+import 'screens/site_labour_attendance_report_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,15 +23,12 @@ class MyApp extends StatelessWidget {
       title: 'Construct Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: const Color.fromARGB(255, 2, 32, 116),
-        hintColor: Colors.grey,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          iconTheme: IconThemeData(color: Colors.blueGrey),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 2, 32, 116),
+          brightness: Brightness.light,
         ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       // Define initial route
       initialRoute: '/',
@@ -39,6 +37,8 @@ class MyApp extends StatelessWidget {
         '/': (context) => const SplashScreen(),
         '/letsStart': (context) => const LetsStartPage(),
         '/dashboard': (context) => MainDashboard(),
+        '/reports/site-labour-report': (context) =>
+            const SiteLabourAttendanceReportScreen(),
       },
     );
   }

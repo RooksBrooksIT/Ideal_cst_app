@@ -183,9 +183,11 @@ class _Supervisor_LoginPageState extends State<Supervisor_LoginPage>
           .where((name) => name != null)
           .cast<String>()
           .toList();
-      setState(() {
-        _supervisorNames = names;
-      });
+      if (mounted) {
+        setState(() {
+          _supervisorNames = names;
+        });
+      }
     } catch (e) {
       print('Error fetching contractor names: $e');
     }
@@ -590,133 +592,66 @@ class _Supervisor_LoginPageState extends State<Supervisor_LoginPage>
                 child: Opacity(
                   opacity: _opacityAnimation.value.toDouble(),
                   child: SingleChildScrollView(
-                    child: Container(
-                      width: containerWidth,
-                      padding: EdgeInsets.symmetric(
-                        vertical: verticalPadding.toDouble(),
-                        horizontal: horizontalPadding.toDouble(),
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(25.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 12.0,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(
-                              radius: avatarRadius,
-                              backgroundColor: AppColors.supervisorPrimaryColor,
-                              child: Icon(
-                                Icons.supervisor_account,
-                                size: avatarRadius + 10.0,
-                                color: Colors.white,
-                              ),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Container(
+                        width: containerWidth,
+                        padding: EdgeInsets.symmetric(
+                          vertical: verticalPadding.toDouble(),
+                          horizontal: horizontalPadding.toDouble(),
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(25.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 12.0,
+                              offset: const Offset(0, 6),
                             ),
-                            SizedBox(height: verticalPadding / 3),
-                            const Text(
-                              'Supervisor Login',
-                              style: TextStyle(
-                                fontSize: 22.0,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.supervisorPrimaryColor,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Sign in to continue',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            SizedBox(height: verticalPadding / 2),
-                            TextFormField(
-                              controller: _usernameController,
-                              decoration: InputDecoration(
-                                labelText: 'UserName',
-                                prefixIcon: const Icon(
-                                  Icons.person,
-                                  color: Color.fromARGB(255, 0, 29, 54),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.0),
-                                  borderSide: BorderSide.none,
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                radius: avatarRadius,
+                                backgroundColor:
+                                    AppColors.supervisorPrimaryColor,
+                                child: Icon(
+                                  Icons.supervisor_account,
+                                  size: avatarRadius + 10.0,
+                                  color: Colors.white,
                                 ),
                               ),
-                              validator: (value) =>
-                                  (value == null || value.isEmpty)
-                                  ? 'UserName is required'
-                                  : null,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: !_showPassword,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(
-                                  Icons.lock,
-                                  color: Color.fromARGB(255, 0, 29, 54),
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _showPassword
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                    color: AppColors.supervisorPrimaryColor,
-                                  ),
-                                  onPressed: () => setState(
-                                    () => _showPassword = !_showPassword,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.0),
-                                  borderSide: BorderSide.none,
+                              SizedBox(height: verticalPadding / 3),
+                              const Text(
+                                'Supervisor Login',
+                                style: TextStyle(
+                                  fontSize: 22.0,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.supervisorPrimaryColor,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
-                              validator: (value) =>
-                                  (value == null || value.isEmpty)
-                                  ? 'Password is required'
-                                  : null,
-                            ),
-                            const SizedBox(height: 12),
-                            CheckboxListTile(
-                              title: const Text('Is Contractor'),
-                              value: _isContractor,
-                              activeColor: AppColors.supervisorPrimaryColor,
-                              onChanged: (val) {
-                                setState(() {
-                                  _isContractor = val ?? false;
-                                  if (!_isContractor) {
-                                    _selectedSupervisorName = null;
-                                  }
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            const SizedBox(height: 12),
-                            if (_isContractor)
-                              DropdownButtonFormField<String>(
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Sign in to continue',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                              SizedBox(height: verticalPadding / 2),
+                              TextFormField(
+                                controller: _usernameController,
                                 decoration: InputDecoration(
-                                  labelText: 'Contractor Name',
+                                  labelText: 'UserName',
                                   prefixIcon: const Icon(
-                                    Icons.supervisor_account,
-                                    color: AppColors.supervisorPrimaryColor,
+                                    Icons.person,
+                                    color: Color.fromARGB(255, 0, 29, 54),
                                   ),
                                   filled: true,
                                   fillColor: Colors.grey[100],
@@ -725,56 +660,131 @@ class _Supervisor_LoginPageState extends State<Supervisor_LoginPage>
                                     borderSide: BorderSide.none,
                                   ),
                                 ),
-                                items: _supervisorNames
-                                    .map(
-                                      (name) => DropdownMenuItem(
-                                        value: name,
-                                        child: Text(name),
-                                      ),
-                                    )
-                                    .toList(),
-                                value: _selectedSupervisorName,
-                                onChanged: (val) => setState(
-                                  () => _selectedSupervisorName = val,
-                                ),
-                                validator: (val) {
-                                  if (_isContractor &&
-                                      (val == null || val.isEmpty)) {
-                                    return 'Please select a supervisor name';
-                                  }
-                                  return null;
-                                },
+                                validator: (value) =>
+                                    (value == null || value.isEmpty)
+                                    ? 'UserName is required'
+                                    : null,
                               ),
-                            SizedBox(height: verticalPadding / 2),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _login,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      AppColors.supervisorPrimaryColor,
-                                  shape: RoundedRectangleBorder(
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: !_showPassword,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: const Icon(
+                                    Icons.lock,
+                                    color: Color.fromARGB(255, 0, 29, 54),
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _showPassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: AppColors.supervisorPrimaryColor,
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _showPassword = !_showPassword,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                  border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12.0),
+                                    borderSide: BorderSide.none,
                                   ),
                                 ),
-                                child: _isLoading
-                                    ? const CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2.0,
-                                      )
-                                    : const Text(
-                                        'LOGIN',
-                                        style: TextStyle(
-                                          fontSize: 16.0,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
+                                validator: (value) =>
+                                    (value == null || value.isEmpty)
+                                    ? 'Password is required'
+                                    : null,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+                              Material(
+                                type: MaterialType.transparency,
+                                child: CheckboxListTile(
+                                  title: const Text('Is Contractor'),
+                                  value: _isContractor,
+                                  activeColor: AppColors.supervisorPrimaryColor,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _isContractor = val ?? false;
+                                      if (!_isContractor) {
+                                        _selectedSupervisorName = null;
+                                      }
+                                    });
+                                  },
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              if (_isContractor)
+                                DropdownButtonFormField<String>(
+                                  decoration: InputDecoration(
+                                    labelText: 'Contractor Name',
+                                    prefixIcon: const Icon(
+                                      Icons.supervisor_account,
+                                      color: AppColors.supervisorPrimaryColor,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.grey[100],
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12.0),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  items: _supervisorNames
+                                      .map(
+                                        (name) => DropdownMenuItem(
+                                          value: name,
+                                          child: Text(name),
+                                        ),
+                                      )
+                                      .toList(),
+                                  value: _selectedSupervisorName,
+                                  onChanged: (val) => setState(
+                                    () => _selectedSupervisorName = val,
+                                  ),
+                                  validator: (val) {
+                                    if (_isContractor &&
+                                        (val == null || val.isEmpty)) {
+                                      return 'Please select a supervisor name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              SizedBox(height: verticalPadding / 2),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _login,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        AppColors.supervisorPrimaryColor,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12.0),
+                                    ),
+                                  ),
+                                  child: _isLoading
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.0,
+                                        )
+                                      : const Text(
+                                          'LOGIN',
+                                          style: TextStyle(
+                                            fontSize: 16.0,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: 1.2,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
