@@ -140,7 +140,6 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         }
       }
 
-      if (!mounted) return;
       setState(() {
         _workerIdsOnOtherSitesToday = blocked;
       });
@@ -191,18 +190,15 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           )
           .toList();
 
-      if (!mounted) return;
       setState(() {
         _labours = uniqueLabours;
         _isLoadingLabours = false;
       });
     } catch (e) {
       debugPrint('Error loading labours: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingLabours = false;
-        });
-      }
+      setState(() {
+        _isLoadingLabours = false;
+      });
     }
   }
 
@@ -234,7 +230,6 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
             .get();
       }
 
-      if (!mounted) return;
       setState(() {
         // Step 1: Merge by document ID to remove exact duplicate docs
         final allDocsMap = <String, DocumentSnapshot>{};
@@ -256,6 +251,10 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           if (name.isEmpty || seenNames.contains(name)) return false;
           if (!_isVisibleForCurrentSite(data)) return false;
           if (_isBlockedOnAnotherSiteToday(doc.id)) return false;
+          // Filter out if already in existingEntries, unless it's the one we're editing
+          if (widget.initialWorker == null || widget.initialWorker!['workerId'] != doc.id) {
+            if (widget.existingEntries.any((w) => w['workerId'] == doc.id)) return false;
+          }
           // Filter out if already in existingEntries, unless it's the one we're editing
           if (widget.initialWorker == null || widget.initialWorker!['workerId'] != doc.id) {
             if (widget.existingEntries.any((w) => w['workerId'] == doc.id)) return false;
@@ -310,7 +309,6 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
             .get();
       }
 
-      if (!mounted) return;
       setState(() {
         workers = querySnapshot.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -863,7 +861,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
 
       await batch.commit();
 
-      if (mounted) setState(() => _isSaving = false);
+      setState(() => _isSaving = false);
 
       if (!mounted) return;
 
@@ -901,7 +899,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       debugPrint('Error saving labour entry: $e');
-      if (mounted) setState(() => _isSaving = false);
+      setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -913,7 +911,6 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
@@ -921,409 +918,485 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) => Material(
-        color: Colors.grey.shade50,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                _buildHeader(context),
-                Expanded(
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    children: [
-                      _buildToggle(),
-                      const SizedBox(height: 16),
-                      
-                      if (!isAddingNewWorker)
-                        _buildSelectWorkerSection()
-                      else
-                        _buildNewWorkerForm(),
-                        
-                      const SizedBox(height: 16),
-                      _buildAttendanceDetails(),
-                      const SizedBox(height: 100), // padding for bottom button
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.only(left: 20, right: 20, bottom: MediaQuery.of(context).padding.bottom + 16, top: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(0, -4), blurRadius: 10)],
-                ),
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : addWorkerEntry,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  child: _isSaving
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Save Entry', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, 2),
-            blurRadius: 10,
-          )
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            widget.initialWorker != null ? 'Edit Labour Entry' : 'Add Labour Entry',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.close, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggle() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildToggleButton(
-              title: 'Select Existing',
-              isActive: !isAddingNewWorker,
-              onTap: () => setState(() => isAddingNewWorker = false),
-            ),
-          ),
-          Expanded(
-            child: _buildToggleButton(
-              title: 'Add New',
-              isActive: isAddingNewWorker,
-              onTap: () => setState(() => isAddingNewWorker = true),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButton({required String title, required bool isActive, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isActive
-              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
-              : [],
-        ),
-        child: Center(
-          child: Text(
-            title,
-            style: TextStyle(
-              color: isActive ? primaryColor : Colors.grey.shade600,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSelectWorkerSection() {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                labelText: 'Search Worker / Contractor',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (filteredWorkers.isEmpty && filteredContractors.isEmpty)
-              const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text('No results found')))
-            else
-              Container(
-                constraints: const BoxConstraints(maxHeight: 250),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    if (filteredWorkers.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text('WORKERS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey.shade600)),
-                      ),
-                      ...filteredWorkers.map((doc) => _buildWorkerTile(doc, isWorker: true)).toList(),
-                    ],
-                    if (filteredContractors.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-                        child: Text('SUB CONTRACTORS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey.shade600)),
-                      ),
-                      ...filteredContractors.map((doc) => _buildWorkerTile(doc, isWorker: false)).toList(),
-                    ],
-                  ],
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.05),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWorkerTile(DocumentSnapshot doc, {required bool isWorker}) {
-    final data = doc.data() as Map<String, dynamic>;
-    final name = isWorker 
-        ? (data['workerName'] ?? data['name'] ?? 'Unknown')
-        : (data['contractorName'] ?? data['name'] ?? 'Unknown');
-        
-    final subContractor = isWorker 
-        ? (data['contractorName'] ?? data['subContractorName'] ?? data['contractor'] ?? 'None')
-        : 'Self';
-        
-    final category = isWorker 
-        ? (data['category'] ?? data['workerType'] ?? 'Uncategorized')
-        : 'Sub Contractor';
-        
-    final isSelected = selectedWorker?.id == doc.id;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? primaryColor.withOpacity(0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade200, width: isSelected ? 1.5 : 1),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        title: Row(
-          children: [
-            Expanded(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? primaryColor : Colors.black87))),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isWorker ? Colors.blue.shade50 : Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                isWorker ? 'Worker' : 'Sub',
-                style: TextStyle(color: isWorker ? Colors.blue.shade700 : Colors.orange.shade700, fontSize: 10, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Text('$category • Sub: $subContractor', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-        trailing: isSelected ? Icon(Icons.check_circle, color: primaryColor) : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
-        onTap: () {
-          setState(() {
-            selectedWorker = doc;
-          });
-          _recalculateOtHours();
-        },
-      ),
-      ),
-    );
-  }
-
-  Widget _buildNewWorkerForm() {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Worker Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _buildTextField(controller: workerNameController, label: 'Worker Name'),
-            const SizedBox(height: 12),
-            _buildTextField(controller: mobileController, label: 'Mobile Number', keyboardType: TextInputType.phone),
-            const SizedBox(height: 12),
-            _buildTextField(controller: aadhaarController, label: 'Aadhaar Number (Optional)'),
-            const SizedBox(height: 12),
-            _isLoadingLabours
-                ? const Center(child: CircularProgressIndicator())
-                : _buildDropdown(
-                    value: selectedCategory,
-                    items: _labours.map((l) => l['designation'].toString()).toList(),
-                    label: 'Category',
-                    onChanged: (v) {
-                      setState(() => selectedCategory = v!);
-                      _recalculateOtHours();
-                    },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Add Labour Entry',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-            const SizedBox(height: 12),
-            _buildDropdown(
-              value: (() {
-                final names = contractors.map((d) {
-                  final data = d.data() as Map<String, dynamic>;
-                  return (data['contractorName'] ?? data['name'])?.toString();
-                }).whereType<String>().toList();
-                return (selectedContractor != null && names.contains(selectedContractor)) ? selectedContractor : null;
-              })(),
-              items: contractors.map((d) {
-                final data = d.data() as Map<String, dynamic>;
-                return (data['contractorName'] ?? data['name'] ?? 'Unknown').toString();
-              }).toList(),
-              label: 'Sub-Contractor',
-              onChanged: (v) => setState(() => selectedContractor = v),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            _buildDropdown(
-              value: selectedLabourType,
-              items: labourTypes,
-              label: 'Labour Type',
-              onChanged: (v) => setState(() => selectedLabourType = v!),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Toggle between existing and new worker
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              isAddingNewWorker = false;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: !isAddingNewWorker
+                                ? primaryColor
+                                : Colors.grey[200],
+                            foregroundColor: !isAddingNewWorker
+                                ? Colors.white
+                                : Colors.grey[800],
+                          ),
+                          child: const Text('Select Worker'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              isAddingNewWorker = true;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isAddingNewWorker
+                                ? primaryColor
+                                : Colors.grey[200],
+                            foregroundColor: isAddingNewWorker
+                                ? Colors.white
+                                : Colors.grey[800],
+                          ),
+                          child: const Text('Add New Worker'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  if (!isAddingNewWorker) ...[
+                    TextField(
+                      controller: searchController,
+                      decoration: const InputDecoration(
+                        labelText: 'Search Worker or Sub Contractor',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      constraints: const BoxConstraints(maxHeight: 250),
+                      child:
+                          (filteredWorkers.isEmpty &&
+                              filteredContractors.isEmpty)
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text('No results found'),
+                              ),
+                            )
+                          : ListView(
+                              shrinkWrap: true,
+                              children: [
+                                if (filteredWorkers.isNotEmpty) ...[
+                                  Container(
+                                    color: Colors.grey.shade100,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    child: const Text(
+                                      'WORKERS',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  ...filteredWorkers.map((doc) {
+                                    final data =
+                                        doc.data() as Map<String, dynamic>;
+                                    final name =
+                                        data['workerName'] ??
+                                        data['name'] ??
+                                        'Unknown';
+                                    final subContractor =
+                                        data['contractorName'] ??
+                                        data['subContractorName'] ??
+                                        data['contractor'] ??
+                                        'None';
+                                    final category =
+                                        data['category'] ??
+                                        data['workerType'] ??
+                                        'Uncategorized';
+                                    return ListTile(
+                                      title: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.shade50,
+                                              border: Border.all(
+                                                color: Colors.blue.shade200,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Worker',
+                                              style: TextStyle(
+                                                color: Colors.blue.shade900,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      subtitle: Text(
+                                        '$category • Sub Contractor: $subContractor',
+                                      ),
+                                      trailing: selectedWorker?.id == doc.id
+                                          ? Icon(
+                                              Icons.check_circle,
+                                              color: primaryColor,
+                                            )
+                                          : null,
+                                      onTap: () {
+                                        setState(() {
+                                          selectedWorker = doc;
+                                        });
+                                        _recalculateOtHours();
+                                      },
+                                    );
+                                  }).toList(),
+                                ],
+                                if (filteredContractors.isNotEmpty) ...[
+                                  Container(
+                                    color: Colors.grey.shade100,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    child: const Text(
+                                      'SUB CONTRACTORS',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  ...filteredContractors.map((doc) {
+                                    final data =
+                                        doc.data() as Map<String, dynamic>;
+                                    final name =
+                                        data['contractorName'] ??
+                                        data['name'] ??
+                                        'Unknown';
+                                    return ListTile(
+                                      title: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.shade50,
+                                              border: Border.all(
+                                                color: Colors.orange.shade200,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Sub Contractor',
+                                              style: TextStyle(
+                                                color: Colors.orange.shade900,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      subtitle: const Text(
+                                        'Sub Contractor (Self)',
+                                      ),
+                                      trailing: selectedWorker?.id == doc.id
+                                          ? Icon(
+                                              Icons.check_circle,
+                                              color: primaryColor,
+                                            )
+                                          : null,
+                                      onTap: () {
+                                        setState(() {
+                                          selectedWorker = doc;
+                                        });
+                                        _recalculateOtHours();
+                                      },
+                                    );
+                                  }).toList(),
+                                ],
+                              ],
+                            ),
+                    ),
+                  ] else ...[
+                    TextField(
+                      controller: workerNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Worker Name',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: mobileController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Mobile Number',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: aadhaarController,
+                      decoration: const InputDecoration(
+                        labelText: 'Aadhaar Number (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _isLoadingLabours
+                        ? const Center(child: CircularProgressIndicator())
+                        : DropdownButtonFormField<String>(
+                            value: selectedCategory,
+                            items: _labours.map<DropdownMenuItem<String>>((labour) {
+                              return DropdownMenuItem<String>(
+                                value: labour['designation'],
+                                child: Text(labour['designation']),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                selectedCategory = value!;
+                              });
+                              _recalculateOtHours();
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Category',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      // Guard: only pass value if it exists in the unique items list
+                      value: (() {
+                        final names = contractors
+                            .map((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              return (data['contractorName'] ?? data['name'])
+                                  ?.toString();
+                            })
+                            .whereType<String>()
+                            .toList();
+                        return (selectedContractor != null &&
+                                names.contains(selectedContractor))
+                            ? selectedContractor
+                            : null;
+                      })(),
+                      items: contractors.map<DropdownMenuItem<String>>((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final name =
+                            (data['contractorName'] ??
+                                    data['name'] ??
+                                    'Unknown')
+                                .toString();
+                        return DropdownMenuItem<String>(
+                          value: name,
+                          child: Text(name),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedContractor = value;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Sub-Contractor',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedLabourType,
+                      items: labourTypes.map<DropdownMenuItem<String>>((t) {
+                        return DropdownMenuItem<String>(
+                          value: t,
+                          child: Text(t),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedLabourType = value!;
+                        });
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Labour Type',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+
+                  // Attendance Type
+                  const Text(
+                    'Attendance Details',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedAttendanceType,
+                    items: attendanceTypes.map<DropdownMenuItem<String>>((t) {
+                      return DropdownMenuItem<String>(value: t, child: Text(t));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedAttendanceType = value!;
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Attendance Type',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: inTimeController,
+                    readOnly: true,
+                    onTap: () => _selectTime(context, inTimeController),
+                    decoration: const InputDecoration(
+                      labelText: 'In Time (e.g. 08:00 AM)',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.access_time),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: outTimeController,
+                    readOnly: true,
+                    onTap: () => _selectTime(context, outTimeController),
+                    decoration: const InputDecoration(
+                      labelText: 'Out Time (e.g. 05:00 PM)',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.access_time),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: otHoursController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'OT Hours',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: remarksController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Remarks',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Add Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : addWorkerEntry,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Add Entry',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildAttendanceDetails() {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Attendance & Time', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _buildDropdown(
-              value: selectedAttendanceType,
-              items: attendanceTypes,
-              label: 'Attendance Type',
-              onChanged: (v) => setState(() => selectedAttendanceType = v!),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: _buildTextField(controller: inTimeController, label: 'In Time', icon: Icons.access_time, readOnly: true, onTap: () => _selectTime(context, inTimeController))),
-                const SizedBox(width: 12),
-                Expanded(child: _buildTextField(controller: outTimeController, label: 'Out Time', icon: Icons.access_time, readOnly: true, onTap: () => _selectTime(context, outTimeController))),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildTextField(controller: otHoursController, label: 'OT Hours', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-            const SizedBox(height: 12),
-            _buildTextField(controller: remarksController, label: 'Remarks (Optional)', maxLines: 2),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    IconData? icon,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-  }) {
-    return TextField(
-      controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-        suffixIcon: icon != null ? Icon(icon, color: Colors.grey.shade500, size: 20) : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String? value,
-    required List<String> items,
-    required String label,
-    required void Function(String?) onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      items: items.toSet().map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14)))).toList(),
-      onChanged: onChanged,
-      icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

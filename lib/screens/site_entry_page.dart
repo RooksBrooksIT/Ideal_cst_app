@@ -409,6 +409,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
       "siteLocation": siteLocation,
       "siteId": siteCode,
     };
+
     try {
       // Check for existing entry for this site and date
       final existing = await FirebaseFirestore.instance
@@ -436,10 +437,31 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
         });
         return;
       }
+
+      // Fetch coordinator name automatically
+      String? fetchedCoordinatorName;
+      try {
+        final coordDocs = await FirebaseFirestore.instance
+            .collection('Site_Co-ordinator')
+            .where('siteName', isEqualTo: siteCode)
+            .where('supervisorName', isEqualTo: widget.userName)
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
+        if (coordDocs.docs.isNotEmpty) {
+          fetchedCoordinatorName = coordDocs.docs.first.data()['coordinatorName'] as String?;
+        }
+      } catch (e) {
+        debugPrint('Error fetching coordinator: $e');
+      }
+
+      data["coordinatorName"] = fetchedCoordinatorName ?? '';
+
       await FirebaseFirestore.instance
           .collection('siteSupervisorEntries')
           .doc(docId)
           .set(data);
+
       // Update total site expense aggregation
       await ExpenseService.updateTotalSiteExpense(siteCode);
       // --- Update siteSupervisorProjectStageActual collection ---

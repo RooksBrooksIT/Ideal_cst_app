@@ -31,6 +31,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   List<DocumentSnapshot> assignedSites = [];
   List<DocumentSnapshot> assignedContractors = [];
   String? coordinatorName;
+  DateTime? coordinatorDate;
   bool isLoading = true;
   Map<String, dynamic> todayStats = {
     'totalWorkers': 0,
@@ -66,6 +67,14 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
       if (doc.exists && doc.data() != null) {
         setState(() {
           coordinatorName = doc.data()!['CoordinatorName'] as String?;
+          final dateVal = doc.data()!['CoordinatorDate'];
+          if (dateVal != null) {
+            if (dateVal is Timestamp) {
+              coordinatorDate = dateVal.toDate();
+            } else if (dateVal is String) {
+              coordinatorDate = DateTime.tryParse(dateVal);
+            }
+          }
         });
       }
     } catch (e) {
@@ -226,6 +235,167 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     );
   }
 
+  void _showAssignCoordinatorDialog(BuildContext context) {
+    String? selectedSite;
+    final TextEditingController _coordinatorController = TextEditingController();
+    DateTime? _selectedDate = DateTime.now();
+    bool _isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Select Project Coordinator'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (assignedSites.isEmpty)
+                    const Text('No sites assigned.')
+                  else
+                    DropdownButtonFormField<String>(
+                      value: selectedSite,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Site',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: assignedSites.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final siteName = data['site'] ?? data['siteId'] ?? doc.id;
+                        return DropdownMenuItem<String>(
+                          value: siteName.toString(),
+                          child: Text(siteName.toString()),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedSite = val;
+                        });
+                      },
+                    ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _coordinatorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Coordinator Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedDate == null
+                              ? 'Select Date'
+                              : 'Date: ${_selectedDate!.toLocal().toString().split(' ')[0]}',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.calendar_today, color: primaryColor),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _selectedDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2101),
+                            builder: (context, child) {
+                              return Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: ColorScheme.light(
+                                    primary: primaryColor,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _selectedDate = picked;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: _isSaving || assignedSites.isEmpty
+                      ? null
+                      : () async {
+                          if (selectedSite == null ||
+                              _coordinatorController.text.trim().isEmpty ||
+                              _selectedDate == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Please fill all fields and select a date.')),
+                            );
+                            return;
+                          }
+                          setState(() {
+                            _isSaving = true;
+                          });
+                          try {
+                            await FirebaseFirestore.instance
+                                .collection('Site_Co-ordinator')
+                                .add({
+                              'siteName': selectedSite,
+                              'supervisorName': widget.supervisorName,
+                              'coordinatorName':
+                                  _coordinatorController.text.trim(),
+                              'coordinatorDate': Timestamp.fromDate(_selectedDate!),
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                            
+                            // Also update the supervisor document so it reflects on the dashboard
+                            await FirebaseFirestore.instance
+                                .collection('supervisor')
+                                .doc(widget.supervisorId)
+                                .update({
+                              'CoordinatorName': _coordinatorController.text.trim(),
+                              'CoordinatorDate': Timestamp.fromDate(_selectedDate!),
+                            });
+
+                            fetchCoordinatorName();
+                            
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Coordinator assigned successfully!')),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                            setState(() {
+                              _isSaving = false;
+                            });
+                          }
+                        },
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -332,6 +502,15 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                             color: Colors.grey[700],
                                           ),
                                         ),
+                                        if (coordinatorDate != null)
+                                          Text(
+                                            'Assigned On: ${coordinatorDate!.toLocal().toString().split(' ')[0]}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w400,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
                                       ],
                                       const SizedBox(height: 4),
                                       Text(
@@ -449,34 +628,17 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Salary Management Button
+                        // Select Project Coordinator Button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () {
-                              // Convert DocumentSnapshot list to Map list
-                              final sitesList = assignedSites.map((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-                                return {'id': doc.id, ...data};
-                              }).toList();
-
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DailyAttendanceScreen(
-                                    supervisorId: widget.supervisorId,
-                                    supervisorName: widget.supervisorName,
-                                    sites: sitesList,
-                                  ),
-                                ),
-                              );
-                            },
+                            onPressed: () => _showAssignCoordinatorDialog(context),
                             icon: const Icon(
-                              Icons.attach_money,
+                              Icons.person_add,
                               color: Colors.white,
                             ),
                             label: const Text(
-                              'Salary Management',
+                              'Select Project Coordinator',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,

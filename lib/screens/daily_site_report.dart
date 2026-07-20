@@ -187,6 +187,7 @@ class _DailySiteExpensesReportPageState
     required num orgTotal,
     required num contractorTotal,
     required num grandTotal,
+    String? coordinatorName,
   }) async {
     final pdf = pw.Document();
     final formattedDate = DateFormat('yyyy-MM-dd').format(widget.date);
@@ -207,6 +208,8 @@ class _DailySiteExpensesReportPageState
           pw.Text('Supervisor ID: ${widget.supervisorId}'),
           pw.Text('Site ID: ${widget.siteId ?? "N/A"}'),
           pw.Text('Date: $formattedDate'),
+          if (coordinatorName != null && coordinatorName.isNotEmpty)
+            pw.Text('Site Coordinator: $coordinatorName'),
           pw.SizedBox(height: 16),
 
           // Supervisor Section
@@ -557,6 +560,10 @@ class _DailySiteExpensesReportPageState
               managerData?['projectName'] ??
               orgData?['projectName'] ??
               '-';
+          final coordinatorName =
+              supervisorData?['coordinatorName'] ??
+              managerData?['coordinatorName'] ??
+              orgData?['coordinatorName'];
 
           // Supervisor Expenses Table
           List<DataRow> supervisorRows = [];
@@ -811,6 +818,8 @@ class _DailySiteExpensesReportPageState
                         _buildInfoRow('Site ID', siteId),
                         _buildInfoRow('Supervisor', supervisorName),
                         _buildInfoRow('Project', projectName),
+                        if (coordinatorName != null && coordinatorName.toString().trim().isNotEmpty)
+                          _buildInfoRow('Site Coordinator', coordinatorName.toString()),
                         _buildInfoRow('Date', formattedDate),
                       ],
                     ),
@@ -1172,6 +1181,7 @@ class _DailySiteExpensesReportPageState
                         orgTotal: orgTotal,
                         contractorTotal: contractorTotal,
                         grandTotal: grandTotal,
+                        coordinatorName: coordinatorName?.toString(),
                       );
                       await Printing.layoutPdf(onLayout: (format) => pdfBytes);
                     },
