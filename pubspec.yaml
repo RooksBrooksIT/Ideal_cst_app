@@ -55,7 +55,7 @@ dependencies:
   path_provider: ^2.1.1
   open_file: ^4.0.0
   share_plus: ^10.1.4
-  excel_community: ^2.1.9
+  excel_community: ^1.0.10
   
  
 dev_dependencies:

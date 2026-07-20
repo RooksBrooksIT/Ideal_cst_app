@@ -186,9 +186,15 @@ class _SiteLabourDetailsReportScreenState
       // SC attendance entries may not carry a salary because the contractor
       // master stores it as `salaryRate`. Load that master data once so the
       // report can display and total the subcontractor's labour cost.
-      final subContractorsSnap = await FirebaseFirestore.instance
-          .collection('sub_contractors')
-          .get();
+      final results = await Future.wait([
+        FirebaseFirestore.instance.collection('sub_contractors').get(),
+        FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
+        FirebaseFirestore.instance.collection('supervisor').get(),
+      ]);
+      final subContractorsSnap = results[0];
+      final siteSupervisorMapSnap = results[1];
+      final supervisorCollectionSnap = results[2];
+
       final subContractorSalaryById = <String, double>{};
       final subContractorSalaryByName = <String, double>{};
       for (final doc in subContractorsSnap.docs) {
@@ -211,6 +217,28 @@ class _SiteLabourDetailsReportScreenState
         }
       }
 
+      // Build siteId → supervisorName lookup from siteSupervisorMap
+      final siteIdToSupervisorName = <String, String>{};
+      for (final doc in siteSupervisorMapSnap.docs) {
+        final data = doc.data();
+        final sId = (data['siteId'] ?? doc.id)?.toString().trim();
+        final supName = data['supervisor']?.toString().trim();
+        if (sId != null && sId.isNotEmpty && supName != null && supName.isNotEmpty) {
+          siteIdToSupervisorName[sId] = supName;
+        }
+      }
+
+      // Build supervisorUserName → coordinatorName lookup from supervisor collection
+      final supervisorNameToCoordinator = <String, String>{};
+      for (final doc in supervisorCollectionSnap.docs) {
+        final data = doc.data();
+        final userName = data['UserName']?.toString().trim();
+        final coordName = data['CoordinatorName']?.toString().trim();
+        if (userName != null && userName.isNotEmpty && coordName != null && coordName.isNotEmpty) {
+          supervisorNameToCoordinator[userName.toLowerCase()] = coordName;
+        }
+      }
+
       List<Map<String, dynamic>> entries = snap.docs.map((d) {
         final data = Map<String, dynamic>.from(d.data());
         data['_docId'] = d.id;
@@ -224,8 +252,7 @@ class _SiteLabourDetailsReportScreenState
       double busAmountTotal = 0;
       int busCountTotal = 0;
 
-      // Keep one report row for every source entry.  In particular, SC and DW
-      // are classifications of a labour record, not keys for combining records.
+      // Keep one report row for every source entry.
       final List<Map<String, dynamic>> reportRows = [];
 
       for (final e in entries) {
@@ -235,72 +262,89 @@ class _SiteLabourDetailsReportScreenState
             (e['contractorName']?.toString() ??
             e['subContractorName']?.toString() ??
             '-');
-        final labourType =
-            (e['labourType'] ?? e['salaryType'])?.toString().trim().toLowerCase() ??
-            '';
-        final group =
-            labourType == 'dw' || labourType.contains('daily') ? 'DW' : 'SC';
         final category = e['category']?.toString() ?? '-';
-        // Worker Name belongs to the attendance record. It must not be
-        // replaced with the subcontractor name for SC workers.
         final workerName = (e['workerName'] ?? e['name'] ?? '-').toString();
-        final subContractorSalary = group == 'SC'
-            ? (subContractorSalaryById[e['contractorId']?.toString()] ??
-                  subContractorSalaryByName[subContractor.toLowerCase()] ??
-                  0.0)
-            : 0.0;
 
-        // Extract fields from entry
-        final entrySalaryBasic = (e['basicSalary'] as num?)?.toDouble() ?? 0.0;
-        final salaryBasic =
-            group == 'SC' && subContractorSalary > 0
-                ? subContractorSalary
-                : entrySalaryBasic;
+        // ── Basic Salary: always use the entry's own field directly.
+        // Do NOT override with the sub_contractors master salaryRate — the
+        // entry already stores the correct agreed rate for that worker.
+        final basicSalaryDirect =
+            (e['basicSalary'] as num?)?.toDouble() ?? 0.0;
+
+        // ── Attendance
+        final attendanceType = e['attendanceType']?.toString() ?? '-';
+
+        // ── Hours worked
         final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? 0.0;
-        final recordedTotalSalary =
-            (e['totalSalary'] as num?)?.toDouble() ?? 0.0;
-        final totalSalary =
-            group == 'SC' && recordedTotalSalary == 0 && subContractorSalary > 0
-                ? subContractorSalary
-                : recordedTotalSalary;
-        final overtimeAmt = (e['overtimeAmount'] as num?)?.toDouble() ?? 0.0;
-        final otRate = (e['overtimeRate'] as num?)?.toDouble() ?? 0.0;
 
+        // ── OT Hours (can be stored as num or string like "0.5 Hours")
+        final otHoursRaw = e['otHours'] ?? e['overtimeHours'];
+        final otHoursValue = otHoursRaw is num
+            ? otHoursRaw.toDouble()
+            : double.tryParse(
+                    otHoursRaw?.toString().split(' ').first ?? '') ??
+                0.0;
+
+        // ── OT Amount
+        final overtimeAmt =
+            (e['overtimeAmount'] as num?)?.toDouble() ??
+            (e['otAmount'] as num?)?.toDouble() ??
+            0.0;
+
+        // ── Meals
         final mealsCount = (e['mealsCount'] as num?)?.toInt() ?? 0;
         final mealsAmount = (e['mealsAmount'] as num?)?.toDouble() ?? 0.0;
-        final totalMealsAmount = mealsCount * mealsAmount;
+        final mealsTotal = mealsCount * mealsAmount;
 
+        // ── Bus
         final busCount = (e['busCount'] as num?)?.toInt() ?? 0;
         final busAmount = (e['busAmount'] as num?)?.toDouble() ?? 0.0;
-        final totalBusAmount = busCount * busAmount;
+        final busTotal = busCount * busAmount;
+
+        // ── Total Amount: prefer Firestore's stored totalSalary; fall back
+        // to computing from component parts if missing or zero.
+        final storedTotal = (e['totalSalary'] as num?)?.toDouble() ?? 0.0;
+        final totalAmount = storedTotal > 0
+            ? storedTotal
+            : (basicSalaryDirect + overtimeAmt + mealsTotal + busTotal);
+
+        // ── Supervisor
+        final supervisorName = e['supervisorName']?.toString() ?? '-';
+
+        // ── Remarks
+        final remarks = e['remarks']?.toString() ?? '';
+
+        // ── Coordinator (siteId → supervisorUserName → coordinatorName)
+        final supervisorUserName = siteIdToSupervisorName[siteId] ?? '';
+        final coordinatorName =
+            supervisorNameToCoordinator[supervisorUserName.toLowerCase()] ??
+            '-';
 
         reportRows.add({
           'siteId': siteId,
+          'date': e['date']?.toString() ?? '-',
           'siteName': siteName,
+          'coordinatorName': coordinatorName,
           'subContractor': subContractor,
           'workerName': workerName,
-          'group': group,
           'category': category,
-          'labourCount': 1,
-          'salaryBasic': salaryBasic,
-          'totalSalary': totalSalary,
-          'hours': hoursWorked,
-          'otSalaryBasic': otRate,
-          'otTotalAmount': overtimeAmt,
-          'mealsExpense': mealsAmount,
-          'mealsCount': mealsCount,
-          'totalMealsAmount': totalMealsAmount,
-          'busFare': busAmount,
-          'busCount': busCount,
-          'totalBusAmount': totalBusAmount,
-          'otHours': e['otHours'] ?? e['overtimeHours'],
+          'basicSalary': basicSalaryDirect,
+          'attendanceType': attendanceType,
+          'hoursWorked': hoursWorked,
+          'otHours': otHoursValue,
+          'otAmount': overtimeAmt,
+          'mealsTotal': mealsTotal,
+          'busTotal': busTotal,
+          'totalAmount': totalAmount,
+          'supervisorName': supervisorName,
+          'remarks': remarks,
         });
 
         // Overall totals
-        costTotal += totalSalary;
-        mealsAmountTotal += totalMealsAmount;
+        costTotal += totalAmount;
+        mealsAmountTotal += mealsTotal;
         mealsCountTotal += mealsCount;
-        busAmountTotal += totalBusAmount;
+        busAmountTotal += busTotal;
         busCountTotal += busCount;
       }
 
@@ -997,409 +1041,124 @@ class _SiteLabourDetailsReportScreenState
               }),
               dividerThickness: 1,
               columns: const [
-                DataColumn(
-                  label: Text(
-                    'Sl. No.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Site Code',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Site Name',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Sub Contractor',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Worker Name',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Group',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Type / Category',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'Labour Count',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Salary (Basic)',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Total Salary',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Hours',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'OT Salary (Basic)',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'OT Total Amount',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Meals Expense',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Meals Count',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Total Meals Amount',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Bus Fare',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Bus Count',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text(
-                    'Total Bus Amount',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 11,
-                    ),
-                  ),
-                  numeric: true,
-                ),
+                DataColumn(label: Text('Sl', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Site Name', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Coordinator', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Sub Contractor', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Worker Name', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Category', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Basic Rate', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11)), numeric: true),
+                DataColumn(label: Text('Attendance', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Hours', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11)), numeric: true),
+                DataColumn(label: Text('OT Hours', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11)), numeric: true),
+                DataColumn(label: Text('OT Amount', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11)), numeric: true),
+                DataColumn(label: Text('Meals', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11)), numeric: true),
+                DataColumn(label: Text('Bus', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11)), numeric: true),
+                DataColumn(label: Text('Total Amount', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11)), numeric: true),
+                DataColumn(label: Text('Supervisor', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
+                DataColumn(label: Text('Remarks', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 11))),
               ],
               rows: () {
-                final List<DataRow> rowsList = List.generate(filteredReportData.length, (index) {
-                  final entry = filteredReportData[index];
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        Text(
-                          '${index + 1}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          entry['siteId']?.toString() ?? '-',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          entry['siteName']?.toString() ?? '-',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          entry['subContractor']?.toString() ?? '-',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          entry['workerName']?.toString() ?? '-',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          entry['group']?.toString() ?? '-',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          entry['category']?.toString() ?? '-',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          entry['labourCount']?.toString() ?? '0',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['salaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                final List<DataRow> rowsList = List.generate(
+                  filteredReportData.length,
+                  (index) {
+                    final e = filteredReportData[index];
+                    return DataRow(
+                      cells: [
+                        DataCell(Text('${index + 1}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500))),
+                        DataCell(Text(e['date']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(e['siteName']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(e['coordinatorName']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(e['subContractor']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(e['workerName']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(e['category']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(
+                          '${String.fromCharCode(8377)}${(e['basicSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
                           style: const TextStyle(fontSize: 11),
                           textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['totalSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                        )),
+                        DataCell(Text(e['attendanceType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(
+                          (e['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0',
                           style: const TextStyle(fontSize: 11),
                           textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '${(entry['hours'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
+                        )),
+                        DataCell(Text(
+                          (e['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0',
                           style: const TextStyle(fontSize: 11),
                           textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['otSalaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                        )),
+                        DataCell(Text(
+                          '${String.fromCharCode(8377)}${(e['otAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
                           style: const TextStyle(fontSize: 11),
                           textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['otTotalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                        )),
+                        DataCell(Text(
+                          '${String.fromCharCode(8377)}${(e['mealsTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
                           style: const TextStyle(fontSize: 11),
                           textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['mealsExpense'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                        )),
+                        DataCell(Text(
+                          '${String.fromCharCode(8377)}${(e['busTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
                           style: const TextStyle(fontSize: 11),
                           textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          (entry['mealsCount'] as int?)?.toString() ?? '0',
-                          style: const TextStyle(fontSize: 11),
+                        )),
+                        DataCell(Text(
+                          '${String.fromCharCode(8377)}${(e['totalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                           textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['totalMealsAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                          style: const TextStyle(fontSize: 11),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['busFare'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                          style: const TextStyle(fontSize: 11),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          (entry['busCount'] as int?)?.toString() ?? '0',
-                          style: const TextStyle(fontSize: 11),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          '₹${(entry['totalBusAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                          style: const TextStyle(fontSize: 11),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  );
-                });
+                        )),
+                        DataCell(Text(e['supervisorName']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                        DataCell(Text(e['remarks']?.toString() ?? '', style: const TextStyle(fontSize: 11))),
+                      ],
+                    );
+                  },
+                );
 
                 if (filteredReportData.isNotEmpty) {
-                  int totWorkers = 0;
-                  double totBasic = 0;
-                  double totSalary = 0;
-                  double totHrs = 0;
-                  double totOtBasic = 0;
-                  double totOtAmt = 0;
-                  double totMealsExp = 0;
-                  int totMealsCnt = 0;
-                  double totMealsAmt = 0;
-                  double totBusFare = 0;
-                  int totBusCnt = 0;
-                  double totBusAmt = 0;
+                  final Set<String> uniqueSubs = {};
+                  double totBasic = 0, totHrs = 0, totOtHrs = 0;
+                  double totOtAmt = 0, totMeals = 0, totBus = 0, totTotal = 0;
 
                   for (final r in filteredReportData) {
-                    final wc = r['labourCount'];
-                    if (wc is int) totWorkers += wc;
-                    else if (wc != null) totWorkers += int.tryParse(wc.toString()) ?? 1;
-                    else totWorkers += 1;
-
-                    totBasic += (r['salaryBasic'] as num? ?? 0).toDouble();
-                    totSalary += (r['totalSalary'] as num? ?? 0).toDouble();
-                    totHrs += (r['hours'] as num? ?? 0).toDouble();
-                    totOtBasic += (r['otSalaryBasic'] as num? ?? 0).toDouble();
-                    totOtAmt += (r['otTotalAmount'] as num? ?? 0).toDouble();
-                    totMealsExp += (r['mealsExpense'] as num? ?? 0).toDouble();
-                    totMealsCnt += (r['mealsCount'] as int? ?? 0);
-                    totMealsAmt += (r['totalMealsAmount'] as num? ?? 0).toDouble();
-                    totBusFare += (r['busFare'] as num? ?? 0).toDouble();
-                    totBusCnt += (r['busCount'] as int? ?? 0);
-                    totBusAmt += (r['totalBusAmount'] as num? ?? 0).toDouble();
+                    final sub = r['subContractor']?.toString() ?? '';
+                    if (sub.isNotEmpty && sub != '-') uniqueSubs.add(sub);
+                    totBasic  += (r['basicSalary']  as num? ?? 0).toDouble();
+                    totHrs    += (r['hoursWorked']   as num? ?? 0).toDouble();
+                    totOtHrs  += (r['otHours']       as num? ?? 0).toDouble();
+                    totOtAmt  += (r['otAmount']      as num? ?? 0).toDouble();
+                    totMeals  += (r['mealsTotal']    as num? ?? 0).toDouble();
+                    totBus    += (r['busTotal']      as num? ?? 0).toDouble();
+                    totTotal  += (r['totalAmount']   as num? ?? 0).toDouble();
                   }
 
-                  rowsList.add(
-                    DataRow(
-                      color: WidgetStateProperty.all(const Color(0xFF0b3470).withValues(alpha: 0.12)),
-                      cells: [
-                        const DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0b3470)))),
-                        DataCell(Text('${filteredReportData.length} Recs', style: const TextStyle(fontWeight: FontWeight.bold))),
-                        const DataCell(Text('-')),
-                        const DataCell(Text('-')),
-                        const DataCell(Text('-')),
-                        const DataCell(Text('-')),
-                        const DataCell(Text('-')),
-                        DataCell(Text('$totWorkers', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green), textAlign: TextAlign.right)),
-                        DataCell(Text(totHrs.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totOtBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totOtAmt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totMealsExp.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('$totMealsCnt', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totMealsAmt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('$totBusCnt', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                        DataCell(Text('₹${totBusAmt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                      ],
-                    ),
-                  );
+                  const bold = TextStyle(fontWeight: FontWeight.bold);
+                  const boldGreen = TextStyle(fontWeight: FontWeight.bold, color: Colors.green);
+                  const boldBlue = TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0b3470));
+
+                  rowsList.add(DataRow(
+                    color: WidgetStateProperty.all(const Color(0xFF0b3470).withValues(alpha: 0.12)),
+                    cells: [
+                      DataCell(Text('TOTAL', style: boldBlue)),
+                      DataCell(Text('${filteredReportData.length} Recs', style: bold)),
+                      const DataCell(Text('-')),
+                      const DataCell(Text('-')),
+                      DataCell(Text('${uniqueSubs.length} Subs', style: bold)),
+                      const DataCell(Text('-')),
+                      const DataCell(Text('-')),
+                      DataCell(Text('${String.fromCharCode(8377)}${totBasic.toStringAsFixed(2)}', style: bold, textAlign: TextAlign.right)),
+                      const DataCell(Text('-')),
+                      DataCell(Text(totHrs.toStringAsFixed(1), style: bold, textAlign: TextAlign.right)),
+                      DataCell(Text(totOtHrs.toStringAsFixed(1), style: bold, textAlign: TextAlign.right)),
+                      DataCell(Text('${String.fromCharCode(8377)}${totOtAmt.toStringAsFixed(2)}', style: bold, textAlign: TextAlign.right)),
+                      DataCell(Text('${String.fromCharCode(8377)}${totMeals.toStringAsFixed(2)}', style: bold, textAlign: TextAlign.right)),
+                      DataCell(Text('${String.fromCharCode(8377)}${totBus.toStringAsFixed(2)}', style: bold, textAlign: TextAlign.right)),
+                      DataCell(Text('${String.fromCharCode(8377)}${totTotal.toStringAsFixed(2)}', style: boldGreen, textAlign: TextAlign.right)),
+                      const DataCell(Text('-')),
+                      const DataCell(Text('-')),
+                    ],
+                  ));
                 }
 
                 return rowsList;
@@ -1842,54 +1601,24 @@ class _SiteLabourDetailsReportScreenState
           final List<List<String>>
           tableData = List<List<String>>.generate(reportData.length, (index) {
             final e = reportData[index];
-            final slNo = (index + 1).toString();
-            final siteId = e['siteId']?.toString() ?? '-';
-            final siteName = e['siteName']?.toString() ?? '-';
-            final subContractorName = e['subContractor']?.toString() ?? '-';
-            final workerName = e['workerName']?.toString() ?? '-';
-            final group = e['group']?.toString() ?? '-';
-            final category = e['category']?.toString() ?? '-';
-            final labourCount = e['labourCount']?.toString() ?? '0';
-            final salaryBasic =
-                '₹${(e['salaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
-            final totalSalary =
-                '₹${(e['totalSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
-            final hours =
-                '${(e['hours'] as double?)?.toStringAsFixed(1) ?? '0.0'}';
-            final otSalaryBasic =
-                '₹${(e['otSalaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
-            final otTotalAmount =
-                '₹${(e['otTotalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
-            final mealsExpense =
-                '₹${(e['mealsExpense'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
-            final mealsCount = e['mealsCount']?.toString() ?? '0';
-            final totalMealsAmount =
-                '₹${(e['totalMealsAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
-            final busFare =
-                '₹${(e['busFare'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
-            final busCount = e['busCount']?.toString() ?? '0';
-            final totalBusAmount =
-                '₹${(e['totalBusAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}';
             return [
-              slNo,
-              siteId,
-              siteName,
-              subContractorName,
-              workerName,
-              group,
-              category,
-              labourCount,
-              salaryBasic,
-              totalSalary,
-              hours,
-              otSalaryBasic,
-              otTotalAmount,
-              mealsExpense,
-              mealsCount,
-              totalMealsAmount,
-              busFare,
-              busCount,
-              totalBusAmount,
+              (index + 1).toString(),
+              e['date']?.toString() ?? '-',
+              e['siteName']?.toString() ?? '-',
+              e['coordinatorName']?.toString() ?? '-',
+              e['subContractor']?.toString() ?? '-',
+              e['workerName']?.toString() ?? '-',
+              e['category']?.toString() ?? '-',
+              '\u20b9${(e['basicSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+              e['attendanceType']?.toString() ?? '-',
+              (e['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0',
+              (e['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0',
+              '\u20b9${(e['otAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+              '\u20b9${(e['mealsTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+              '\u20b9${(e['busTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+              '\u20b9${(e['totalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+              e['supervisorName']?.toString() ?? '-',
+              e['remarks']?.toString() ?? '',
             ];
           });
 
@@ -2019,25 +1748,23 @@ class _SiteLabourDetailsReportScreenState
             pw.Table.fromTextArray(
               context: context,
               headers: [
-                'Sl. No.',
-                'Site Code',
+                'Sl.',
+                'Date',
                 'Site Name',
+                'Coordinator',
                 'Sub Contractor',
                 'Worker Name',
-                'Group',
-                'Type / Category',
-                'Labour Count',
-                'Salary (Basic)',
-                'Total Salary',
+                'Category',
+                'Basic Rate',
+                'Attendance',
                 'Hours',
-                'OT Salary (Basic)',
-                'OT Total Amount',
-                'Meals Expense',
-                'Meals Count',
-                'Total Meals Amount',
-                'Bus Fare',
-                'Bus Count',
-                'Total Bus Amount',
+                'OT Hours',
+                'OT Amount',
+                'Meals',
+                'Bus',
+                'Total Amount',
+                'Supervisor',
+                'Remarks',
               ],
               cellAlignments: {
                 0: pw.Alignment.center,
@@ -2045,20 +1772,18 @@ class _SiteLabourDetailsReportScreenState
                 2: pw.Alignment.centerLeft,
                 3: pw.Alignment.centerLeft,
                 4: pw.Alignment.centerLeft,
-                5: pw.Alignment.center,
+                5: pw.Alignment.centerLeft,
                 6: pw.Alignment.center,
                 7: pw.Alignment.centerRight,
-                8: pw.Alignment.centerRight,
+                8: pw.Alignment.center,
                 9: pw.Alignment.centerRight,
                 10: pw.Alignment.centerRight,
                 11: pw.Alignment.centerRight,
                 12: pw.Alignment.centerRight,
                 13: pw.Alignment.centerRight,
                 14: pw.Alignment.centerRight,
-                15: pw.Alignment.centerRight,
-                16: pw.Alignment.centerRight,
-                17: pw.Alignment.centerRight,
-                18: pw.Alignment.centerRight,
+                15: pw.Alignment.centerLeft,
+                16: pw.Alignment.centerLeft,
               },
               headerStyle: pw.TextStyle(
                 fontSize: 7,
@@ -2141,91 +1866,94 @@ class _SiteLabourDetailsReportScreenState
 
       // Headers
       sheet.appendRow([
-        excel.TextCellValue('Sl. No.'),
-        excel.TextCellValue('Site Code'),
+        excel.TextCellValue('Sl.'),
+        excel.TextCellValue('Date'),
         excel.TextCellValue('Site Name'),
+        excel.TextCellValue('Coordinator'),
         excel.TextCellValue('Sub Contractor'),
         excel.TextCellValue('Worker Name'),
-        excel.TextCellValue('Group'),
-        excel.TextCellValue('Type / Category'),
-        excel.TextCellValue('Labour Count'),
-        excel.TextCellValue('Salary (Basic)'),
-        excel.TextCellValue('Total Salary'),
+        excel.TextCellValue('Category'),
+        excel.TextCellValue('Basic Rate'),
+        excel.TextCellValue('Attendance'),
         excel.TextCellValue('Hours'),
-        excel.TextCellValue('OT Salary (Basic)'),
-        excel.TextCellValue('OT Total Amount'),
-        excel.TextCellValue('Meals Expense'),
-        excel.TextCellValue('Meals Count'),
-        excel.TextCellValue('Total Meals Amount'),
-        excel.TextCellValue('Bus Fare'),
-        excel.TextCellValue('Bus Count'),
-        excel.TextCellValue('Total Bus Amount'),
+        excel.TextCellValue('OT Hours'),
+        excel.TextCellValue('OT Amount'),
+        excel.TextCellValue('Meals'),
+        excel.TextCellValue('Bus'),
+        excel.TextCellValue('Total Amount'),
+        excel.TextCellValue('Supervisor'),
+        excel.TextCellValue('Remarks'),
       ]);
 
       for (int i = 0; i < reportData.length; i++) {
         final entry = reportData[i];
         sheet.appendRow([
           excel.IntCellValue(i + 1),
-          excel.TextCellValue(entry['siteId']?.toString() ?? '-'),
+          excel.TextCellValue(entry['date']?.toString() ?? '-'),
           excel.TextCellValue(entry['siteName']?.toString() ?? '-'),
+          excel.TextCellValue(entry['coordinatorName']?.toString() ?? '-'),
           excel.TextCellValue(entry['subContractor']?.toString() ?? '-'),
           excel.TextCellValue(entry['workerName']?.toString() ?? '-'),
-          excel.TextCellValue(entry['group']?.toString() ?? '-'),
           excel.TextCellValue(entry['category']?.toString() ?? '-'),
-          excel.IntCellValue((entry['labourCount'] as int?) ?? 0),
           excel.TextCellValue(
-            '₹${(entry['salaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+            '₹${(entry['basicSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+          ),
+          excel.TextCellValue(entry['attendanceType']?.toString() ?? '-'),
+          excel.TextCellValue(
+            '${(entry['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
           ),
           excel.TextCellValue(
-            '₹${(entry['totalSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+            '${(entry['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
           ),
           excel.TextCellValue(
-            '${(entry['hours'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
+            '₹${(entry['otAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
           ),
           excel.TextCellValue(
-            '₹${(entry['otSalaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+            '₹${(entry['mealsTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
           ),
           excel.TextCellValue(
-            '₹${(entry['otTotalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+            '₹${(entry['busTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
           ),
           excel.TextCellValue(
-            '₹${(entry['mealsExpense'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+            '₹${(entry['totalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
           ),
-          excel.IntCellValue((entry['mealsCount'] as int?) ?? 0),
-          excel.TextCellValue(
-            '₹${(entry['totalMealsAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
-          excel.TextCellValue(
-            '₹${(entry['busFare'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
-          excel.IntCellValue((entry['busCount'] as int?) ?? 0),
-          excel.TextCellValue(
-            '₹${(entry['totalBusAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
+          excel.TextCellValue(entry['supervisorName']?.toString() ?? '-'),
+          excel.TextCellValue(entry['remarks']?.toString() ?? ''),
         ]);
       }
 
-      // Add totals row
+      // Add totals row:
+      // Sl., Date, Site Name, Coordinator, Sub Contractor, Worker Name, Category, Basic Rate, Attendance, Hours, OT Hours, OT Amount, Meals, Bus, Total Amount, Supervisor, Remarks
+      // 0,  1,    2,         3,           4,              5,           6,        7,          8,          9,     10,       11,        12,    13,  14,           15,         16
+      double totBasic = 0, totHrs = 0, totOtHrs = 0, totOtAmt = 0, totMeals = 0, totBus = 0, totTotal = 0;
+      for (final r in reportData) {
+        totBasic += (r['basicSalary'] as num? ?? 0).toDouble();
+        totHrs   += (r['hoursWorked'] as num? ?? 0).toDouble();
+        totOtHrs += (r['otHours'] as num? ?? 0).toDouble();
+        totOtAmt += (r['otAmount'] as num? ?? 0).toDouble();
+        totMeals += (r['mealsTotal'] as num? ?? 0).toDouble();
+        totBus   += (r['busTotal'] as num? ?? 0).toDouble();
+        totTotal += (r['totalAmount'] as num? ?? 0).toDouble();
+      }
+
       sheet.appendRow([
+        excel.TextCellValue('TOTAL'),
+        excel.TextCellValue('${reportData.length} Recs'),
         excel.TextCellValue(''),
         excel.TextCellValue(''),
         excel.TextCellValue(''),
         excel.TextCellValue(''),
         excel.TextCellValue(''),
+        excel.TextCellValue('₹${totBasic.toStringAsFixed(2)}'),
+        excel.TextCellValue(''),
+        excel.TextCellValue(totHrs.toStringAsFixed(1)),
+        excel.TextCellValue(totOtHrs.toStringAsFixed(1)),
+        excel.TextCellValue('₹${totOtAmt.toStringAsFixed(2)}'),
+        excel.TextCellValue('₹${totMeals.toStringAsFixed(2)}'),
+        excel.TextCellValue('₹${totBus.toStringAsFixed(2)}'),
+        excel.TextCellValue('₹${totTotal.toStringAsFixed(2)}'),
         excel.TextCellValue(''),
         excel.TextCellValue(''),
-        excel.TextCellValue('Grand Total:'),
-        excel.TextCellValue(''),
-        excel.TextCellValue('₹${totalLabourCost.toStringAsFixed(2)}'),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue('₹${totalMealsAmount.toStringAsFixed(2)}'),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue('₹${totalBusAmount.toStringAsFixed(2)}'),
       ]);
 
       final output = await getTemporaryDirectory();
@@ -2258,7 +1986,7 @@ class _SiteLabourDetailsReportScreenState
 
       // Headers
       csvBuffer.writeln(
-        'Sl. No.,Site Code,Site Name,Sub Contractor,Worker Name,Group,Type / Category,Labour Count,Salary (Basic),Total Salary,Hours,OT Salary (Basic),OT Total Amount,Meals Expense,Meals Count,Total Meals Amount,Bus Fare,Bus Count,Total Bus Amount',
+        'Sl.,Date,Site Name,Coordinator,Sub Contractor,Worker Name,Category,Basic Rate,Attendance,Hours,OT Hours,OT Amount,Meals,Bus,Total Amount,Supervisor,Remarks',
       );
 
       for (int i = 0; i < reportData.length; i++) {
@@ -2266,50 +1994,57 @@ class _SiteLabourDetailsReportScreenState
         csvBuffer.writeln(
           [
             i + 1,
-            '"${entry['siteId']?.toString().replaceAll('"', '""') ?? '-'}"',
+            '"${entry['date']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['siteName']?.toString().replaceAll('"', '""') ?? '-'}"',
+            '"${entry['coordinatorName']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['subContractor']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['workerName']?.toString().replaceAll('"', '""') ?? '-'}"',
-            '"${entry['group']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['category']?.toString().replaceAll('"', '""') ?? '-'}"',
-            entry['labourCount']?.toString() ?? '0',
-            '"₹${(entry['salaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"₹${(entry['totalSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"${(entry['hours'] as double?)?.toStringAsFixed(1) ?? '0.0'}"',
-            '"₹${(entry['otSalaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"₹${(entry['otTotalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"₹${(entry['mealsExpense'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            entry['mealsCount']?.toString() ?? '0',
-            '"₹${(entry['totalMealsAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"₹${(entry['busFare'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            entry['busCount']?.toString() ?? '0',
-            '"₹${(entry['totalBusAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
+            '"₹${(entry['basicSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
+            '"${entry['attendanceType']?.toString().replaceAll('"', '""') ?? '-'}"',
+            '"${(entry['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0'}"',
+            '"${(entry['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0'}"',
+            '"₹${(entry['otAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
+            '"₹${(entry['mealsTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
+            '"₹${(entry['busTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
+            '"₹${(entry['totalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
+            '"${entry['supervisorName']?.toString().replaceAll('"', '""') ?? '-'}"',
+            '"${entry['remarks']?.toString().replaceAll('"', '""') ?? ''}"',
           ].join(','),
         );
       }
 
       // Add totals row
+      double totBasic = 0, totHrs = 0, totOtHrs = 0, totOtAmt = 0, totMeals = 0, totBus = 0, totTotal = 0;
+      for (final r in reportData) {
+        totBasic += (r['basicSalary'] as num? ?? 0).toDouble();
+        totHrs   += (r['hoursWorked'] as num? ?? 0).toDouble();
+        totOtHrs += (r['otHours'] as num? ?? 0).toDouble();
+        totOtAmt += (r['otAmount'] as num? ?? 0).toDouble();
+        totMeals += (r['mealsTotal'] as num? ?? 0).toDouble();
+        totBus   += (r['busTotal'] as num? ?? 0).toDouble();
+        totTotal += (r['totalAmount'] as num? ?? 0).toDouble();
+      }
+
       csvBuffer.writeln(
         [
+          'TOTAL',
+          '"${reportData.length} Recs"',
           '',
           '',
           '',
           '',
           '',
+          '"₹${totBasic.toStringAsFixed(2)}"',
+          '',
+          '"${totHrs.toStringAsFixed(1)}"',
+          '"${totOtHrs.toStringAsFixed(1)}"',
+          '"₹${totOtAmt.toStringAsFixed(2)}"',
+          '"₹${totMeals.toStringAsFixed(2)}"',
+          '"₹${totBus.toStringAsFixed(2)}"',
+          '"₹${totTotal.toStringAsFixed(2)}"',
           '',
           '',
-          'Grand Total:',
-          '',
-          '"₹${totalLabourCost.toStringAsFixed(2)}"',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '"₹${totalMealsAmount.toStringAsFixed(2)}"',
-          '',
-          '',
-          '"₹${totalBusAmount.toStringAsFixed(2)}"',
         ].join(','),
       );
 

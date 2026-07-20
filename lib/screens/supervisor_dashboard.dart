@@ -30,6 +30,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   final Color primaryColor = const Color(0xFF0b3470);
   List<DocumentSnapshot> assignedSites = [];
   List<DocumentSnapshot> assignedContractors = [];
+  String? coordinatorName;
   bool isLoading = true;
   Map<String, dynamic> todayStats = {
     'totalWorkers': 0,
@@ -50,9 +51,26 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     await fetchAssignedSites();
     await fetchAssignedContractors();
     await fetchTodayStats();
+    await fetchCoordinatorName();
     setState(() {
       isLoading = false;
     });
+  }
+
+  Future<void> fetchCoordinatorName() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('supervisor')
+          .doc(widget.supervisorId)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        setState(() {
+          coordinatorName = doc.data()!['CoordinatorName'] as String?;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching coordinator name: $e');
+    }
   }
 
   Future<void> fetchAssignedContractors() async {
@@ -303,6 +321,18 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                           color: Color(0xFF222222),
                                         ),
                                       ),
+                                      if (coordinatorName != null &&
+                                          coordinatorName!.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Co-ordinator: $coordinatorName',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      ],
                                       const SizedBox(height: 4),
                                       Text(
                                         'Assigned Sites: ${assignedSites.length}',
