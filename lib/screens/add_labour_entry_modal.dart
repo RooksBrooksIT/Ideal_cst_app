@@ -451,7 +451,9 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     double? overtimeRate,
   }) {
     final double hourlyRate = basicSalary / defaultHours;
-    final double overtimeRateToUse = overtimeRate ?? hourlyRate * 1.5;
+    final double overtimeRateToUse = (overtimeRate != null && overtimeRate > 0)
+        ? overtimeRate
+        : hourlyRate * 1.5;
 
     double regularHours = hoursWorked > defaultHours
         ? defaultHours
@@ -514,6 +516,15 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           .get();
       if (contractorQuery.docs.isNotEmpty) {
         selectedContractorDoc = contractorQuery.docs.first;
+      } else {
+        final subContractorQuery = await FirebaseFirestore.instance
+            .collection('sub_contractors')
+            .where('name', isEqualTo: selectedContractor)
+            .limit(1)
+            .get();
+        if (subContractorQuery.docs.isNotEmpty) {
+          selectedContractorDoc = subContractorQuery.docs.first;
+        }
       }
     }
 
@@ -634,6 +645,26 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     double hoursWorked = 0.0;
     if (inTime.isNotEmpty && outTime.isNotEmpty) {
       hoursWorked = calculateHoursWorked(inTime, outTime);
+    }
+
+    // Fetch subcontractor overtime rate if worker is under a subcontractor
+    final subContractorId = workerData['contractorId']?.toString() ?? '';
+    final isSubContractorLabour = workerData['labourType'] == 'Sub Contractor';
+    if (isSubContractorLabour && subContractorId.isNotEmpty) {
+      try {
+        final subContractorDoc = await FirebaseFirestore.instance
+            .collection('sub_contractors')
+            .doc(subContractorId)
+            .get();
+        if (subContractorDoc.exists) {
+          final scData = subContractorDoc.data();
+          if (scData != null && scData['overtimeRate'] != null) {
+            overtimeRate = (scData['overtimeRate'] as num).toDouble();
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching subcontractor overtime rate: $e');
+      }
     }
 
     final salaryData = calculateSalary(
@@ -823,11 +854,9 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       initialChildSize: 0.9,
       maxChildSize: 0.95,
       expand: false,
-      builder: (context, scrollController) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (context, scrollController) => Material(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         child: Column(
           children: [
             // Header

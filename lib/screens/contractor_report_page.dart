@@ -965,42 +965,69 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                                     ),
                                   ),
                                 ],
-                                rows: List<DataRow>.generate(lastExpenses!.length, (index) {
-                                  final e = lastExpenses![index];
-                                  final date = e['date'] ?? '';
-                                  final siteId = e['siteId'] ?? '';
-                                  final stage = e['projectStage'] ?? '';
-                                  final amt = e['totalAmount'] ?? e['amount'] ?? 0;
-                                  return DataRow(
-                                    cells: [
-                                      DataCell(
-                                        Text(date.toString(), 
-                                          style: TextStyle(
-                                            color: textColor,
+                                rows: () {
+                                  final List<DataRow> listRows = List<DataRow>.generate(lastExpenses!.length, (index) {
+                                    final e = lastExpenses![index];
+                                    final date = e['date'] ?? '';
+                                    final siteId = e['siteId'] ?? '';
+                                    final stage = e['projectStage'] ?? '';
+                                    final amt = e['totalAmount'] ?? e['amount'] ?? 0;
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          Text(date.toString(), 
+                                            style: TextStyle(
+                                              color: textColor,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      DataCell(
-                                        Text(siteId.toString()),
-                                      ),
-                                      DataCell(
-                                        Text(stage.toString()),
-                                      ),
-                                      DataCell(
-                                        Text('₹$amt', 
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold, 
-                                            color: primaryColor,
-                                            fontSize: 14,
+                                        DataCell(
+                                          Text(siteId.toString()),
+                                        ),
+                                        DataCell(
+                                          Text(stage.toString()),
+                                        ),
+                                        DataCell(
+                                          Text('₹$amt', 
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold, 
+                                              color: primaryColor,
+                                              fontSize: 14,
+                                            ),
                                           ),
                                         ),
+                                      ],
+                                      onSelectChanged: (_) {
+                                        _showEntryDetails(e);
+                                      },
+                                    );
+                                  });
+
+                                  if (lastExpenses!.isNotEmpty) {
+                                    listRows.add(
+                                      DataRow(
+                                        color: WidgetStateProperty.all(primaryColor.withOpacity(0.12)),
+                                        cells: [
+                                          DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
+                                          DataCell(Text('${lastExpenses!.length} Entries', style: TextStyle(fontWeight: FontWeight.bold))),
+                                          const DataCell(Text('-')),
+                                          DataCell(
+                                            Text(
+                                              '₹${lastTotalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: successColor,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                    onSelectChanged: (_) {
-                                      _showEntryDetails(e);
-                                    },
-                                  );
-                                }),
+                                    );
+                                  }
+
+                                  return listRows;
+                                }(),
                               ),
                             ),
                           ),

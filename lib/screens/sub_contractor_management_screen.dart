@@ -305,6 +305,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _salaryRateController = TextEditingController();
+  final TextEditingController _overtimeRateController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   String? _selectedCategory;
   String _selectedSalaryType = 'Daily Wages';
@@ -328,6 +329,9 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
       _selectedSalaryType = c.salaryType;
       _selectedSiteIds = List.from(c.assignedSiteIds);
       _selectedDate = c.joiningDate;
+      _overtimeRateController.text = c.overtimeRate.toString();
+    } else {
+      _overtimeRateController.text = '0.0';
     }
   }
 
@@ -477,6 +481,24 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
                 ),
               ),
               const SizedBox(height: 12),
+              TextFormField(
+                controller: _overtimeRateController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Overtime Rate (per Hour) *',
+                  suffixText: '₹/hr',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter an overtime rate';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
               const Text('Assigned Sites'),
               const SizedBox(height: 8),
               Wrap(
@@ -568,6 +590,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
           : _addressController.text.trim(),
       salaryType: _selectedSalaryType,
       salaryRate: double.tryParse(_salaryRateController.text) ?? 0.0,
+      overtimeRate: double.tryParse(_overtimeRateController.text) ?? 0.0,
       assignedSiteIds: List.from(_selectedSiteIds),
       isActive: true,
       joiningDate: _selectedDate,
@@ -598,6 +621,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
     _mobileController.dispose();
     _addressController.dispose();
     _salaryRateController.dispose();
+    _overtimeRateController.dispose();
     _notesController.dispose();
     super.dispose();
   }
