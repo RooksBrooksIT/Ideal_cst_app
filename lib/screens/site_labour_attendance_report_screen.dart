@@ -222,7 +222,36 @@ class _SiteLabourAttendanceReportScreenState
         query = query.where('date', isLessThanOrEqualTo: endStr);
       }
 
-      final snap = await query.get();
+      final results = await Future.wait([
+        query.get(),
+        FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
+        FirebaseFirestore.instance.collection('supervisor').get(),
+      ]);
+      final snap = results[0];
+      final siteSupervisorMapSnap = results[1];
+      final supervisorCollectionSnap = results[2];
+
+      // Build siteId → supervisorName lookup from siteSupervisorMap
+      final siteIdToSupervisorName = <String, String>{};
+      for (final doc in siteSupervisorMapSnap.docs) {
+        final data = doc.data();
+        final sId = (data['siteId'] ?? doc.id)?.toString().trim();
+        final supName = data['supervisor']?.toString().trim();
+        if (sId != null && sId.isNotEmpty && supName != null && supName.isNotEmpty) {
+          siteIdToSupervisorName[sId] = supName;
+        }
+      }
+
+      // Build supervisorUserName → coordinatorName lookup from supervisor collection
+      final supervisorNameToCoordinator = <String, String>{};
+      for (final doc in supervisorCollectionSnap.docs) {
+        final data = doc.data();
+        final userName = data['UserName']?.toString().trim();
+        final coordName = data['CoordinatorName']?.toString().trim();
+        if (userName != null && userName.isNotEmpty && coordName != null && coordName.isNotEmpty) {
+          supervisorNameToCoordinator[userName.toLowerCase()] = coordName;
+        }
+      }
 
       List<Map<String, dynamic>> entries = snap.docs.map((d) {
         final data = Map<String, dynamic>.from(d.data());
@@ -275,7 +304,11 @@ class _SiteLabourAttendanceReportScreenState
             .toList();
       }
 
-      _buildGroupedReport(entries);
+      _buildGroupedReport(
+        entries,
+        siteIdToSupervisorName,
+        supervisorNameToCoordinator,
+      );
       setState(() => isLoading = false);
     } catch (e) {
       setState(() => isLoading = false);
@@ -290,7 +323,11 @@ class _SiteLabourAttendanceReportScreenState
     }
   }
 
-  void _buildGroupedReport(List<Map<String, dynamic>> entries) {
+  void _buildGroupedReport(
+    List<Map<String, dynamic>> entries,
+    Map<String, String> siteIdToSupervisorName,
+    Map<String, String> supervisorNameToCoordinator,
+  ) {
     // Group: site → supervisor → (category + labourType + contractor)
     final siteMap = <String, Map<String, dynamic>>{};
     final contractorMap = <String, int>{};
@@ -348,12 +385,18 @@ class _SiteLabourAttendanceReportScreenState
       final sup = supervisors[supervisor]!;
       sup['totalCount'] = (sup['totalCount'] as int) + 1;
 
+      // Resolve coordinator name
+      final supervisorUserName = siteIdToSupervisorName[siteId] ?? supervisor;
+      final coordinator =
+          supervisorNameToCoordinator[supervisorUserName.toLowerCase()] ?? '-';
+
       final rows = sup['rows'] as Map<String, Map<String, dynamic>>;
       if (!rows.containsKey(rowKey)) {
         rows[rowKey] = {
           'date': date,
           'siteCode': siteId,
           'siteName': siteName,
+          'coordinator': coordinator,
           'supervisor': supervisor,
           'categoryType': category,
           'labourType': lt,
@@ -372,6 +415,7 @@ class _SiteLabourAttendanceReportScreenState
       if (attendance == 'Night Shift') {
         row['stHours'] = (row['stHours'] as double) + hoursWorked;
       }
+
       final newOtDetail = _buildOtStDetails(e);
       if (newOtDetail != '-' && row['otDetails']?.toString() != newOtDetail) {
         final existing = row['otDetails']?.toString() ?? '';
@@ -1300,16 +1344,17 @@ class _SiteLabourAttendanceReportScreenState
                 primaryColor.withValues(alpha: 0.08),
               ),
               columns: [
+                _col('S.No'),
+                _col('Date'),
+                _col('Co-ordinator'),
                 _col('Site Code'),
                 _col('Supervisor'),
                 _col('CT'),
                 _col('LT'),
-                _col('Sub. Contractor'),
+                _col('Sub.Contractor'),
                 _col('Nos'),
                 _col('Total'),
                 _col('OT/ST Details'),
-                _col('Date'),
-                _col('Remarks'),
               ],
               rows: _buildRegisterRows(site),
             ),
@@ -1335,12 +1380,25 @@ class _SiteLabourAttendanceReportScreenState
   List<DataRow> _buildRegisterRows(_SiteGroup site) {
     final rows = <DataRow>[];
     bool firstSiteRow = true;
+    int sNoCounter = 1;
     for (final sup in site.supervisors) {
       for (int i = 0; i < sup.rows.length; i++) {
         final r = sup.rows[i];
         final showSupervisor = i == 0;
         rows.add(DataRow(
           cells: [
+            DataCell(Text(
+              '$sNoCounter',
+              style: const TextStyle(fontSize: 11),
+            )),
+            DataCell(Text(
+              _formatDate(r['date']?.toString()),
+              style: const TextStyle(fontSize: 11),
+            )),
+            DataCell(Text(
+              r['coordinator']?.toString() ?? '-',
+              style: const TextStyle(fontSize: 11),
+            )),
             DataCell(Text(
               firstSiteRow ? site.siteCode : '',
               style: TextStyle(
@@ -1386,17 +1444,10 @@ class _SiteLabourAttendanceReportScreenState
               r['otDetails']?.toString() ?? '-',
               style: const TextStyle(fontSize: 10),
             )),
-            DataCell(Text(
-              _formatDate(r['date']?.toString()),
-              style: const TextStyle(fontSize: 11),
-            )),
-            DataCell(Text(
-              r['remarks']?.toString() ?? '',
-              style: const TextStyle(fontSize: 10),
-            )),
           ],
         ));
         firstSiteRow = false;
+        sNoCounter++;
       }
     }
     return rows;
@@ -1444,102 +1495,34 @@ class _SiteLabourAttendanceReportScreenState
               dataRowHeight: 48,
               headingRowColor: WidgetStateProperty.all(primaryColor),
               columns: const [
-                DataColumn(
-                  label: Text('Date',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                DataColumn(
-                  label: Text('Site Code',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                DataColumn(
-                  label: Text('Supervisor',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                DataColumn(
-                  label: Text('CT',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                DataColumn(
-                  label: Text('LT',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                DataColumn(
-                  label: Text('Sub Contractor',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                DataColumn(
-                  label: Text('Workers',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text('Total',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                  numeric: true,
-                ),
-                DataColumn(
-                  label: Text('OT/ST Details',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                DataColumn(
-                  label: Text('Remarks',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
+                DataColumn(label: Text('S.No', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Date', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Co-ordinator', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Site Code', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Supervisor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('CT', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('LT', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Sub.Contractor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
+                DataColumn(label: Text('Nos', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)), numeric: true),
+                DataColumn(label: Text('Total', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)), numeric: true),
+                DataColumn(label: Text('OT/ST Details', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
               ],
               rows: pageRows.asMap().entries.map((entry) {
+                final idx = entry.key;
                 final r = entry.value;
+                final globalIdx = currentPage * rowsPerPage + idx + 1;
                 return DataRow(cells: [
-                  DataCell(Text(_formatDate(r['date']?.toString()),
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['siteCode']?.toString() ?? '-',
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['supervisor']?.toString() ?? '-',
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['categoryType']?.toString() ?? '-',
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['labourType']?.toString() ?? '-',
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['subContractor']?.toString() ?? '-',
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text('${r['workerCount'] ?? 0}',
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text('${r['totalCount'] ?? '-'}',
-                      style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['otDetails']?.toString() ?? '-',
-                      style: const TextStyle(fontSize: 10))),
-                  DataCell(Text(r['remarks']?.toString() ?? '',
-                      style: const TextStyle(fontSize: 10))),
+                  DataCell(Text('$globalIdx', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(_formatDate(r['date']?.toString()), style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(r['coordinator']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(r['siteCode']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(r['supervisor']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(r['categoryType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(r['labourType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(r['subContractor']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text('${r['workerCount'] ?? 0}', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text('${r['totalCount'] ?? '-'}', style: const TextStyle(fontSize: 11))),
+                  DataCell(Text(r['otDetails']?.toString() ?? '-', style: const TextStyle(fontSize: 10))),
                 ]);
               }).toList(),
             ),
@@ -1577,16 +1560,17 @@ class _SiteLabourAttendanceReportScreenState
 
   // ── Export helpers (register layout) ───────────────────────────────────────
   static const List<String> _registerHeaders = [
+    'S.No',
+    'Date',
+    'Co-ordinator',
     'Site Code',
     'Supervisor',
     'CT',
     'LT',
-    'Sub. Contractor',
+    'Sub.Contractor',
     'Nos',
     'Total',
     'OT/ST Details',
-    'Date',
-    'Remarks',
   ];
 
   String _reportTitle() {
@@ -1638,6 +1622,8 @@ class _SiteLabourAttendanceReportScreenState
           final r = sup.rows[i];
           final isLastInSupervisor = i == sup.rows.length - 1;
           rows.add(_RegisterExportRow(
+            date: _formatDate(r['date']?.toString()),
+            coordinator: r['coordinator']?.toString() ?? '-',
             siteCode: firstSiteRow ? site.siteCode : '',
             supervisor: i == 0 ? sup.supervisor : '',
             categoryType: r['categoryType']?.toString() ?? '-',
@@ -1646,7 +1632,6 @@ class _SiteLabourAttendanceReportScreenState
             workerCount: (r['workerCount'] as int?) ?? 0,
             totalCount: isLastInSupervisor ? sup.totalCount : null,
             otStDetails: r['otDetails']?.toString() ?? '-',
-            date: _formatDate(r['date']?.toString()),
             remarks: r['remarks']?.toString() ?? '',
             isSiteTotalRow: false,
             siteTotalLabel: '',
@@ -1657,6 +1642,8 @@ class _SiteLabourAttendanceReportScreenState
       }
       // Site subtotal row
       rows.add(_RegisterExportRow(
+        date: '',
+        coordinator: '',
         siteCode: '',
         supervisor: '',
         categoryType: '',
@@ -1665,7 +1652,6 @@ class _SiteLabourAttendanceReportScreenState
         workerCount: site.totalCount,
         totalCount: site.totalCount,
         otStDetails: '',
-        date: '',
         remarks: '',
         isSiteTotalRow: true,
         siteTotalLabel: site.siteCode,
@@ -1675,18 +1661,19 @@ class _SiteLabourAttendanceReportScreenState
     return rows;
   }
 
-  List<String> _registerRowToStrings(_RegisterExportRow row) {
+  List<String> _registerRowToStrings(_RegisterExportRow row, String sNo) {
     return [
+      sNo,
+      row.date,
+      row.coordinator,
       row.siteCode,
       row.supervisor,
       row.categoryType,
       row.labourType,
       row.subContractor,
-      row.isSiteTotalRow ? '${row.workerCount}' : '${row.workerCount}',
+      '${row.workerCount}',
       row.totalCount != null ? '${row.totalCount}' : '',
       row.otStDetails,
-      row.date,
-      row.remarks,
     ];
   }
 
@@ -1751,8 +1738,11 @@ class _SiteLabourAttendanceReportScreenState
         decoration: pw.BoxDecoration(color: _pdfNavy),
         children: _registerHeaders.map(_pdfHeaderCell).toList(),
       ),
-      ...exportRows.map((row) {
-        final cells = _registerRowToStrings(row);
+      ...exportRows.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final row = entry.value;
+        final sNo = row.isSiteTotalRow ? '' : '${idx + 1}';
+        final cells = _registerRowToStrings(row, sNo);
         return pw.TableRow(
           decoration: row.isSiteTotalRow
               ? const pw.BoxDecoration(color: PdfColors.blue100)
@@ -1760,7 +1750,7 @@ class _SiteLabourAttendanceReportScreenState
           children: List.generate(cells.length, (i) {
             return _pdfDataCell(
               cells[i],
-              bold: row.isSiteTotalRow || i == 5 || i == 6,
+              bold: row.isSiteTotalRow || i == 8 || i == 9,
               highlight: row.isSiteTotalRow,
             );
           }),
@@ -1775,14 +1765,15 @@ class _SiteLabourAttendanceReportScreenState
           _pdfDataCell('', bold: true),
           _pdfDataCell('', bold: true),
           _pdfDataCell('', bold: true),
+          _pdfDataCell('', bold: true),
+          _pdfDataCell('', bold: true),
+          _pdfDataCell('', bold: true),
           _pdfDataCell('$totalLabourCount', bold: true),
           _pdfDataCell('$totalLabourCount', bold: true),
           _pdfDataCell(
             'OT: ${totalOtHours.toStringAsFixed(1)}h | ST: ${totalStHours.toStringAsFixed(1)}h',
             bold: true,
           ),
-          _pdfDataCell('', bold: true),
-          _pdfDataCell('', bold: true),
         ],
       ),
     ];
@@ -1790,16 +1781,17 @@ class _SiteLabourAttendanceReportScreenState
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.5),
       columnWidths: {
-        0: const pw.FlexColumnWidth(1.1),
-        1: const pw.FlexColumnWidth(1.4),
-        2: const pw.FlexColumnWidth(0.7),
-        3: const pw.FlexColumnWidth(0.6),
-        4: const pw.FlexColumnWidth(1.5),
-        5: const pw.FlexColumnWidth(0.5),
-        6: const pw.FlexColumnWidth(0.5),
-        7: const pw.FlexColumnWidth(1.6),
-        8: const pw.FlexColumnWidth(0.8),
-        9: const pw.FlexColumnWidth(1.2),
+        0: const pw.FlexColumnWidth(0.5), // S.No
+        1: const pw.FlexColumnWidth(1.0), // Date
+        2: const pw.FlexColumnWidth(1.4), // Co-ordinator
+        3: const pw.FlexColumnWidth(1.1), // Site Code
+        4: const pw.FlexColumnWidth(1.4), // Supervisor
+        5: const pw.FlexColumnWidth(0.7), // CT
+        6: const pw.FlexColumnWidth(0.6), // LT
+        7: const pw.FlexColumnWidth(1.5), // Sub.Contractor
+        8: const pw.FlexColumnWidth(0.5), // Nos
+        9: const pw.FlexColumnWidth(0.5), // Total
+        10: const pw.FlexColumnWidth(1.6), // OT/ST Details
       },
       children: tableRows,
     );
@@ -1909,8 +1901,10 @@ class _SiteLabourAttendanceReportScreenState
     );
 
     // Data rows (register layout)
-    for (final row in exportRows) {
-      final cells = _registerRowToStrings(row);
+    for (int i = 0; i < exportRows.length; i++) {
+      final row = exportRows[i];
+      final sNo = row.isSiteTotalRow ? '' : '${i + 1}';
+      final cells = _registerRowToStrings(row, sNo);
       sheet.appendRow(
         cells.map((c) => excel.TextCellValue(c)).toList(),
       );
@@ -1923,13 +1917,14 @@ class _SiteLabourAttendanceReportScreenState
       excel.TextCellValue(''),
       excel.TextCellValue(''),
       excel.TextCellValue(''),
+      excel.TextCellValue(''),
+      excel.TextCellValue(''),
+      excel.TextCellValue(''),
       excel.TextCellValue('$totalLabourCount'),
       excel.TextCellValue('$totalLabourCount'),
       excel.TextCellValue(
         'OT: ${totalOtHours.toStringAsFixed(1)}h | ST: ${totalStHours.toStringAsFixed(1)}h',
       ),
-      excel.TextCellValue(''),
-      excel.TextCellValue(''),
     ]);
 
     // Contractor-wise totals section
@@ -2232,6 +2227,8 @@ class _DropdownOption {
 }
 
 class _RegisterExportRow {
+  final String date;
+  final String coordinator;
   final String siteCode;
   final String supervisor;
   final String categoryType;
@@ -2240,13 +2237,14 @@ class _RegisterExportRow {
   final int workerCount;
   final int? totalCount;
   final String otStDetails;
-  final String date;
   final String remarks;
   final bool isSiteTotalRow;
   final String siteTotalLabel;
   final int siteTotalValue;
 
   _RegisterExportRow({
+    required this.date,
+    required this.coordinator,
     required this.siteCode,
     required this.supervisor,
     required this.categoryType,
@@ -2255,7 +2253,6 @@ class _RegisterExportRow {
     required this.workerCount,
     this.totalCount,
     required this.otStDetails,
-    required this.date,
     required this.remarks,
     required this.isSiteTotalRow,
     required this.siteTotalLabel,
