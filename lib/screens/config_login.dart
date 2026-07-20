@@ -83,6 +83,7 @@ class _ConfigLoginPageState extends State<ConfigLoginPage>
     await prefs.setBool(_isLoggedInKey, true);
     await prefs.setString(_usernameKey, username);
     await prefs.setString(_passwordKey, password);
+    await prefs.setString('persistent_role', 'Manager');
   }
 
   // Clear login credentials (for logout)
@@ -198,7 +199,7 @@ class _ConfigLoginPageState extends State<ConfigLoginPage>
         elevation: 0,
         backgroundColor: AppColors.primaryColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),

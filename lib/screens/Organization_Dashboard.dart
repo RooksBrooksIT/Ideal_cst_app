@@ -51,10 +51,7 @@ class OrganizationDashboard extends StatelessWidget {
       centerTitle: true,
       elevation: 0,
       backgroundColor: const Color(0xFF003768),
-      leading: GestureDetector(
-        onTap: () => _showLogoutConfirmation(context),
-        child: const Icon(Icons.arrow_back, color: Colors.white),
-      ),
+      automaticallyImplyLeading: false,
       actions: [
         GestureDetector(
           onTap: () => _showLogoutConfirmation(context),
@@ -106,9 +103,9 @@ class OrganizationDashboard extends StatelessWidget {
       await prefs.clear();
 
       // Navigate to login and clear all routes
-      Navigator.pushAndRemoveUntil(
+      Navigator.pushNamedAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const Organisation_LoginPage()),
+        '/dashboard',
         (route) => false,
       );
     }

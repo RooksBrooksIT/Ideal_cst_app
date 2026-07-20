@@ -111,11 +111,9 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              Navigator.pushAndRemoveUntil(
+              Navigator.pushNamedAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const ContractorLoginPage(),
-                ),
+                '/dashboard',
                 (route) => false,
               );
             },
@@ -139,10 +137,7 @@ class _ContractorDashboardState extends State<ContractorDashboard> {
           title: const Text('Sub-Contractor Dashboard'),
           backgroundColor: AppColors.primaryColor,
           foregroundColor: Colors.white,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => _showLogoutDialog(context),
-          ),
+          automaticallyImplyLeading: false,
           actions: [
             IconButton(
               icon: const Icon(Icons.logout),

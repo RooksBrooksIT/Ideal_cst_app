@@ -156,7 +156,7 @@ class _Organisation_LoginPageState extends State<Organisation_LoginPage>
         elevation: 0,
         backgroundColor: AppColors.primaryColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pushReplacement(
               context,
@@ -221,6 +221,7 @@ class _Organisation_LoginPageState extends State<Organisation_LoginPage>
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setBool(_isLoggedInKey, true);
           await prefs.setString(_usernameKey, _usernameController.text.trim());
+          await prefs.setString('persistent_role', 'Organization');
 
           Navigator.pushReplacement(
             context,

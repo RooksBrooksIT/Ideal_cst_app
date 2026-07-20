@@ -1200,145 +1200,210 @@ class _SiteLabourDetailsReportScreenState
                   numeric: true,
                 ),
               ],
-              rows: List.generate(filteredReportData.length, (index) {
-                final entry = filteredReportData[index];
-                return DataRow(
-                  cells: [
-                    DataCell(
-                      Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+              rows: () {
+                final List<DataRow> rowsList = List.generate(filteredReportData.length, (index) {
+                  final entry = filteredReportData[index];
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        entry['siteId']?.toString() ?? '-',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        entry['siteName']?.toString() ?? '-',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        entry['subContractor']?.toString() ?? '-',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        entry['workerName']?.toString() ?? '-',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        entry['group']?.toString() ?? '-',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        entry['category']?.toString() ?? '-',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        entry['labourCount']?.toString() ?? '0',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                      DataCell(
+                        Text(
+                          entry['siteId']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 11),
                         ),
-                        textAlign: TextAlign.right,
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['salaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          entry['siteName']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['totalSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          entry['subContractor']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '${(entry['hours'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          entry['workerName']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['otSalaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          entry['group']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['otTotalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          entry['category']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['mealsExpense'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          entry['labourCount']?.toString() ?? '0',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        (entry['mealsCount'] as int?)?.toString() ?? '0',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          '₹${(entry['salaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['totalMealsAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          '₹${(entry['totalSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['busFare'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          '${(entry['hours'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        (entry['busCount'] as int?)?.toString() ?? '0',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          '₹${(entry['otSalaryBasic'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
-                    ),
-                    DataCell(
-                      Text(
-                        '₹${(entry['totalBusAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-                        style: const TextStyle(fontSize: 11),
-                        textAlign: TextAlign.right,
+                      DataCell(
+                        Text(
+                          '₹${(entry['otTotalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
+                      DataCell(
+                        Text(
+                          '₹${(entry['mealsExpense'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          (entry['mealsCount'] as int?)?.toString() ?? '0',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          '₹${(entry['totalMealsAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          '₹${(entry['busFare'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          (entry['busCount'] as int?)?.toString() ?? '0',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          '₹${(entry['totalBusAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(fontSize: 11),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  );
+                });
+
+                if (filteredReportData.isNotEmpty) {
+                  int totWorkers = 0;
+                  double totBasic = 0;
+                  double totSalary = 0;
+                  double totHrs = 0;
+                  double totOtBasic = 0;
+                  double totOtAmt = 0;
+                  double totMealsExp = 0;
+                  int totMealsCnt = 0;
+                  double totMealsAmt = 0;
+                  double totBusFare = 0;
+                  int totBusCnt = 0;
+                  double totBusAmt = 0;
+
+                  for (final r in filteredReportData) {
+                    final wc = r['labourCount'];
+                    if (wc is int) totWorkers += wc;
+                    else if (wc != null) totWorkers += int.tryParse(wc.toString()) ?? 1;
+                    else totWorkers += 1;
+
+                    totBasic += (r['salaryBasic'] as num? ?? 0).toDouble();
+                    totSalary += (r['totalSalary'] as num? ?? 0).toDouble();
+                    totHrs += (r['hours'] as num? ?? 0).toDouble();
+                    totOtBasic += (r['otSalaryBasic'] as num? ?? 0).toDouble();
+                    totOtAmt += (r['otTotalAmount'] as num? ?? 0).toDouble();
+                    totMealsExp += (r['mealsExpense'] as num? ?? 0).toDouble();
+                    totMealsCnt += (r['mealsCount'] as int? ?? 0);
+                    totMealsAmt += (r['totalMealsAmount'] as num? ?? 0).toDouble();
+                    totBusFare += (r['busFare'] as num? ?? 0).toDouble();
+                    totBusCnt += (r['busCount'] as int? ?? 0);
+                    totBusAmt += (r['totalBusAmount'] as num? ?? 0).toDouble();
+                  }
+
+                  rowsList.add(
+                    DataRow(
+                      color: WidgetStateProperty.all(const Color(0xFF0b3470).withValues(alpha: 0.12)),
+                      cells: [
+                        const DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0b3470)))),
+                        DataCell(Text('${filteredReportData.length} Recs', style: const TextStyle(fontWeight: FontWeight.bold))),
+                        const DataCell(Text('-')),
+                        const DataCell(Text('-')),
+                        const DataCell(Text('-')),
+                        const DataCell(Text('-')),
+                        const DataCell(Text('-')),
+                        DataCell(Text('$totWorkers', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green), textAlign: TextAlign.right)),
+                        DataCell(Text(totHrs.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totOtBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totOtAmt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totMealsExp.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('$totMealsCnt', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totMealsAmt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('$totBusCnt', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                        DataCell(Text('₹${totBusAmt.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                      ],
                     ),
-                  ],
-                );
-              }),
+                  );
+                }
+
+                return rowsList;
+              }(),
             ),
           ),
         ),

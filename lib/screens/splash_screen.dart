@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ideal_cst/screens/Organization_Dashboard.dart';
+import 'package:ideal_cst/screens/config_account_dashboard.dart';
+import 'package:ideal_cst/screens/supervisor_dashboard.dart';
+import 'package:ideal_cst/screens/contractor_dashboard.dart';
+import 'package:ideal_cst/screens/contractor_entry_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,8 +18,69 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 5), () {
-        Navigator.pushReplacementNamed(context, '/letsStart');
+      Future.delayed(const Duration(seconds: 5), () async {
+        final prefs = await SharedPreferences.getInstance();
+        final String? role = prefs.getString('persistent_role');
+
+        if (!mounted) return;
+
+        if (role == 'Organization') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const OrganizationDashboard()),
+          );
+        } else if (role == 'Manager') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ConfigAccountDashboard()),
+          );
+        } else if (role == 'Supervisor') {
+          final supervisorId = prefs.getString('sup_supervisorId') ?? '';
+          final supervisorName = prefs.getString('sup_supervisorName') ?? '';
+          final username = prefs.getString('sup_username') ?? '';
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SupervisorDashboard(
+                supervisorId: supervisorId,
+                supervisorName: supervisorName,
+                username: username,
+              ),
+            ),
+          );
+        } else if (role == 'Contractor') {
+          final contractorId = prefs.getString('contractorId') ?? '';
+          final contractorName = prefs.getString('contractorName') ?? '';
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ContractorDashboard(
+                contractorId: contractorId,
+                contractorName: contractorName,
+              ),
+            ),
+          );
+        } else if (role == 'ContractorEntry') {
+          final supervisorId = prefs.getString('sup_supervisorId') ?? '';
+          final contractorName = prefs.getString('sup_contractorName') ?? '';
+          final contractorField = prefs.getString('sup_contractorField') ?? '';
+          final username = prefs.getString('sup_username') ?? '';
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ContractorEntryPage(
+                userName: username,
+                userDetails: {
+                  'supervisorId': supervisorId,
+                  'contractorName': contractorName,
+                  'contractorField': contractorField,
+                },
+              ),
+            ),
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, '/letsStart');
+        }
       });
     });
   }

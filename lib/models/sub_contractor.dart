@@ -9,6 +9,7 @@ class SubContractor {
   final String? address;
   final String salaryType;
   final double salaryRate;
+  final double overtimeRate;
   final List<String> assignedSiteIds;
   final bool isActive;
   final DateTime joiningDate;
@@ -27,6 +28,7 @@ class SubContractor {
     this.address,
     required this.salaryType,
     required this.salaryRate,
+    this.overtimeRate = 0.0,
     required this.assignedSiteIds,
     this.isActive = true,
     required this.joiningDate,
@@ -46,6 +48,7 @@ class SubContractor {
       'address': address,
       'salaryType': salaryType,
       'salaryRate': salaryRate,
+      'overtimeRate': overtimeRate,
       'assignedSiteIds': assignedSiteIds,
       'isActive': isActive,
       'joiningDate': joiningDate.toIso8601String(),
@@ -67,6 +70,7 @@ class SubContractor {
       address: json['address'],
       salaryType: json['salaryType'] ?? 'Daily Wage',
       salaryRate: (json['salaryRate'] as num?)?.toDouble() ?? 0.0,
+      overtimeRate: (json['overtimeRate'] as num?)?.toDouble() ?? 0.0,
       assignedSiteIds: List<String>.from(json['assignedSiteIds'] ?? []),
       isActive: json['isActive'] ?? true,
       joiningDate: json['joiningDate'] != null

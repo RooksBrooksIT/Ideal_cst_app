@@ -150,6 +150,9 @@ class _Supervisor_LoginPageState extends State<Supervisor_LoginPage>
       if (isContractor && contractorName != null) {
         await prefs.setString(_contractorNameKey, contractorName);
         await prefs.setString(_contractorFieldKey, contractorField ?? '');
+        await prefs.setString('persistent_role', 'ContractorEntry');
+      } else {
+        await prefs.setString('persistent_role', 'Supervisor');
       }
     } catch (e) {
       debugPrint('Error saving login data: $e');

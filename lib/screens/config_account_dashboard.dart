@@ -197,10 +197,8 @@ class _ConfigAccountDashboardState extends State<ConfigAccountDashboard> {
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
       ),
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-        onPressed: () {
-          Navigator.pop(context);
-        },
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
       actions: [
         IconButton(
@@ -271,12 +269,11 @@ class _ConfigAccountDashboardState extends State<ConfigAccountDashboard> {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.clear(); // Clear all stored preferences for logout
 
-                // Navigate to ConfigLoginPage, replacing current routes
-                Navigator.pushReplacement(
+                // Navigate to CST Dashboard, clearing all routes
+                Navigator.pushNamedAndRemoveUntil(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const ConfigLoginPage(),
-                  ),
+                  '/dashboard',
+                  (route) => false,
                 );
               },
               style: ElevatedButton.styleFrom(

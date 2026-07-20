@@ -206,16 +206,7 @@ class _MainDashboardState extends State<MainDashboard>
       centerTitle: true,
       elevation: 0,
       backgroundColor: Colors.transparent,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_rounded,
-          size: 24,
-          color: Colors.white,
-        ),
-        onPressed: () {
-          Navigator.pushReplacementNamed(context, '/letsStart');
-        },
-      ),
+      automaticallyImplyLeading: false,
     );
   }
 

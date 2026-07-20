@@ -46,16 +46,16 @@ dependencies:
   geocoding: ^4.0.0
   image_picker: ^1.1.2
   firebase_storage: ^13.0.4
-  file_picker: ^10.2.1
+  file_picker: ^10.3.10
   webview_flutter: ^4.13.0
   webview_flutter_android: ^4.3.0  # Updated version
   webview_flutter_wkwebview: ^3.0.0
   table_calendar: ^3.0.9
   shared_preferences: ^2.5.3
   path_provider: ^2.1.1
-  open_file: ^3.3.3
+  open_file: ^4.0.0
   share_plus: ^10.1.4
-  excel_community: ^1.0.7
+  excel_community: ^2.1.9
   
  
 dev_dependencies:

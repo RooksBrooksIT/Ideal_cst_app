@@ -195,9 +195,9 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              Navigator.pushAndRemoveUntil(
+              Navigator.pushNamedAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => Supervisor_LoginPage()),
+                '/dashboard',
                 (route) => false,
               );
             },
@@ -247,14 +247,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                   bottom: Radius.circular(20),
                 ),
               ),
-              leading: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white,
-                ),
-                onPressed: () => _showLogoutDialog(context),
-                tooltip: "Back / Logout",
-              ),
+              automaticallyImplyLeading: false,
               actions: [
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.white),

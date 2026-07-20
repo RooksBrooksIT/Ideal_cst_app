@@ -62,6 +62,7 @@ class _ContractorLoginPageState extends State<ContractorLoginPage> {
       await prefs.setString('contractorId', contractorSnapshot.id);
       await prefs.setString('contractorName', data['contractorName']);
       await prefs.setString('contractorField', data['contractorField'] ?? '');
+      await prefs.setString('persistent_role', 'Contractor');
 
       if (!mounted) return;
       Navigator.pushReplacement(

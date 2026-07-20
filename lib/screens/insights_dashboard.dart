@@ -6,6 +6,7 @@ import 'package:ideal_cst/screens/project_financial_status_report_page.dart';
 import 'package:ideal_cst/screens/site_status_report.dart';
 import 'package:ideal_cst/screens/site_labour_details_report_screen.dart';
 import 'package:ideal_cst/screens/site_labour_attendance_report_screen.dart';
+import 'package:ideal_cst/screens/site_labour_reports_screen.dart';
 
 class InsightsDashboard extends StatelessWidget {
   const InsightsDashboard({super.key});
@@ -128,6 +129,22 @@ class InsightsDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ContractorReportPage(),
+                  ),
+                );
+              },
+            ),
+             const SizedBox(height: 16),
+            _buildSectionCard(
+              context,
+              icon: Icons.analytics_rounded,
+              title: 'Centralized Site Labour Reports',
+              description:
+                  'Access all labour-related reports, daily wage reports, sub contractor details, worker presence, and billing in one centralized place with unified filters.',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SiteLabourReportsScreen(),
                   ),
                 );
               },

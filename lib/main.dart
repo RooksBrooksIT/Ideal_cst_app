@@ -28,6 +28,11 @@ class MyApp extends StatelessWidget {
           seedColor: const Color.fromARGB(255, 2, 32, 116),
           brightness: Brightness.light,
         ),
+        appBarTheme: const AppBarTheme(
+          iconTheme: IconThemeData(color: Colors.white),
+          actionsIconTheme: IconThemeData(color: Colors.white),
+          foregroundColor: Colors.white,
+        ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       // Define initial route
