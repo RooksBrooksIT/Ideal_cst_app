@@ -16,7 +16,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _contactNoController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _coordinatorNameController = TextEditingController();
   List<String> _designationList = [];
   bool _isLoadingDesignations = true;
   bool _isPasswordVisible = false;
@@ -343,7 +342,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
         'Designation': _selectedDesignation,
         'ContactNo': _contactNoController.text.trim(),
         'Email': _emailController.text.trim(),
-        'CoordinatorName': _coordinatorNameController.text.trim(),
         'Photo': 'Photo URL or Placeholder',
         'CreatedAt': FieldValue.serverTimestamp(),
       };
@@ -448,7 +446,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
     _passwordController.clear();
     _contactNoController.clear();
     _emailController.clear();
-    _coordinatorNameController.clear();
     setState(() {
       _selectedDesignation = null;
     });
@@ -461,7 +458,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
     _passwordController.dispose();
     _contactNoController.dispose();
     _emailController.dispose();
-    _coordinatorNameController.dispose();
     super.dispose();
   }
 
@@ -595,11 +591,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
             ),
             const SizedBox(height: 16),
             _buildDesignationDropdown(),
-            const SizedBox(height: 16),
-            _buildTextField(
-              'Co-ordinator Name',
-              _coordinatorNameController,
-            ),
             const SizedBox(height: 16),
             _buildTextField(
               'Contact No',
@@ -1180,7 +1171,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
                           final supervisorId = data['SupervisorId'] ?? '';
                           final password = data['Password'] ?? '';
                           final designation = data['Designation'] ?? '';
-                          final coordinatorName = data['CoordinatorName'] ?? '';
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8),
                             padding: const EdgeInsets.symmetric(
@@ -1282,17 +1272,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                      if (coordinatorName.toString().isNotEmpty)
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 2),
-                                          child: Text(
-                                            'Co-ordinator: $coordinatorName',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ),
                                     ],
                                   ),
                                 ),
