@@ -157,6 +157,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   String? selectedSiteId;
   String? selectedSiteName;
   String? selectedSupervisorName;
+  String? selectedCoordinatorName;
   String? selectedSubContractorName;
   String? selectedLabourType = 'All';
 
@@ -168,6 +169,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // Dropdown list data
   List<_DropdownOption> siteOptions = [];
   List<_DropdownOption> supervisorOptions = [];
+  List<_DropdownOption> coordinatorOptions = [];
   List<_DropdownOption> contractorOptions = [];
 
   bool isLoadingFilters = true;
@@ -189,7 +191,6 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   double totalBusAmount = 0.0;
   int totalBusCount = 0;
 
-  @override
   @override
   void initState() {
     super.initState();
@@ -216,12 +217,14 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final results = await Future.wait([
         _fetchSites(),
         _fetchSupervisors(),
+        _fetchCoordinators(),
         _fetchContractors(),
       ]);
       setState(() {
         siteOptions = results[0];
         supervisorOptions = results[1];
-        contractorOptions = results[2];
+        coordinatorOptions = results[2];
+        contractorOptions = results[3];
         isLoadingFilters = false;
       });
     } catch (_) {
@@ -256,6 +259,34 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return sorted.map((n) => _DropdownOption(id: n, label: n)).toList();
   }
 
+  Future<List<_DropdownOption>> _fetchCoordinators() async {
+    final names = <String>{};
+    try {
+      final snap1 = await FirebaseFirestore.instance.collection('Site_Co-ordinator').get();
+      for (final doc in snap1.docs) {
+        final name = doc.data()['coordinatorName']?.toString();
+        if (name != null && name.trim().isNotEmpty) names.add(name.trim());
+      }
+    } catch (_) {}
+    try {
+      final snap2 = await FirebaseFirestore.instance.collection('supervisor').get();
+      for (final doc in snap2.docs) {
+        final name = doc.data()['CoordinatorName']?.toString();
+        if (name != null && name.trim().isNotEmpty) names.add(name.trim());
+      }
+    } catch (_) {}
+    try {
+      final snap3 = await FirebaseFirestore.instance.collection('daily_labour_entries').limit(200).get();
+      for (final doc in snap3.docs) {
+        final data = doc.data();
+        final name = data['coordinatorName']?.toString() ?? data['coordinator']?.toString();
+        if (name != null && name.trim().isNotEmpty) names.add(name.trim());
+      }
+    } catch (_) {}
+    final sorted = names.toList()..sort();
+    return sorted.map((n) => _DropdownOption(id: n, label: n)).toList();
+  }
+
   Future<List<_DropdownOption>> _fetchContractors() async {
     final results = await Future.wait([
       FirebaseFirestore.instance.collection('contractors').get(),
@@ -281,6 +312,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       selectedSiteId = null;
       selectedSiteName = null;
       selectedSupervisorName = null;
+      selectedCoordinatorName = null;
       selectedSubContractorName = null;
       selectedLabourType = 'All';
       searchQuery = '';
@@ -288,7 +320,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     _generateReport();
   }
 
-  // Unified Query logic
+  // Unified Query logic — new structure: workers subcollection
   Future<void> _generateReport() async {
     setState(() {
       isLoading = true;
@@ -299,7 +331,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final startStr = startDate != null ? DateFormat('yyyy-MM-dd').format(startDate!) : null;
       final endStr = endDate != null ? DateFormat('yyyy-MM-dd').format(endDate!) : null;
 
-      Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('daily_labour_entries');
+      // ── Step 1: Query parent daily_labour_entries documents ──────────────
+      Query<Map<String, dynamic>> query =
+          FirebaseFirestore.instance.collection('daily_labour_entries');
 
       if (selectedSiteId != null) {
         query = query.where('siteId', isEqualTo: selectedSiteId);
@@ -311,45 +345,145 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         query = query.where('date', isLessThanOrEqualTo: endStr);
       }
 
-      final snap = await query.get();
-      List<Map<String, dynamic>> entries = snap.docs.map((d) {
-        final data = Map<String, dynamic>.from(d.data());
-        data['_docId'] = d.id;
-        return data;
-      }).toList();
+      final results = await Future.wait([
+        query.get(),
+        FirebaseFirestore.instance.collection('Site_Co-ordinator').get(),
+        FirebaseFirestore.instance.collection('supervisor').get(),
+        FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
+      ]);
+      final parentSnap = results[0];
+      final siteCoordinatorSnap = results[1];
+      final supervisorSnap = results[2];
+      final siteSupervisorMapSnap = results[3];
 
-      // Merge site_labour_reports if attendance report is active
-      if (selectedReportType == 'Site Labour Attendance Report') {
-        try {
-          Query<Map<String, dynamic>> altQuery = FirebaseFirestore.instance.collection('site_labour_reports');
-          if (startStr != null) {
-            altQuery = altQuery.where('date', isGreaterThanOrEqualTo: startStr);
+      // Build fallback lookup maps
+      final siteToCoordinator = <String, String>{};
+      final supervisorToCoordinator = <String, String>{};
+
+      for (final doc in siteCoordinatorSnap.docs) {
+        final data = doc.data();
+        final sName = data['siteName']?.toString().trim();
+        final supName = data['supervisorName']?.toString().trim();
+        final cName = data['coordinatorName']?.toString().trim();
+        if (cName != null && cName.isNotEmpty) {
+          if (sName != null && sName.isNotEmpty) {
+            siteToCoordinator[sName.toLowerCase()] = cName;
           }
-          if (endStr != null) {
-            altQuery = altQuery.where('date', isLessThanOrEqualTo: endStr);
+          if (supName != null && supName.isNotEmpty) {
+            supervisorToCoordinator[supName.toLowerCase()] = cName;
           }
-          final altSnap = await altQuery.get();
-          for (final d in altSnap.docs) {
-            final data = Map<String, dynamic>.from(d.data());
-            data['_docId'] = d.id;
-            data['siteId'] = data['siteCode'] ?? data['siteId'];
-            data['supervisorName'] = data['supervisor'] ?? data['supervisorName'];
-            data['category'] = data['categoryType'] ?? data['category'];
-            data['labourType'] = data['labourType'];
-            data['contractorName'] = data['subContractor'] ?? data['contractorName'];
-            entries.add(data);
-          }
-        } catch (_) {}
+        }
       }
 
-      // Fetch subcontractors salary mappings
-      final subContractorsSnap = await FirebaseFirestore.instance.collection('sub_contractors').get();
+      for (final doc in supervisorSnap.docs) {
+        final data = doc.data();
+        final userName = (data['UserName'] ?? data['supervisorName'] ?? data['name'])?.toString().trim();
+        final cName = data['CoordinatorName']?.toString().trim();
+        if (cName != null && cName.isNotEmpty && userName != null && userName.isNotEmpty) {
+          supervisorToCoordinator[userName.toLowerCase()] = cName;
+        }
+      }
+
+      for (final doc in siteSupervisorMapSnap.docs) {
+        final data = doc.data();
+        final siteId = (data['siteId'] ?? doc.id)?.toString().trim();
+        final supName = data['supervisor']?.toString().trim();
+        if (siteId != null && supName != null && supervisorToCoordinator.containsKey(supName.toLowerCase())) {
+          siteToCoordinator[siteId.toLowerCase()] = supervisorToCoordinator[supName.toLowerCase()]!;
+        }
+      }
+
+      // ── Step 2: For each parent doc fetch the workers subcollection ───────
+      // Fetch all workers subcollections in parallel.
+      final List<Map<String, dynamic>> flatWorkerEntries = [];
+
+      await Future.wait(parentSnap.docs.map((parentDoc) async {
+        final parentData = Map<String, dynamic>.from(parentDoc.data());
+        final parentDocId = parentDoc.id;
+
+        // Shared metadata from the parent document
+        final parentSiteId   = parentData['siteId']?.toString() ?? '-';
+        final parentSiteName = parentData['siteName']?.toString() ?? '-';
+        final parentDate     = parentData['date']?.toString() ?? '-';
+        final parentSupervisor =
+            parentData['supervisorName']?.toString() ?? parentData['supervisor']?.toString() ?? '-';
+
+        final docCoord = parentData['coordinatorName']?.toString() ??
+            parentData['coordinator']?.toString() ??
+            parentData['CoordinatorName']?.toString();
+        final parentCoordinator = (docCoord != null &&
+                docCoord.trim().isNotEmpty &&
+                docCoord.trim() != '-')
+            ? docCoord.trim()
+            : (siteToCoordinator[parentSiteId.toLowerCase()] ??
+                siteToCoordinator[parentSiteName.toLowerCase()] ??
+                supervisorToCoordinator[parentSupervisor.toLowerCase()] ??
+                '-');
+
+        // Fetch workers subcollection
+        final workersSnap = await FirebaseFirestore.instance
+            .collection('daily_labour_entries')
+            .doc(parentDocId)
+            .collection('workers')
+            .get();
+
+        if (workersSnap.docs.isEmpty) {
+          // Fallback: if no workers subcollection exists, treat the parent
+          // document itself as a single worker entry (backward compatibility).
+          flatWorkerEntries.add({
+            ...parentData,
+            'coordinatorName': parentCoordinator,
+            '_docId': parentDocId,
+            '_parentDocId': parentDocId,
+          });
+          return;
+        }
+
+        for (final workerDoc in workersSnap.docs) {
+          final wData = Map<String, dynamic>.from(workerDoc.data());
+          // Merge parent metadata + worker data.
+          // Worker-level fields take priority; parent fills gaps.
+          flatWorkerEntries.add({
+            // Parent shared fields
+            'siteId':          parentSiteId,
+            'siteName':        parentSiteName,
+            'date':            parentDate,
+            'coordinatorName': parentCoordinator,
+            // Worker-specific fields from the subcollection document
+            'workerName':         wData['workerName']?.toString() ?? wData['name']?.toString() ?? '-',
+            'contractorName':     wData['contractor']?.toString() ?? wData['contractorName']?.toString() ?? wData['subContractor']?.toString() ?? '-',
+            'category':           wData['category']?.toString() ?? '-',
+            'labourType':         wData['labourType']?.toString() ?? wData['salaryType']?.toString() ?? '',
+            'basicSalary':        wData['basicSalary'] ?? wData['salaryBasic'] ?? wData['salary'] ?? wData['rate'],
+            'hoursWorked':        wData['hoursWorked'] ?? wData['hours'],
+            'otHours':            wData['overtimeHours'] ?? wData['otHours'],
+            'overtimeAmount':     wData['overtimeAmount'] ?? wData['otAmount'],
+            'mealsCount':         wData['mealsCount'],
+            'mealsAmount':        wData['mealsAmount'] ?? wData['mealsExpense'],
+            'busCount':           wData['busCount'],
+            'busAmount':          wData['busAmount'] ?? wData['busFare'],
+            'attendanceType':     wData['attendanceType'] ?? wData['attendance'] ?? 'Full Day',
+            'supervisorName':     wData['supervisorName']?.toString() ?? parentSupervisor,
+            'remarks':            wData['remarks'] ?? '',
+            'defaultHours':       wData['defaultHours'] ?? parentData['defaultHours'],
+            'contractorId':       wData['contractorId'],
+            // Doc identifiers
+            '_docId':             workerDoc.id,
+            '_parentDocId':       parentDocId,
+          });
+        }
+      }));
+
+      // ── Step 3: Fetch sub_contractors for salary fallback mapping ─────────
+      final subContractorsSnap =
+          await FirebaseFirestore.instance.collection('sub_contractors').get();
       final subContractorSalaryById = <String, double>{};
       final subContractorSalaryByName = <String, double>{};
       for (final doc in subContractorsSnap.docs) {
         final data = doc.data();
         final salary = data['salaryRate'] ?? data['basicSalary'] ?? data['salary'];
-        final salaryValue = salary is num ? salary.toDouble() : double.tryParse(salary?.toString() ?? '') ?? 0.0;
+        final salaryValue =
+            salary is num ? salary.toDouble() : double.tryParse(salary?.toString() ?? '') ?? 0.0;
         final name = (data['name'] ?? data['contractorName'])?.toString().trim();
         final contractorId = data['contractorId']?.toString().trim();
         subContractorSalaryById[doc.id] = salaryValue;
@@ -361,19 +495,29 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }
 
-      // Client-side Filters
+      // ── Step 4: Client-side filtering ────────────────────────────────────
+      List<Map<String, dynamic>> entries = flatWorkerEntries;
+
       if (selectedSupervisorName != null) {
-        entries = entries.where((e) => (e['supervisorName']?.toString() ?? '') == selectedSupervisorName).toList();
+        entries = entries
+            .where((e) => (e['supervisorName']?.toString() ?? '') == selectedSupervisorName)
+            .toList();
+      }
+      if (selectedCoordinatorName != null) {
+        entries = entries.where((e) {
+          final c = (e['coordinatorName'] ?? e['coordinator'])?.toString().trim() ?? '-';
+          return c == selectedCoordinatorName;
+        }).toList();
       }
       if (selectedSubContractorName != null) {
         entries = entries.where((e) {
-          final sc = (e['contractorName'] ?? e['subContractorName'] ?? e['contractor'] ?? '').toString().trim();
+          final sc = (e['contractorName'] ?? '').toString().trim();
           return sc == selectedSubContractorName;
         }).toList();
       }
       if (selectedLabourType != null && selectedLabourType != 'All') {
         entries = entries.where((e) {
-          final lt = (e['labourType'] ?? e['salaryType'])?.toString().trim().toLowerCase() ?? '';
+          final lt = (e['labourType'])?.toString().trim().toLowerCase() ?? '';
           final isDW = lt == 'dw' || lt.contains('daily');
           if (selectedLabourType == 'Daily Wage (DW)') return isDW;
           if (selectedLabourType == 'Sub Contractor (SC)') return !isDW;
@@ -381,7 +525,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }).toList();
       }
 
-      // Report-specific processing
+      // ── Step 5: Build report rows ─────────────────────────────────────────
       _processReportData(entries, subContractorSalaryById, subContractorSalaryByName);
 
       setState(() => isLoading = false);
@@ -389,7 +533,10 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       setState(() => isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating report: $e'), backgroundColor: errorColor),
+          SnackBar(
+            content: Text('Error generating report: $e'),
+            backgroundColor: errorColor,
+          ),
         );
       }
     }
@@ -400,41 +547,64 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     Map<String, double> subContractorSalaryById,
     Map<String, double> subContractorSalaryByName,
   ) {
+    // Each entry in [entries] is already a flat worker-level map produced by
+    // _generateReport() merging the parent document metadata with the worker
+    // subcollection document. We only need to compute derived fields here.
     final List<Map<String, dynamic>> rows = [];
-    double costTotal = 0;
-    double mealsAmountTotal = 0;
-    int mealsCountTotal = 0;
-    double busAmountTotal = 0;
-    int busCountTotal = 0;
 
     for (final e in entries) {
-      final siteId = e['siteId']?.toString() ?? '-';
+      final siteId   = e['siteId']?.toString() ?? '-';
       final siteName = e['siteName']?.toString() ?? '-';
-      final subContractor = (e['contractorName'] ?? e['subContractorName'] ?? e['contractor'] ?? '-').toString().trim();
-      final labourType = (e['labourType'] ?? e['salaryType'])?.toString().trim().toLowerCase() ?? '';
+      final date     = e['date']?.toString() ?? '-';
+
+      // ── Contractor / group ──────────────────────────────────────────────
+      final subContractor =
+          (e['contractorName'] ?? '-').toString().trim();
+      final labourType =
+          (e['labourType'])?.toString().trim().toLowerCase() ?? '';
       final isDW = labourType == 'dw' || labourType.contains('daily');
       final group = isDW ? 'DW' : 'SC';
-      final category = e['category']?.toString() ?? '-';
-      final workerName = (e['workerName'] ?? e['name'] ?? '-').toString();
-      final date = e['date']?.toString() ?? '-';
+
+      // ── Worker identity ─────────────────────────────────────────────────
+      final workerName = e['workerName']?.toString() ?? '-';
+      final category   = e['category']?.toString() ?? '-';
+
+      // ── Basic Salary ────────────────────────────────────────────────────
+      // Priority: worker's own basicSalary → sub_contractors fallback.
+      final rawSalary = e['basicSalary'];
+      final entrySalaryBasic = rawSalary is num
+          ? rawSalary.toDouble()
+          : double.tryParse(rawSalary?.toString() ?? '') ?? 0.0;
 
       final subContractorSalary = group == 'SC'
           ? (subContractorSalaryById[e['contractorId']?.toString()] ??
-                subContractorSalaryByName[subContractor.toLowerCase()] ??
-                0.0)
+              subContractorSalaryByName[subContractor.toLowerCase()] ??
+              0.0)
           : 0.0;
 
-      final entrySalaryBasic = (e['basicSalary'] as num?)?.toDouble() ??
-          (e['salaryBasic'] as num?)?.toDouble() ??
-          (e['rate'] as num?)?.toDouble() ??
-          0.0;
       final salaryBasic = entrySalaryBasic > 0
           ? entrySalaryBasic
           : (group == 'SC' && subContractorSalary > 0 ? subContractorSalary : 0.0);
-      final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? (e['hours'] as num?)?.toDouble() ?? 0.0;
-      final otHours = e['otHours'] ?? e['overtimeHours'];
-      final doubleOtHours = otHours is num ? otHours.toDouble() : double.tryParse(otHours?.toString().split(' ').first ?? '0.0') ?? 0.0;
-      final defaultHrs = (e['defaultHours'] as num?)?.toDouble() ?? 8.0;
+
+      // ── Hours worked ────────────────────────────────────────────────────
+      final rawHours = e['hoursWorked'];
+      final hoursWorked = rawHours is num
+          ? rawHours.toDouble()
+          : double.tryParse(rawHours?.toString() ?? '') ?? 0.0;
+
+      // ── OT Hours ────────────────────────────────────────────────────────
+      final rawOtHours = e['otHours'];
+      final doubleOtHours = rawOtHours is num
+          ? rawOtHours.toDouble()
+          : double.tryParse(
+                  rawOtHours?.toString().split(' ').first ?? '') ??
+              0.0;
+
+      // ── Default / basic hours computation ───────────────────────────────
+      final rawDefaultHrs = e['defaultHours'];
+      final defaultHrs = rawDefaultHrs is num
+          ? rawDefaultHrs.toDouble()
+          : double.tryParse(rawDefaultHrs?.toString() ?? '') ?? 8.0;
 
       double basicHours;
       if (hoursWorked > doubleOtHours) {
@@ -452,90 +622,110 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }
 
-      final recordedTotalSalary = (e['totalSalary'] as num?)?.toDouble() ?? (e['totalAmount'] as num?)?.toDouble() ?? 0.0;
-      final overtimeAmt = (e['overtimeAmount'] as num?)?.toDouble() ?? (e['otAmount'] as num?)?.toDouble() ?? 0.0;
-      final mealsCount = (e['mealsCount'] as num?)?.toInt() ?? 0;
-      final mealsAmount = (e['mealsAmount'] as num?)?.toDouble() ?? 0.0;
-      final totalMealsAmt = mealsCount * mealsAmount;
+      // ── OT Amount (from worker doc, not computed) ────────────────────────
+      final rawOtAmt = e['overtimeAmount'];
+      final overtimeAmt = rawOtAmt is num
+          ? rawOtAmt.toDouble()
+          : double.tryParse(rawOtAmt?.toString() ?? '') ?? 0.0;
 
-      final busCount = (e['busCount'] as num?)?.toInt() ?? 0;
-      final busAmount = (e['busAmount'] as num?)?.toDouble() ?? 0.0;
-      final totalBusAmt = busCount * busAmount;
-
-      final totalSalary = (recordedTotalSalary >= (salaryBasic + overtimeAmt) && recordedTotalSalary > 0)
-          ? recordedTotalSalary
-          : (salaryBasic + overtimeAmt + totalMealsAmt + totalBusAmt);
-      double otRate = (e['overtimeRate'] as num?)?.toDouble() ??
-          (e['otRate'] as num?)?.toDouble() ??
-          (e['otSalaryBasic'] as num?)?.toDouble() ??
-          0.0;
-      if (otRate == 0.0) {
-        if (doubleOtHours > 0 && overtimeAmt > 0) {
-          otRate = overtimeAmt / doubleOtHours;
-        } else if (salaryBasic > 0 && defaultHrs > 0) {
-          otRate = (salaryBasic / defaultHrs) * 1.5;
-        }
+      // ── OT Rate ─────────────────────────────────────────────────────────
+      double otRate = 0.0;
+      if (doubleOtHours > 0 && overtimeAmt > 0) {
+        otRate = overtimeAmt / doubleOtHours;
+      } else if (salaryBasic > 0 && defaultHrs > 0) {
+        otRate = (salaryBasic / defaultHrs) * 1.5;
       }
 
-      rows.add({
-        'siteId': siteId,
-        'siteName': siteName,
-        'subContractor': subContractor,
-        'workerName': workerName,
-        'group': group,
-        'category': category,
-        'labourCount': 1,
-        'salaryBasic': salaryBasic,
-        'totalSalary': totalSalary,
-        'hours': basicHours,
-        'otSalaryBasic': otRate,
-        'otTotalAmount': overtimeAmt,
-        'mealsExpense': mealsAmount,
-        'mealsCount': mealsCount,
-        'totalMealsAmount': totalMealsAmt,
-        'busFare': busAmount,
-        'busCount': busCount,
-        'totalBusAmount': totalBusAmt,
-        'otHours': doubleOtHours,
-        'date': date,
-        'attendanceType': e['attendanceType']?.toString() ?? 'Full Day',
-        'inTime': e['inTime']?.toString() ?? '',
-        'outTime': e['outTime']?.toString() ?? '',
-        'supervisorName': e['supervisorName']?.toString() ?? '-',
-        'remarks': e['remarks']?.toString() ?? '',
-      });
+      // ── Meals ───────────────────────────────────────────────────────────
+      final rawMealsCnt = e['mealsCount'];
+      final mealsCount = rawMealsCnt is num
+          ? rawMealsCnt.toInt()
+          : int.tryParse(rawMealsCnt?.toString() ?? '') ?? 0;
 
-      costTotal += totalSalary;
-      mealsAmountTotal += totalMealsAmt;
-      mealsCountTotal += mealsCount;
-      busAmountTotal += totalBusAmt;
-      busCountTotal += busCount;
+      final rawMealsAmt = e['mealsAmount'];
+      final mealsAmount = rawMealsAmt is num
+          ? rawMealsAmt.toDouble()
+          : double.tryParse(rawMealsAmt?.toString() ?? '') ?? 0.0;
+
+      final totalMealsAmt = mealsCount * mealsAmount;
+
+      // ── Bus ─────────────────────────────────────────────────────────────
+      final rawBusCnt = e['busCount'];
+      final busCount = rawBusCnt is num
+          ? rawBusCnt.toInt()
+          : int.tryParse(rawBusCnt?.toString() ?? '') ?? 0;
+
+      final rawBusAmt = e['busAmount'];
+      final busAmount = rawBusAmt is num
+          ? rawBusAmt.toDouble()
+          : double.tryParse(rawBusAmt?.toString() ?? '') ?? 0.0;
+
+      final totalBusAmt = busCount * busAmount;
+
+      // ── Total Earned ─────────────────────────────────────────────────────
+      // Basic Wage + OT Amount + Meals Total + Bus Total
+      final totalSalary = salaryBasic + overtimeAmt + totalMealsAmt + totalBusAmt;
+
+      rows.add({
+        'siteId':          siteId,
+        'siteName':        siteName,
+        'coordinatorName': e['coordinatorName']?.toString() ?? e['coordinator']?.toString() ?? '-',
+        'supervisorName':  e['supervisorName']?.toString() ?? e['supervisor']?.toString() ?? '-',
+        'subContractor':   subContractor,
+        'workerName':      workerName,
+        'group':           group,
+        'category':        category,
+        'labourCount':     1,
+        'salaryBasic':     salaryBasic,
+        'totalSalary':     totalSalary,
+        'hours':           basicHours,
+        'otSalaryBasic':   otRate,
+        'otTotalAmount':   overtimeAmt,
+        'mealsExpense':    mealsAmount,
+        'mealsCount':      mealsCount,
+        'totalMealsAmount': totalMealsAmt,
+        'busFare':         busAmount,
+        'busCount':        busCount,
+        'totalBusAmount':  totalBusAmt,
+        'otHours':         doubleOtHours,
+        'date':            date,
+        'attendanceType':  e['attendanceType']?.toString() ?? 'Full Day',
+        'inTime':          e['inTime']?.toString() ?? '',
+        'outTime':         e['outTime']?.toString() ?? '',
+        'remarks':         e['remarks']?.toString() ?? '',
+      });
     }
 
-    // Now filter according to specific report requirements
+    // ── Filter rows by report type ────────────────────────────────────────
     if (selectedReportType == 'Daily Wage Report') {
       reportData = rows.where((r) => r['group'] == 'DW').toList();
     } else if (selectedReportType == 'Sub Contractor Report') {
       reportData = rows.where((r) => r['group'] == 'SC').toList();
     } else if (selectedReportType == 'Worker on Site Report') {
-      // Physical presence: filter active workers
-      reportData = rows.where((r) => r['attendanceType'] != 'Absent' && r['attendanceType'] != 'Leave').toList();
+      reportData = rows
+          .where((r) =>
+              r['attendanceType'] != 'Absent' &&
+              r['attendanceType'] != 'Leave')
+          .toList();
     } else {
       reportData = rows;
     }
 
-    // Update Totals Based on final lists
-    totalWorkers = reportData.length;
-    totalLabourCost = reportData.fold(0.0, (sum, r) => sum + (r['totalSalary'] as double));
-    totalMealsAmount = reportData.fold(0.0, (sum, r) => sum + (r['totalMealsAmount'] as double));
-    totalMealsCount = reportData.fold(0, (sum, r) => sum + (r['mealsCount'] as int));
-    totalBusAmount = reportData.fold(0.0, (sum, r) => sum + (r['totalBusAmount'] as double));
-    totalBusCount = reportData.fold(0, (sum, r) => sum + (r['busCount'] as int));
+    // ── Update summary totals ─────────────────────────────────────────────
+    totalWorkers    = reportData.length;
+    totalLabourCost = reportData.fold(
+        0.0, (sum, r) => sum + (r['totalSalary'] as double));
+    totalMealsAmount = reportData.fold(
+        0.0, (sum, r) => sum + (r['totalMealsAmount'] as double));
+    totalMealsCount = reportData.fold(
+        0, (sum, r) => sum + (r['mealsCount'] as int));
+    totalBusAmount = reportData.fold(
+        0.0, (sum, r) => sum + (r['totalBusAmount'] as double));
+    totalBusCount = reportData.fold(
+        0, (sum, r) => sum + (r['busCount'] as int));
 
-    // Secondary processing for attendance report
+    // ── Secondary groupings ───────────────────────────────────────────────
     _buildAttendanceGroupData(entries);
-
-    // Secondary processing for subcontractor bill report
     _buildSubContractorBillTotals();
   }
 
@@ -550,6 +740,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final contractor = (e['contractorName'] ?? e['subContractorName'] ?? e['contractor'] ?? '-').toString().trim();
       final date = e['date']?.toString() ?? '-';
       final rowKey = '$siteId|$supervisor|$category|$lt|$contractor|$date';
+
+      final coordVal = (e['coordinatorName'] ?? e['coordinator'])?.toString().trim();
+      final coordinator = (coordVal != null && coordVal.isNotEmpty && coordVal != '-') ? coordVal : '-';
 
       final otHours = e['otHours'] ?? e['overtimeHours'];
       final ot = otHours is num ? otHours.toDouble() : double.tryParse(otHours?.toString().split(' ').first ?? '0.0') ?? 0.0;
@@ -586,6 +779,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           'date': date,
           'siteCode': siteId,
           'siteName': siteName,
+          'coordinator': coordinator,
           'supervisor': supervisor,
           'categoryType': category,
           'labourType': lt,
@@ -933,8 +1127,14 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildDynamicDropdown(label: 'Sub Contractor', options: contractorOptions, value: selectedSubContractorName, onChanged: (opt) => setState(() { selectedSubContractorName = opt?.id; _generateReport(); }))),
+              Expanded(child: _buildDynamicDropdown(label: 'Co-ordinator', options: coordinatorOptions, value: selectedCoordinatorName, onChanged: (opt) => setState(() { selectedCoordinatorName = opt?.id; _generateReport(); }))),
               const SizedBox(width: 8),
+              Expanded(child: _buildDynamicDropdown(label: 'Sub Contractor', options: contractorOptions, value: selectedSubContractorName, onChanged: (opt) => setState(() { selectedSubContractorName = opt?.id; _generateReport(); }))),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: selectedLabourType,
@@ -1219,12 +1419,46 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // ── 1. Details Table Layout ──────────────────────────────────────────────
   Widget _buildDetailsTable(List<Map<String, dynamic>> rows) {
     final totals = _ReportTotals.fromRows(rows);
+
+    // ── Highlight color constants ──────────────────────────────────────────
+    const Color otHighlightBg    = Color(0xFFFFF3E0); // amber-50
+    const Color otHighlightFg    = Color(0xFFE65100); // deep-orange
+    const Color mealsHighlightBg = Color(0xFFE0F7FA); // cyan-50
+    const Color mealsHighlightFg = Color(0xFF00838F); // cyan-800
+    const Color busHighlightBg   = Color(0xFFEDE7F6); // deep-purple-50
+    const Color busHighlightFg   = Color(0xFF4527A0); // deep-purple-800
+    const Color earnedBg         = Color(0xFFE8F5E9); // green-50
+    const Color earnedFg         = Color(0xFF1B5E20); // green-900
+
+    // Helper: highlighted DataCell
+    DataCell _hCell(String text, Color bg, Color fg, {bool bold = false}) {
+      return DataCell(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: fg,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      );
+    }
+
     final List<DataRow> dataRows = List.generate(rows.length, (index) {
       final r = rows[index];
       return DataRow(cells: [
         DataCell(Text('${index + 1}')),
+        DataCell(Text(r['coordinatorName']?.toString() ?? '-')),
         DataCell(Text(r['siteId']?.toString() ?? '-')),
         DataCell(Text(r['siteName']?.toString() ?? '-')),
+        DataCell(Text(r['supervisorName']?.toString() ?? '-')),
         DataCell(Text(r['subContractor']?.toString() ?? '-')),
         DataCell(Text(r['workerName']?.toString() ?? '-')),
         DataCell(Text(r['group']?.toString() ?? '-')),
@@ -1233,14 +1467,18 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
-        DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
+        // OT Amount — amber highlight
+        _hCell('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}', otHighlightBg, otHighlightFg),
         DataCell(Text('₹${(r['mealsExpense'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['mealsCount']}')),
-        DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
+        // Meals Total — cyan highlight
+        _hCell('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg),
         DataCell(Text('₹${(r['busFare'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['busCount']}')),
-        DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
+        // Bus Total — purple highlight
+        _hCell('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}', busHighlightBg, busHighlightFg),
+        // Total Earned Amount — green highlight
+        _hCell('₹${(r['totalSalary'] as double).toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
       ]);
     });
 
@@ -1250,7 +1488,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           color: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
           cells: [
             DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
+            DataCell(const Text('-')),
             DataCell(Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataCell(const Text('-')),
             DataCell(const Text('-')),
             DataCell(Text('${totals.totalSubContractors} Subs', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(const Text('-')),
@@ -1260,17 +1500,36 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             DataCell(Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            // OT Amount total — amber bold
+            _hCell('₹${totals.totalOtAmount.toStringAsFixed(2)}', otHighlightBg, otHighlightFg, bold: true),
             DataCell(Text('₹${totals.totalMealsExpense.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalMealsCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalMealsAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            // Meals Total total — cyan bold
+            _hCell('₹${totals.totalMealsAmount.toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg, bold: true),
             DataCell(Text('₹${totals.totalBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalBusCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
+            // Bus Total total — purple bold
+            _hCell('₹${totals.totalBusAmount.toStringAsFixed(2)}', busHighlightBg, busHighlightFg, bold: true),
+            // Grand Total Earned — green bold
+            _hCell('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
           ],
         ),
       );
+    }
+
+    // All column headers use the same plain white style — highlights are data-cells only
+    List<DataColumn> _buildColumns() {
+      const headerStyle = TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11);
+      DataColumn plain(String h) => DataColumn(label: Text(h, style: headerStyle));
+
+      return [
+        plain('SI'), plain('Coordinator'), plain('Site Code'), plain('Site Name'),
+        plain('Supervisor'), plain('Contractor'), plain('Worker Name'), plain('Group'),
+        plain('Category'), plain('Basic Wage'), plain('Hrs'), plain('OT Rate'),
+        plain('OT Hrs'), plain('OT Amount'), plain('Meals Exp'), plain('Meals Count'),
+        plain('Meals Total'), plain('Bus Fare'), plain('Bus Count'), plain('Bus Total'),
+        plain('Total Earned Amount'),
+      ];
     }
 
     return Container(
@@ -1280,92 +1539,21 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         child: DataTable(
           columnSpacing: 12,
           headingRowColor: WidgetStateProperty.all(primaryColor),
-          columns: _headersToColumns([
-            'Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group',
-            'Category', 'Basic Wage', 'Hrs', 'OT Rate', 'OT Hrs', 'OT Amount',
-            'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total',
-            'Total Earned Amount'
-          ]),
+          columns: _buildColumns(),
           rows: dataRows,
         ),
       ),
     );
   }
 
+
   // ── 2. Attendance List Layout (Grouped Site/Supervisor) ──────────────────
   Widget _buildAttendanceList() {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: siteGroups.length,
-      itemBuilder: (context, index) {
-        final site = siteGroups[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          color: cardColor,
-          elevation: 2,
-          child: ExpansionTile(
-            title: Text(site.siteName, style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
-            subtitle: Text('Site ID: ${site.siteCode} • ${site.totalCount} Workers Total'),
-            children: site.supervisors.map((sup) {
-              final List<DataRow> supRows = sup.rows.map((row) {
-                return DataRow(cells: [
-                  DataCell(Text(row['date']?.toString() ?? '-')),
-                  DataCell(Text(row['categoryType']?.toString() ?? '-')),
-                  DataCell(Text(row['labourType']?.toString() ?? '-')),
-                  DataCell(Text(row['subContractor']?.toString() ?? '-')),
-                  DataCell(Text(row['workerCount']?.toString() ?? '0')),
-                  DataCell(Text(row['otDetails']?.toString() ?? '-')),
-                  DataCell(Text(row['remarks']?.toString() ?? '-')),
-                ]);
-              }).toList();
-
-              if (sup.rows.isNotEmpty) {
-                int totalSupWorkers = sup.rows.fold(0, (sum, r) {
-                  final wc = r['workerCount'];
-                  if (wc is int) return sum + wc;
-                  return sum + (int.tryParse(wc?.toString() ?? '') ?? 0);
-                });
-                supRows.add(
-                  DataRow(
-                    color: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
-                    cells: [
-                      DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
-                      const DataCell(Text('-')),
-                      const DataCell(Text('-')),
-                      DataCell(Text('${sup.rows.length} Entries', style: const TextStyle(fontWeight: FontWeight.bold))),
-                      DataCell(Text('$totalSupWorkers Workers', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
-                      const DataCell(Text('-')),
-                      const DataCell(Text('-')),
-                    ],
-                  ),
-                );
-              }
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                child: Card(
-                  color: bgColor,
-                  child: ExpansionTile(
-                    title: Text('Supervisor: ${sup.supervisor}', style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
-                    subtitle: Text('${sup.rows.length} Allocations'),
-                    children: [
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          columnSpacing: 10,
-                          columns: _headersToColumns(['Date', 'Category', 'Type', 'Sub Contractor', 'Workers', 'OT Details', 'Remarks']),
-                          rows: supRows,
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: siteGroups
+          .map((site) => _SiteAttendanceCardItem(site: site, searchQuery: searchQuery))
+          .toList(),
     );
   }
 
@@ -1808,55 +1996,81 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final totals = _ReportTotals.fromRows(reportData);
 
     if (selectedReportType == 'Site Labour Details Report') {
-      result.add(['Sl', 'Site Code', 'Site Name', 'Sub Contractor', 'Worker Name', 'Group', 'Category', 'Basic Wage', 'Total Earned', 'Hours', 'OT Basic', 'OT Amount', 'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total']);
+      result.add([
+        'Sl',
+        'Co-ordinator',
+        'Site Code',
+        'Site Name',
+        'Contractor',
+        'Worker Name',
+        'Group',
+        'Category',
+        'Basic Wage',
+        'Hrs',
+        'OT Rate',
+        'OT Hrs',
+        'OT Amount',
+        'Meals Exp',
+        'Meals Count',
+        'Meals Total',
+        'Bus Fare',
+        'Bus Count',
+        'Bus Total',
+        'Total Earned Amount',
+      ]);
       for (int i = 0; i < reportData.length; i++) {
         final r = reportData[i];
         result.add([
           (i + 1).toString(),
-          (r['siteId'] ?? '').toString(),
-          (r['siteName'] ?? '').toString(),
-          (r['subContractor'] ?? '').toString(),
-          (r['workerName'] ?? '').toString(),
-          (r['group'] ?? '').toString(),
-          (r['category'] ?? '').toString(),
-          (r['salaryBasic'] ?? '').toString(),
-          (r['totalSalary'] ?? '').toString(),
-          (r['hours'] ?? '').toString(),
-          (r['otSalaryBasic'] ?? '').toString(),
-          (r['otTotalAmount'] ?? '').toString(),
-          (r['mealsExpense'] ?? '').toString(),
-          (r['mealsCount'] ?? '').toString(),
-          (r['totalMealsAmount'] ?? '').toString(),
-          (r['busFare'] ?? '').toString(),
-          (r['busCount'] ?? '').toString(),
-          (r['totalBusAmount'] ?? '').toString(),
+          (r['coordinatorName'] ?? r['coordinator'] ?? '-').toString(),
+          (r['siteId'] ?? '-').toString(),
+          (r['siteName'] ?? '-').toString(),
+          (r['subContractor'] ?? '-').toString(),
+          (r['workerName'] ?? '-').toString(),
+          (r['group'] ?? '-').toString(),
+          (r['category'] ?? '-').toString(),
+          '₹${(r['salaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['hours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+          '₹${(r['otSalaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['otHours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+          '₹${(r['otTotalAmount'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          '₹${(r['mealsExpense'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['mealsCount'] as num? ?? 0).toInt().toString(),
+          '₹${(r['totalMealsAmount'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          '₹${(r['busFare'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['busCount'] as num? ?? 0).toInt().toString(),
+          '₹${(r['totalBusAmount'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          '₹${(r['totalSalary'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
         ]);
       }
       if (reportData.isNotEmpty) {
         result.add([
           'TOTAL',
+          '-',
           '${totals.totalRecords} Recs',
           '-',
           '${totals.totalSubContractors} Subs',
           '-',
           '-',
           '-',
-          totals.totalBasicSalary.toStringAsFixed(2),
-          totals.totalEarnedSalary.toStringAsFixed(2),
+          '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
           totals.totalHours.toStringAsFixed(1),
-          totals.totalOtSalaryBasic.toStringAsFixed(2),
-          totals.totalOtAmount.toStringAsFixed(2),
-          totals.totalMealsExpense.toStringAsFixed(2),
+          '₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}',
+          totals.totalOtHours.toStringAsFixed(1),
+          '₹${totals.totalOtAmount.toStringAsFixed(2)}',
+          '₹${totals.totalMealsExpense.toStringAsFixed(2)}',
           totals.totalMealsCount.toString(),
-          totals.totalMealsAmount.toStringAsFixed(2),
-          totals.totalBusFare.toStringAsFixed(2),
+          '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
+          '₹${totals.totalBusFare.toStringAsFixed(2)}',
           totals.totalBusCount.toString(),
-          totals.totalBusAmount.toStringAsFixed(2),
+          '₹${totals.totalBusAmount.toStringAsFixed(2)}',
+          '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
         ]);
       }
     } else if (selectedReportType == 'Site Labour Attendance Report') {
-      result.add(['Site Code', 'Site Name', 'Supervisor', 'Category', 'Type', 'Sub Contractor', 'Date', 'Workers', 'OT Details', 'Remarks']);
+      result.add(['S.No', 'Date', 'Co-ordinator', 'Site Code', 'Site Name', 'Supervisor', 'Category', 'Type', 'Sub Contractor', 'Workers', 'OT Details', 'Remarks']);
       int totalAttWorkers = 0;
+      int sNoCounter = 1;
       for (final site in siteGroups) {
         for (final sup in site.supervisors) {
           for (final row in sup.rows) {
@@ -1867,30 +2081,34 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               totalAttWorkers += (int.tryParse(wc?.toString() ?? '') ?? 0);
             }
             result.add([
+              '$sNoCounter',
+              _formatDateString(row['date']?.toString()),
+              (row['coordinator'] ?? '-').toString(),
               (row['siteCode'] ?? '').toString(),
               (row['siteName'] ?? '').toString(),
               (row['supervisor'] ?? '').toString(),
               (row['categoryType'] ?? '').toString(),
               (row['labourType'] ?? '').toString(),
               (row['subContractor'] ?? '').toString(),
-              (row['date'] ?? '').toString(),
               (row['workerCount'] ?? '').toString(),
               (row['otDetails'] ?? '').toString(),
               (row['remarks'] ?? '').toString(),
             ]);
+            sNoCounter++;
           }
         }
       }
       if (siteGroups.isNotEmpty) {
-        result.add(['TOTAL', '-', '-', '-', '-', '-', '-', '$totalAttWorkers Workers', '-', '-']);
+        result.add(['TOTAL', '-', '-', '-', '-', '-', '-', '-', '-', '$totalAttWorkers Workers', '-', '-']);
       }
     } else if (selectedReportType == 'Daily Wage Report') {
-      result.add(['Sl', 'Date', 'Site Name', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Wages', 'Supervisor', 'Remarks']);
+      result.add(['Sl', 'Date', 'Co-ordinator', 'Site Name', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Wages', 'Supervisor', 'Remarks']);
       for (int i = 0; i < reportData.length; i++) {
         final r = reportData[i];
         result.add([
           (i + 1).toString(),
           (r['date'] ?? '').toString(),
+          (r['coordinatorName'] ?? r['coordinator'] ?? '-').toString(),
           (r['siteName'] ?? '').toString(),
           (r['workerName'] ?? '').toString(),
           (r['category'] ?? '').toString(),
@@ -1910,6 +2128,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         result.add([
           'TOTAL',
           '${totals.totalRecords} Recs',
+          '-',
           '-',
           '-',
           '-',
@@ -1926,12 +2145,13 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         ]);
       }
     } else if (selectedReportType == 'Sub Contractor Report') {
-      result.add(['Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Amount', 'Supervisor', 'Remarks']);
+      result.add(['Sl', 'Date', 'Co-ordinator', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Amount', 'Supervisor', 'Remarks']);
       for (int i = 0; i < reportData.length; i++) {
         final r = reportData[i];
         result.add([
           (i + 1).toString(),
           (r['date'] ?? '').toString(),
+          (r['coordinatorName'] ?? r['coordinator'] ?? '-').toString(),
           (r['siteName'] ?? '').toString(),
           (r['subContractor'] ?? '').toString(),
           (r['workerName'] ?? '').toString(),
@@ -1952,6 +2172,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         result.add([
           'TOTAL',
           '${totals.totalRecords} Recs',
+          '-',
           '-',
           '${totals.totalSubContractors} Subs',
           '-',
@@ -2109,7 +2330,14 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   }
 
   // Generic PDF layouts
-  Future<pw.Document> _buildPdfBase(String title, List<String> headers, List<List<String>> tableData) async {
+  Future<pw.Document> _buildPdfBase(
+    String title,
+    List<String> headers,
+    List<List<String>> tableData, {
+    Map<int, pw.TableColumnWidth>? columnWidths,
+    PdfPageFormat? pageFormat,
+  }) async {
+    final effectivePageFormat = pageFormat ?? PdfPageFormat.a3.landscape;
     final pdf = pw.Document();
     final now = DateTime.now();
     final font = await PdfGoogleFonts.notoSansRegular();
@@ -2119,7 +2347,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     pdf.addPage(
       pw.MultiPage(
         theme: pdfTheme,
-        pageFormat: PdfPageFormat.a4.landscape,
+        pageFormat: effectivePageFormat,
         margin: const pw.EdgeInsets.all(16),
         header: (context) {
           return pw.Container(
@@ -2152,10 +2380,12 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             pw.Table.fromTextArray(
               context: context,
               headers: headers,
-              headerStyle: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+              headerStyle: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
               headerDecoration: const pw.BoxDecoration(color: PdfColors.blue900),
               rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5))),
-              cellStyle: const pw.TextStyle(fontSize: 6.5),
+              cellStyle: const pw.TextStyle(fontSize: 7),
+              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+              columnWidths: columnWidths,
               data: tableData,
             ),
           ];
@@ -2169,17 +2399,36 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   Future<pw.Document> _buildDetailsPDFDocument() {
     final totals = _ReportTotals.fromRows(reportData);
     final headers = [
-      'Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group',
-      'Category', 'Basic Wage', 'Hrs', 'OT Rate', 'OT Hrs', 'OT Amount',
-      'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total',
-      'Total Earned Amount'
+      'Sl',
+      'Co-ordinator',
+      'Site Code',
+      'Site Name',
+      'Supervisor',
+      'Contractor',
+      'Worker Name',
+      'Group',
+      'Category',
+      'Basic Wage',
+      'Hrs',
+      'OT Rate',
+      'OT Hrs',
+      'OT Amount',
+      'Meals Exp',
+      'Meals Count',
+      'Meals Total',
+      'Bus Fare',
+      'Bus Count',
+      'Bus Total',
+      'Total Earned Amount',
     ];
     final data = List<List<String>>.generate(reportData.length, (index) {
       final r = reportData[index];
       return [
         '${index + 1}',
+        r['coordinatorName']?.toString() ?? r['coordinator']?.toString() ?? '-',
         r['siteId']?.toString() ?? '-',
         r['siteName']?.toString() ?? '-',
+        r['supervisorName']?.toString() ?? '-',
         r['subContractor']?.toString() ?? '-',
         r['workerName']?.toString() ?? '-',
         r['group']?.toString() ?? '-',
@@ -2202,7 +2451,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     if (reportData.isNotEmpty) {
       data.add([
         'TOTAL',
+        '-',
         '${totals.totalRecords} Recs',
+        '-',
         '-',
         '${totals.totalSubContractors} Subs',
         '-',
@@ -2222,7 +2473,38 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
       ]);
     }
-    return _buildPdfBase('SITE LABOUR DETAILS REPORT', headers, data);
+
+    final columnWidths = <int, pw.TableColumnWidth>{
+      0: const pw.FlexColumnWidth(0.5),  // Sl
+      1: const pw.FlexColumnWidth(1.2),  // Co-ordinator
+      2: const pw.FlexColumnWidth(1.8),  // Site Code
+      3: const pw.FlexColumnWidth(1.2),  // Site Name
+      4: const pw.FlexColumnWidth(1.1),  // Supervisor
+      5: const pw.FlexColumnWidth(1.2),  // Contractor
+      6: const pw.FlexColumnWidth(1.2),  // Worker Name
+      7: const pw.FlexColumnWidth(0.6),  // Group
+      8: const pw.FlexColumnWidth(0.9),  // Category
+      9: const pw.FlexColumnWidth(1.1),  // Basic Wage
+      10: const pw.FlexColumnWidth(0.6), // Hrs
+      11: const pw.FlexColumnWidth(1.0), // OT Rate
+      12: const pw.FlexColumnWidth(0.6), // OT Hrs
+      13: const pw.FlexColumnWidth(1.1), // OT Amount
+      14: const pw.FlexColumnWidth(1.0), // Meals Exp
+      15: const pw.FlexColumnWidth(0.7), // Meals Count
+      16: const pw.FlexColumnWidth(1.0), // Meals Total
+      17: const pw.FlexColumnWidth(1.0), // Bus Fare
+      18: const pw.FlexColumnWidth(0.7), // Bus Count
+      19: const pw.FlexColumnWidth(1.0), // Bus Total
+      20: const pw.FlexColumnWidth(1.3), // Total Earned Amount
+    };
+
+    return _buildPdfBase(
+      'SITE LABOUR DETAILS REPORT',
+      headers,
+      data,
+      columnWidths: columnWidths,
+      pageFormat: PdfPageFormat.a3.landscape,
+    );
   }
 
   // 2. Attendance PDF
@@ -2251,10 +2533,11 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 child: pw.Text('Supervisor: ${sup.supervisor}', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
               ));
               
-              final headers = ['Date', 'Category', 'Type', 'Sub Contractor', 'WorkersCount', 'OT Details', 'Remarks'];
+              final headers = ['Date', 'Co-ordinator', 'Category', 'Type', 'Sub Contractor', 'WorkersCount', 'OT Details', 'Remarks'];
               final data = sup.rows.map((row) {
                 return [
                   row['date']?.toString() ?? '-',
+                  row['coordinator']?.toString() ?? '-',
                   row['categoryType']?.toString() ?? '-',
                   row['labourType']?.toString() ?? '-',
                   row['subContractor']?.toString() ?? '-',
@@ -2270,7 +2553,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                   if (wc is int) return sum + wc;
                   return sum + (int.tryParse(wc?.toString() ?? '') ?? 0);
                 });
-                data.add(['TOTAL', '-', '-', '${sup.rows.length} Entries', '$totalSupWorkers Workers', '-', '-']);
+                data.add(['TOTAL', '-', '-', '-', '${sup.rows.length} Entries', '$totalSupWorkers Workers', '-', '-']);
               }
 
               content.add(pw.Table.fromTextArray(
@@ -2295,12 +2578,13 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // 3. Daily Wage PDF
   Future<pw.Document> _buildDWPDFDocument() {
     final totals = _ReportTotals.fromRows(reportData);
-    final headers = ['Sl', 'Date', 'Site Name', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hrs', 'OT Hrs', 'OT Amt', 'Meals', 'Bus', 'Total Wages', 'Supervisor'];
+    final headers = ['Sl', 'Date', 'Co-ordinator', 'Site Name', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hrs', 'OT Hrs', 'OT Amt', 'Meals', 'Bus', 'Total Wages', 'Supervisor'];
     final data = List<List<String>>.generate(reportData.length, (index) {
       final r = reportData[index];
       return [
         '${index + 1}',
         r['date']?.toString() ?? '-',
+        r['coordinatorName']?.toString() ?? r['coordinator']?.toString() ?? '-',
         r['siteName']?.toString() ?? '-',
         r['workerName']?.toString() ?? '-',
         r['category']?.toString() ?? '-',
@@ -2320,6 +2604,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       data.add([
         'TOTAL',
         '${totals.totalRecords} Recs',
+        '-',
         '-',
         '-',
         '-',
@@ -2340,12 +2625,13 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // 4. Sub Contractor PDF
   Future<pw.Document> _buildSCPDFDocument() {
     final totals = _ReportTotals.fromRows(reportData);
-    final headers = ['Sl', 'Date', 'Site Name', 'Contractor', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hrs', 'OT Hrs', 'OT Amt', 'Meals', 'Bus', 'Total Earned', 'Supervisor'];
+    final headers = ['Sl', 'Date', 'Co-ordinator', 'Site Name', 'Contractor', 'Worker Name', 'Category', 'Basic Rate', 'Attendance', 'Hrs', 'OT Hrs', 'OT Amt', 'Meals', 'Bus', 'Total Earned', 'Supervisor'];
     final data = List<List<String>>.generate(reportData.length, (index) {
       final r = reportData[index];
       return [
         '${index + 1}',
         r['date']?.toString() ?? '-',
+        r['coordinatorName']?.toString() ?? r['coordinator']?.toString() ?? '-',
         r['siteName']?.toString() ?? '-',
         r['subContractor']?.toString() ?? '-',
         r['workerName']?.toString() ?? '-',
@@ -2366,6 +2652,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       data.add([
         'TOTAL',
         '${totals.totalRecords} Recs',
+        '-',
         '-',
         '${totals.totalSubContractors} Subs',
         '-',
@@ -2645,52 +2932,141 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final excelDoc = excel.Excel.createExcel();
     final sheet = excelDoc['Details Report'];
     sheet.appendRow([
-      excel.TextCellValue('Sl'), excel.TextCellValue('Site Code'), excel.TextCellValue('Site Name'),
-      excel.TextCellValue('Sub Contractor'), excel.TextCellValue('Worker Name'), excel.TextCellValue('Group'),
-      excel.TextCellValue('Category'), excel.TextCellValue('Basic Wage'), excel.TextCellValue('Total Earned'),
-      excel.TextCellValue('Hours'), excel.TextCellValue('OT Basic'), excel.TextCellValue('OT Amount'),
-      excel.TextCellValue('Meals Exp'), excel.TextCellValue('Meals Count'), excel.TextCellValue('Meals Total'),
-      excel.TextCellValue('Bus Fare'), excel.TextCellValue('Bus Count'), excel.TextCellValue('Bus Total')
+      excel.TextCellValue('Sl'),
+      excel.TextCellValue('Co-ordinator'),
+      excel.TextCellValue('Site Code'),
+      excel.TextCellValue('Site Name'),
+      excel.TextCellValue('Contractor'),
+      excel.TextCellValue('Worker Name'),
+      excel.TextCellValue('Group'),
+      excel.TextCellValue('Category'),
+      excel.TextCellValue('Basic Wage'),
+      excel.TextCellValue('Hrs'),
+      excel.TextCellValue('OT Rate'),
+      excel.TextCellValue('OT Hrs'),
+      excel.TextCellValue('OT Amount'),
+      excel.TextCellValue('Meals Exp'),
+      excel.TextCellValue('Meals Count'),
+      excel.TextCellValue('Meals Total'),
+      excel.TextCellValue('Bus Fare'),
+      excel.TextCellValue('Bus Count'),
+      excel.TextCellValue('Bus Total'),
+      excel.TextCellValue('Total Earned Amount'),
     ]);
 
     for (int i = 0; i < reportData.length; i++) {
       final r = reportData[i];
       sheet.appendRow([
         excel.IntCellValue(i + 1),
+        excel.TextCellValue(r['coordinatorName']?.toString() ?? r['coordinator']?.toString() ?? '-'),
         excel.TextCellValue(r['siteId']?.toString() ?? '-'),
         excel.TextCellValue(r['siteName']?.toString() ?? '-'),
         excel.TextCellValue(r['subContractor']?.toString() ?? '-'),
         excel.TextCellValue(r['workerName']?.toString() ?? '-'),
         excel.TextCellValue(r['group']?.toString() ?? '-'),
         excel.TextCellValue(r['category']?.toString() ?? '-'),
-        excel.DoubleCellValue(r['salaryBasic']),
-        excel.DoubleCellValue(r['totalSalary']),
-        excel.DoubleCellValue(r['hours']),
-        excel.DoubleCellValue(r['otSalaryBasic']),
-        excel.DoubleCellValue(r['otTotalAmount']),
-        excel.DoubleCellValue(r['mealsExpense']),
-        excel.IntCellValue(r['mealsCount']),
-        excel.DoubleCellValue(r['totalMealsAmount']),
-        excel.DoubleCellValue(r['busFare']),
-        excel.IntCellValue(r['busCount']),
-        excel.DoubleCellValue(r['totalBusAmount']),
+        excel.DoubleCellValue((r['salaryBasic'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['hours'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['otSalaryBasic'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['otHours'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['otTotalAmount'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['mealsExpense'] as num? ?? 0).toDouble()),
+        excel.IntCellValue((r['mealsCount'] as num? ?? 0).toInt()),
+        excel.DoubleCellValue((r['totalMealsAmount'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['busFare'] as num? ?? 0).toDouble()),
+        excel.IntCellValue((r['busCount'] as num? ?? 0).toInt()),
+        excel.DoubleCellValue((r['totalBusAmount'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['totalSalary'] as num? ?? 0).toDouble()),
       ]);
     }
-    final bytes = excelDoc.save();
+
+    if (reportData.isNotEmpty) {
+      final totals = _ReportTotals.fromRows(reportData);
+      sheet.appendRow([
+        excel.TextCellValue('TOTAL'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('${totals.totalRecords} Recs'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('${totals.totalSubContractors} Subs'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('-'),
+        excel.DoubleCellValue(totals.totalBasicSalary),
+        excel.DoubleCellValue(totals.totalHours),
+        excel.DoubleCellValue(totals.totalOtSalaryBasic),
+        excel.DoubleCellValue(totals.totalOtHours),
+        excel.DoubleCellValue(totals.totalOtAmount),
+        excel.DoubleCellValue(totals.totalMealsExpense),
+        excel.IntCellValue(totals.totalMealsCount),
+        excel.DoubleCellValue(totals.totalMealsAmount),
+        excel.DoubleCellValue(totals.totalBusFare),
+        excel.IntCellValue(totals.totalBusCount),
+        excel.DoubleCellValue(totals.totalBusAmount),
+        excel.DoubleCellValue(totals.totalEarnedSalary),
+      ]);
+    }
+
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Site_Labour_Details_Report.xlsx', 'application/vnd.ms-excel');
   }
 
   Future<void> _exportDetailsCSV() async {
     final csv = StringBuffer();
-    csv.writeln('Sl,Site Code,Site Name,Sub Contractor,Worker Name,Group,Category,Basic Wage,Total Earned,Hours,OT Basic,OT Amount,Meals Exp,Meals Count,Meals Total,Bus Fare,Bus Count,Bus Total');
+    csv.writeln(
+      'Sl,Co-ordinator,Site Code,Site Name,Contractor,Worker Name,Group,Category,Basic Wage,Hrs,OT Rate,OT Hrs,OT Amount,Meals Exp,Meals Count,Meals Total,Bus Fare,Bus Count,Bus Total,Total Earned Amount',
+    );
     for (int i = 0; i < reportData.length; i++) {
       final r = reportData[i];
       csv.writeln([
-        i + 1, r['siteId'], r['siteName'], r['subContractor'], r['workerName'], r['group'], r['category'],
-        r['salaryBasic'], r['totalSalary'], r['hours'], r['otSalaryBasic'], r['otTotalAmount'],
-        r['mealsExpense'], r['mealsCount'], r['totalMealsAmount'], r['busFare'], r['busCount'], r['totalBusAmount']
+        i + 1,
+        '"${(r['coordinatorName'] ?? r['coordinator'])?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['siteId']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['siteName']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['subContractor']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['workerName']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['group']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['category']?.toString().replaceAll('"', '""') ?? '-'}"',
+        (r['salaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['hours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+        (r['otSalaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['otHours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+        (r['otTotalAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['mealsExpense'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['mealsCount'] as num? ?? 0).toInt(),
+        (r['totalMealsAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['busFare'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['busCount'] as num? ?? 0).toInt(),
+        (r['totalBusAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['totalSalary'] as num? ?? 0).toDouble().toStringAsFixed(2),
       ].join(','));
     }
+
+    if (reportData.isNotEmpty) {
+      final totals = _ReportTotals.fromRows(reportData);
+      csv.writeln([
+        'TOTAL',
+        '"-"',
+        '"${totals.totalRecords} Recs"',
+        '"-"',
+        '"${totals.totalSubContractors} Subs"',
+        '"-"',
+        '"-"',
+        '"-"',
+        totals.totalBasicSalary.toStringAsFixed(2),
+        totals.totalHours.toStringAsFixed(1),
+        totals.totalOtSalaryBasic.toStringAsFixed(2),
+        totals.totalOtHours.toStringAsFixed(1),
+        totals.totalOtAmount.toStringAsFixed(2),
+        totals.totalMealsExpense.toStringAsFixed(2),
+        totals.totalMealsCount,
+        totals.totalMealsAmount.toStringAsFixed(2),
+        totals.totalBusFare.toStringAsFixed(2),
+        totals.totalBusCount,
+        totals.totalBusAmount.toStringAsFixed(2),
+        totals.totalEarnedSalary.toStringAsFixed(2),
+      ].join(','));
+    }
+
     await _shareFile(csv.toString().codeUnits, 'Site_Labour_Details_Report.csv', 'text/csv');
   }
 
@@ -2699,43 +3075,50 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final excelDoc = excel.Excel.createExcel();
     final sheet = excelDoc['Attendance Report'];
     sheet.appendRow([
+      excel.TextCellValue('S.No'), excel.TextCellValue('Date'), excel.TextCellValue('Co-ordinator'),
       excel.TextCellValue('Site Code'), excel.TextCellValue('Site Name'), excel.TextCellValue('Supervisor'),
       excel.TextCellValue('Category'), excel.TextCellValue('Type'), excel.TextCellValue('Sub Contractor'),
-      excel.TextCellValue('Date'), excel.TextCellValue('Workers'), excel.TextCellValue('OT Details'), excel.TextCellValue('Remarks')
+      excel.TextCellValue('Workers'), excel.TextCellValue('OT Details'), excel.TextCellValue('Remarks')
     ]);
 
+    int sNoCounter = 1;
     for (final site in siteGroups) {
       for (final sup in site.supervisors) {
         for (final row in sup.rows) {
           sheet.appendRow([
+            excel.IntCellValue(sNoCounter),
+            excel.TextCellValue(_formatDateString(row['date']?.toString())),
+            excel.TextCellValue(row['coordinator']?.toString() ?? '-'),
             excel.TextCellValue(row['siteCode']?.toString() ?? ''),
             excel.TextCellValue(row['siteName']?.toString() ?? ''),
             excel.TextCellValue(row['supervisor']?.toString() ?? ''),
             excel.TextCellValue(row['categoryType']?.toString() ?? ''),
             excel.TextCellValue(row['labourType']?.toString() ?? ''),
             excel.TextCellValue(row['subContractor']?.toString() ?? ''),
-            excel.TextCellValue(row['date']?.toString() ?? ''),
             excel.IntCellValue(row['workerCount'] as int),
             excel.TextCellValue(row['otDetails']?.toString() ?? ''),
             excel.TextCellValue(row['remarks']?.toString() ?? ''),
           ]);
+          sNoCounter++;
         }
       }
     }
-    final bytes = excelDoc.save();
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Site_Labour_Attendance_Report.xlsx', 'application/vnd.ms-excel');
   }
 
   Future<void> _exportAttendanceCSV() async {
     final csv = StringBuffer();
-    csv.writeln('Site Code,Site Name,Supervisor,Category,Type,Sub Contractor,Date,Workers,OT Details,Remarks');
+    csv.writeln('S.No,Date,Co-ordinator,Site Code,Site Name,Supervisor,Category,Type,Sub Contractor,Workers,OT Details,Remarks');
+    int sNoCounter = 1;
     for (final site in siteGroups) {
       for (final sup in site.supervisors) {
         for (final row in sup.rows) {
           csv.writeln([
-            row['siteCode'], row['siteName'], row['supervisor'], row['categoryType'], row['labourType'],
-            row['subContractor'], row['date'], row['workerCount'], row['otDetails'], row['remarks']
+            sNoCounter, _formatDateString(row['date']?.toString()), '"${row['coordinator'] ?? '-'}"', row['siteCode'], row['siteName'], row['supervisor'], row['categoryType'], row['labourType'],
+            row['subContractor'], row['workerCount'], row['otDetails'], row['remarks']
           ].join(','));
+          sNoCounter++;
         }
       }
     }
@@ -2747,7 +3130,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final excelDoc = excel.Excel.createExcel();
     final sheet = excelDoc['Daily Wage Report'];
     sheet.appendRow([
-      excel.TextCellValue('Sl'), excel.TextCellValue('Date'), excel.TextCellValue('Site Name'), excel.TextCellValue('Worker Name'),
+      excel.TextCellValue('Sl'), excel.TextCellValue('Date'), excel.TextCellValue('Co-ordinator'), excel.TextCellValue('Site Name'), excel.TextCellValue('Worker Name'),
       excel.TextCellValue('Category'), excel.TextCellValue('Basic Rate'), excel.TextCellValue('Attendance'),
       excel.TextCellValue('Hours'), excel.TextCellValue('OT Hours'), excel.TextCellValue('OT Amount'),
       excel.TextCellValue('Meals'), excel.TextCellValue('Bus'), excel.TextCellValue('Total Wages'), excel.TextCellValue('Supervisor'), excel.TextCellValue('Remarks')
@@ -2758,6 +3141,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       sheet.appendRow([
         excel.IntCellValue(i + 1),
         excel.TextCellValue(r['date']?.toString() ?? '-'),
+        excel.TextCellValue(r['coordinatorName']?.toString() ?? r['coordinator']?.toString() ?? '-'),
         excel.TextCellValue(r['siteName']?.toString() ?? '-'),
         excel.TextCellValue(r['workerName']?.toString() ?? '-'),
         excel.TextCellValue(r['category']?.toString() ?? '-'),
@@ -2773,17 +3157,17 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         excel.TextCellValue(r['remarks']?.toString() ?? '-'),
       ]);
     }
-    final bytes = excelDoc.save();
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Daily_Wage_Report.xlsx', 'application/vnd.ms-excel');
   }
 
   Future<void> _exportDWCSV() async {
     final csv = StringBuffer();
-    csv.writeln('Sl,Date,Site Name,Worker Name,Category,Basic Rate,Attendance,Hours,OT Hours,OT Amount,Meals,Bus,Total Wages,Supervisor,Remarks');
+    csv.writeln('Sl,Date,Co-ordinator,Site Name,Worker Name,Category,Basic Rate,Attendance,Hours,OT Hours,OT Amount,Meals,Bus,Total Wages,Supervisor,Remarks');
     for (int i = 0; i < reportData.length; i++) {
       final r = reportData[i];
       csv.writeln([
-        i + 1, r['date'], r['siteName'], r['workerName'], r['category'], r['salaryBasic'], r['attendanceType'],
+        i + 1, r['date'], '"${r['coordinatorName'] ?? r['coordinator'] ?? '-'}"', r['siteName'], r['workerName'], r['category'], r['salaryBasic'], r['attendanceType'],
         r['hours'], r['otHours'], r['otTotalAmount'], r['totalMealsAmount'], r['totalBusAmount'], r['totalSalary'],
         r['supervisorName'], r['remarks']
       ].join(','));
@@ -2796,7 +3180,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final excelDoc = excel.Excel.createExcel();
     final sheet = excelDoc['Sub Contractor Report'];
     sheet.appendRow([
-      excel.TextCellValue('Sl'), excel.TextCellValue('Date'), excel.TextCellValue('Site Name'), excel.TextCellValue('Sub Contractor'),
+      excel.TextCellValue('Sl'), excel.TextCellValue('Date'), excel.TextCellValue('Co-ordinator'), excel.TextCellValue('Site Name'), excel.TextCellValue('Sub Contractor'),
       excel.TextCellValue('Worker Name'), excel.TextCellValue('Category'), excel.TextCellValue('Basic Rate'),
       excel.TextCellValue('Attendance'), excel.TextCellValue('Hours'), excel.TextCellValue('OT Hours'), excel.TextCellValue('OT Amount'),
       excel.TextCellValue('Meals'), excel.TextCellValue('Bus'), excel.TextCellValue('Total Amount'), excel.TextCellValue('Supervisor'), excel.TextCellValue('Remarks')
@@ -2807,6 +3191,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       sheet.appendRow([
         excel.IntCellValue(i + 1),
         excel.TextCellValue(r['date']?.toString() ?? '-'),
+        excel.TextCellValue(r['coordinatorName']?.toString() ?? r['coordinator']?.toString() ?? '-'),
         excel.TextCellValue(r['siteName']?.toString() ?? '-'),
         excel.TextCellValue(r['subContractor']?.toString() ?? '-'),
         excel.TextCellValue(r['workerName']?.toString() ?? '-'),
@@ -2823,17 +3208,17 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         excel.TextCellValue(r['remarks']?.toString() ?? '-'),
       ]);
     }
-    final bytes = excelDoc.save();
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Sub_Contractor_Report.xlsx', 'application/vnd.ms-excel');
   }
 
   Future<void> _exportSCCSV() async {
     final csv = StringBuffer();
-    csv.writeln('Sl,Date,Site Name,Sub Contractor,Worker Name,Category,Basic Rate,Attendance,Hours,OT Hours,OT Amount,Meals,Bus,Total Amount,Supervisor,Remarks');
+    csv.writeln('Sl,Date,Co-ordinator,Site Name,Sub Contractor,Worker Name,Category,Basic Rate,Attendance,Hours,OT Hours,OT Amount,Meals,Bus,Total Amount,Supervisor,Remarks');
     for (int i = 0; i < reportData.length; i++) {
       final r = reportData[i];
       csv.writeln([
-        i + 1, r['date'], r['siteName'], r['subContractor'], r['workerName'], r['category'], r['salaryBasic'],
+        i + 1, r['date'], '"${r['coordinatorName'] ?? r['coordinator'] ?? '-'}"', r['siteName'], r['subContractor'], r['workerName'], r['category'], r['salaryBasic'],
         r['attendanceType'], r['hours'], r['otHours'], r['otTotalAmount'], r['totalMealsAmount'], r['totalBusAmount'],
         r['totalSalary'], r['supervisorName'], r['remarks']
       ].join(','));
@@ -2862,8 +3247,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         ]);
       }
     }
-    final bytes = excelDoc.save();
-    if (bytes != null) await _shareFile(bytes, 'Worker_Presence_Report.xlsx', 'application/vnd.ms-excel');
+    final bytes = excelDoc.encode();
+    if (bytes != null) await _shareFile(bytes, 'Worker_On_Site_Report.xlsx', 'application/vnd.ms-excel');
   }
 
   Future<void> _exportPresenceCSV() async {
@@ -3058,6 +3443,15 @@ class _ExportPreviewDialogContent extends StatefulWidget {
 class _ExportPreviewDialogContentState extends State<_ExportPreviewDialogContent> {
   bool _isLoading = true;
   Uint8List? _pdfBytes;
+  final ScrollController _verticalScrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _verticalScrollController.dispose();
+    _horizontalScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -3214,39 +3608,249 @@ class _ExportPreviewDialogContentState extends State<_ExportPreviewDialogContent
     final rows = widget.tableData.sublist(1);
     
     return Scrollbar(
+      controller: _verticalScrollController,
       thumbVisibility: true,
       child: SingleChildScrollView(
+        controller: _verticalScrollController,
         scrollDirection: Axis.vertical,
         padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Table(
-            border: TableBorder.all(color: Colors.grey.shade300, width: 1),
-            defaultColumnWidth: const IntrinsicColumnWidth(),
-            children: [
-              TableRow(
-                decoration: BoxDecoration(color: widget.primaryColor.withValues(alpha: 0.08)),
-                children: headers.map((h) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Text(
-                    h,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                  ),
-                )).toList(),
-              ),
-              ...rows.map((row) => TableRow(
-                children: row.map((cell) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(
-                    cell,
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                )).toList(),
-              )),
-            ],
+        child: Scrollbar(
+          controller: _horizontalScrollController,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _horizontalScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Table(
+              border: TableBorder.all(color: Colors.grey.shade300, width: 1),
+              defaultColumnWidth: const IntrinsicColumnWidth(),
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: widget.primaryColor.withValues(alpha: 0.08)),
+                  children: headers.map((h) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Text(
+                      h,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  )).toList(),
+                ),
+                ...rows.map((row) => TableRow(
+                  children: row.map((cell) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Text(
+                      cell,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  )).toList(),
+                )),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _SiteAttendanceCardItem extends StatefulWidget {
+  final _SiteGroup site;
+  final String searchQuery;
+
+  const _SiteAttendanceCardItem({
+    required this.site,
+    required this.searchQuery,
+  });
+
+  @override
+  State<_SiteAttendanceCardItem> createState() => _SiteAttendanceCardItemState();
+}
+
+class _SiteAttendanceCardItemState extends State<_SiteAttendanceCardItem> {
+  bool _isExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final site = widget.site;
+    final searchQuery = widget.searchQuery;
+
+    if (searchQuery.isNotEmpty) {
+      final q = searchQuery.toLowerCase();
+      final siteMatch =
+          site.siteCode.toLowerCase().contains(q) ||
+          site.siteName.toLowerCase().contains(q);
+      final hasMatch = site.supervisors.any((sup) =>
+          sup.supervisor.toLowerCase().contains(q) ||
+          sup.rows.any((r) =>
+              (r['subContractor']?.toString().toLowerCase().contains(q) ??
+                  false) ||
+              (r['categoryType']?.toString().toLowerCase().contains(q) ??
+                  false)));
+      if (!siteMatch && !hasMatch) return const SizedBox.shrink();
+    }
+
+    const primaryColor = Color(0xFF0b3470);
+    const primaryLight = Color(0xFF1a4a8c);
+    const cardColor = Colors.white;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header banner (tappable to expand/collapse)
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(12),
+              bottom: Radius.circular(_isExpanded ? 0 : 12),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [primaryColor, primaryLight],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  top: const Radius.circular(12),
+                  bottom: Radius.circular(_isExpanded ? 0 : 12),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_city, color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Site Code: ${site.siteCode}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (site.siteName != site.siteCode && site.siteName.isNotEmpty)
+                          Text(
+                            site.siteName,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 11,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Total: ${site.totalCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Attendance Table Body (Single detailed attendance register per site)
+          if (_isExpanded)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: 12,
+                headingRowHeight: 40,
+                dataRowHeight: 44,
+                headingRowColor: WidgetStateProperty.all(
+                  primaryColor.withValues(alpha: 0.08),
+                ),
+                columns: const [
+                  DataColumn(label: Text('S.No', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Co-ordinator', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Site Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Supervisor', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('CT', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('LT', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Sub.Contractor', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Nos', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('OT/ST Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                ],
+                rows: _buildRegisterRows(site),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<DataRow> _buildRegisterRows(_SiteGroup site) {
+    final rows = <DataRow>[];
+    bool firstSiteRow = true;
+    int sNoCounter = 1;
+    int grandTotalWorkers = 0;
+
+    for (final sup in site.supervisors) {
+      for (int i = 0; i < sup.rows.length; i++) {
+        final r = sup.rows[i];
+        final showSupervisor = i == 0;
+        final workerCnt = (r['workerCount'] as int? ?? 0);
+        grandTotalWorkers += workerCnt;
+
+        final isLastRowOfSite = (sup == site.supervisors.last) && (i == sup.rows.length - 1);
+
+        rows.add(DataRow(
+          cells: [
+            DataCell(Text('$sNoCounter', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(_formatDate(r['date']?.toString()), style: const TextStyle(fontSize: 11))),
+            DataCell(Text(r['coordinator']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(firstSiteRow ? site.siteCode : '', style: TextStyle(fontSize: 11, fontWeight: firstSiteRow ? FontWeight.w600 : FontWeight.normal))),
+            DataCell(Text(showSupervisor ? sup.supervisor : '', style: TextStyle(fontSize: 11, fontWeight: showSupervisor ? FontWeight.w600 : FontWeight.normal))),
+            DataCell(Text(r['categoryType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(r['labourType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(r['subContractor']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text('$workerCnt', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+            DataCell(Text(isLastRowOfSite ? '$grandTotalWorkers' : '', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF0b3470)))),
+            DataCell(Text(r['otDetails']?.toString() ?? '-', style: const TextStyle(fontSize: 10))),
+          ],
+        ));
+        firstSiteRow = false;
+        sNoCounter++;
+      }
+    }
+    return rows;
+  }
+
+  String _formatDate(String? raw) {
+    if (raw == null || raw.isEmpty) return '-';
+    final dt = DateTime.tryParse(raw);
+    if (dt != null) return DateFormat('dd/MM/yyyy').format(dt);
+    return raw;
   }
 }

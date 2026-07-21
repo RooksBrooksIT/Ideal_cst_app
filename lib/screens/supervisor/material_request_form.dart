@@ -475,6 +475,62 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
     );
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Row(
+          children: [
+            InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(Icons.arrow_back_ios_new, color: primaryColor, size: 20),
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Material',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Request Form',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E1E2D),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Theme(
@@ -497,21 +553,7 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
         ),
       ),
       child: Scaffold(
-        backgroundColor: backgroundColor,
-        appBar: AppBar(
-          title: Text('Material Request Form',style: TextStyle(color: Colors.white),),
-          centerTitle: true,
-          elevation: 0,
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primaryColor.withValues(alpha: 0.8), primaryColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-        ),
+        backgroundColor: const Color.fromARGB(255, 213, 207, 232),
         body: isLoadingSupervisorData
             ? Center(
                 child: Column(
@@ -527,13 +569,33 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
                   ],
                 ),
               )
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /// SECTION 1: Basic Details
-                    _buildSectionHeader('Site Information'),
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                  child: Column(
+                    children: [
+                      _buildHeader(context),
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                /// SECTION 1: Basic Details
+                                _buildSectionHeader('Site Information'),
                     if (supervisorError != null)
                       Container(
                         padding: EdgeInsets.all(12),
@@ -829,12 +891,13 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
                           child: ElevatedButton(
                             onPressed: _sendForApproval,
                             style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple,
                               elevation: 2,
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.send, size: 20),
+                                Icon(Icons.send, size: 20, color: Colors.white),
                                 SizedBox(width: 8),
                                 Text(
                                   "Submit Request",
@@ -848,8 +911,14 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
                     ),
                     SizedBox(height: 16),
                   ],
-                ),
-              ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
       ),
     );
   }

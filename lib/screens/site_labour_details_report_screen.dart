@@ -181,13 +181,69 @@ class _SiteLabourDetailsReportScreenState
         query = query.where('date', isLessThanOrEqualTo: endStr);
       }
 
-      final snap = await query.get();
+      final parentSnap = await query.get();
 
-      List<Map<String, dynamic>> entries = snap.docs.map((d) {
-        final data = Map<String, dynamic>.from(d.data());
-        data['_docId'] = d.id;
-        return data;
-      }).toList();
+      final List<Map<String, dynamic>> entries = [];
+
+      await Future.wait(parentSnap.docs.map((parentDoc) async {
+        final parentData = Map<String, dynamic>.from(parentDoc.data());
+        final parentDocId = parentDoc.id;
+
+        final parentSiteId   = parentData['siteId']?.toString() ?? parentData['siteCode']?.toString() ?? '-';
+        final parentSiteName = parentData['siteName']?.toString() ?? '-';
+        final parentDate     = parentData['date']?.toString() ?? '-';
+        final parentCoordinator =
+            parentData['coordinatorName']?.toString() ?? parentData['coordinator']?.toString() ?? '-';
+        final parentSupervisor =
+            parentData['supervisorName']?.toString() ?? parentData['supervisor']?.toString() ?? '-';
+
+        final workersSnap = await FirebaseFirestore.instance
+            .collection('daily_labour_entries')
+            .doc(parentDocId)
+            .collection('workers')
+            .get();
+
+        if (workersSnap.docs.isEmpty) {
+          // Fallback: treat parent document as a single entry
+          entries.add({
+            ...parentData,
+            '_docId': parentDocId,
+            '_parentDocId': parentDocId,
+          });
+          return;
+        }
+
+        for (final workerDoc in workersSnap.docs) {
+          final wData = Map<String, dynamic>.from(workerDoc.data());
+          entries.add({
+            'siteId':          parentSiteId,
+            'siteCode':        parentSiteId,
+            'siteName':        parentSiteName,
+            'date':            parentDate,
+            'coordinatorName': parentCoordinator,
+            'supervisorName':  wData['supervisorName'] ?? parentSupervisor,
+            'workerName':      wData['workerName']?.toString() ?? wData['name']?.toString() ?? '-',
+            'contractorName':  wData['contractor']?.toString() ?? wData['contractorName']?.toString() ?? wData['subContractor']?.toString() ?? '-',
+            'category':        wData['category']?.toString() ?? wData['categoryType']?.toString() ?? '-',
+            'basicSalary':     wData['basicSalary'] ?? wData['salaryBasic'] ?? wData['salary'] ?? wData['rate'],
+            'hoursWorked':     wData['hoursWorked'] ?? wData['hours'],
+            'otHours':         wData['overtimeHours'] ?? wData['otHours'],
+            'overtimeAmount':  wData['overtimeAmount'] ?? wData['otAmount'],
+            'mealsCount':      wData['mealsCount'],
+            'mealsAmount':     wData['mealsAmount'] ?? wData['mealsExpense'],
+            'busCount':        wData['busCount'],
+            'busAmount':       wData['busAmount'] ?? wData['busFare'],
+            'attendanceType':  wData['attendanceType'] ?? wData['attendance'] ?? 'Full Day',
+            'inTime':          wData['inTime'] ?? '',
+            'outTime':         wData['outTime'] ?? '',
+            'remarks':         wData['remarks'] ?? '',
+            'defaultHours':    wData['defaultHours'] ?? parentData['defaultHours'],
+            'contractorId':    wData['contractorId'],
+            '_docId':          workerDoc.id,
+            '_parentDocId':    parentDocId,
+          });
+        }
+      }));
 
       // Fetch subcontractors salary mappings for fallback
       final subContractorsSnap = await FirebaseFirestore.instance.collection('sub_contractors').get();
@@ -289,11 +345,10 @@ class _SiteLabourDetailsReportScreenState
         final storedBusTotal = (e['totalBusAmount'] as num?)?.toDouble() ?? (e['busTotal'] as num?)?.toDouble();
         final busTotal = storedBusTotal ?? (busCount * busAmount);
 
-        // ── Total Amount: prefer stored total if valid (>= salaryBasic + overtimeAmt); fall back to component computation
-        final storedTotal = (e['totalSalary'] as num?)?.toDouble() ?? (e['totalAmount'] as num?)?.toDouble() ?? 0.0;
-        final totalAmount = (storedTotal >= (salaryBasic + overtimeAmt) && storedTotal > 0)
-            ? storedTotal
-            : (salaryBasic + overtimeAmt + mealsTotal + busTotal);
+        // ── Total Amount: always compute from all four components so that
+        // meals and bus are never dropped when the stored Firestore value
+        // only covered basicSalary + overtimeAmount.
+        final totalAmount = salaryBasic + overtimeAmt + mealsTotal + busTotal;
 
         // ── OT Rate
         double otRate = (e['overtimeRate'] as num?)?.toDouble() ??
@@ -1511,7 +1566,7 @@ class _SiteLabourDetailsReportScreenState
     pdf.addPage(
       pw.MultiPage(
         theme: pdfTheme,
-        pageFormat: PdfPageFormat.a4.landscape,
+        pageFormat: PdfPageFormat.a3.landscape,
         margin: const pw.EdgeInsets.all(20),
         header: (context) {
           return pw.Container(
@@ -1863,100 +1918,103 @@ class _SiteLabourDetailsReportScreenState
 
       // Headers
       sheet.appendRow([
-        excel.TextCellValue('Sl.'),
-        excel.TextCellValue('Date'),
+        excel.TextCellValue('Sl'),
+        excel.TextCellValue('Site Code'),
         excel.TextCellValue('Site Name'),
-        excel.TextCellValue('Coordinator'),
-        excel.TextCellValue('Sub Contractor'),
+        excel.TextCellValue('Contractor'),
         excel.TextCellValue('Worker Name'),
+        excel.TextCellValue('Group'),
         excel.TextCellValue('Category'),
-        excel.TextCellValue('Basic Rate'),
-        excel.TextCellValue('Attendance'),
-        excel.TextCellValue('Hours'),
-        excel.TextCellValue('OT Hours'),
+        excel.TextCellValue('Basic Wage'),
+        excel.TextCellValue('Hrs'),
+        excel.TextCellValue('OT Rate'),
+        excel.TextCellValue('OT Hrs'),
         excel.TextCellValue('OT Amount'),
-        excel.TextCellValue('Meals'),
-        excel.TextCellValue('Bus'),
-        excel.TextCellValue('Total Amount'),
-        excel.TextCellValue('Supervisor'),
-        excel.TextCellValue('Remarks'),
+        excel.TextCellValue('Meals Exp'),
+        excel.TextCellValue('Meals Count'),
+        excel.TextCellValue('Meals Total'),
+        excel.TextCellValue('Bus Fare'),
+        excel.TextCellValue('Bus Count'),
+        excel.TextCellValue('Bus Total'),
+        excel.TextCellValue('Total Earned Amount'),
       ]);
 
       for (int i = 0; i < reportData.length; i++) {
         final entry = reportData[i];
         sheet.appendRow([
           excel.IntCellValue(i + 1),
-          excel.TextCellValue(entry['date']?.toString() ?? '-'),
+          excel.TextCellValue(entry['siteId']?.toString() ?? '-'),
           excel.TextCellValue(entry['siteName']?.toString() ?? '-'),
-          excel.TextCellValue(entry['coordinatorName']?.toString() ?? '-'),
           excel.TextCellValue(entry['subContractor']?.toString() ?? '-'),
           excel.TextCellValue(entry['workerName']?.toString() ?? '-'),
+          excel.TextCellValue(entry['group']?.toString() ?? '-'),
           excel.TextCellValue(entry['category']?.toString() ?? '-'),
-          excel.TextCellValue(
-            '₹${(entry['basicSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
-          excel.TextCellValue(entry['attendanceType']?.toString() ?? '-'),
-          excel.TextCellValue(
-            (entry['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0',
-          ),
-          excel.TextCellValue(
-            (entry['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0',
-          ),
-          excel.TextCellValue(
-            '₹${(entry['otAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
-          excel.TextCellValue(
-            '₹${(entry['mealsTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
-          excel.TextCellValue(
-            '₹${(entry['busTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
-          excel.TextCellValue(
-            '₹${(entry['totalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',
-          ),
-          excel.TextCellValue(entry['supervisorName']?.toString() ?? '-'),
-          excel.TextCellValue(entry['remarks']?.toString() ?? ''),
+          excel.DoubleCellValue((entry['basicSalary'] as num? ?? 0).toDouble()),
+          excel.DoubleCellValue((entry['hoursWorked'] as num? ?? 0).toDouble()),
+          excel.DoubleCellValue((entry['otRate'] as num? ?? 0).toDouble()),
+          excel.DoubleCellValue((entry['otHours'] as num? ?? 0).toDouble()),
+          excel.DoubleCellValue((entry['otAmount'] as num? ?? 0).toDouble()),
+          excel.DoubleCellValue((entry['mealsExpense'] as num? ?? 0).toDouble()),
+          excel.IntCellValue((entry['mealsCount'] as num? ?? 0).toInt()),
+          excel.DoubleCellValue((entry['mealsTotal'] as num? ?? 0).toDouble()),
+          excel.DoubleCellValue((entry['busFare'] as num? ?? 0).toDouble()),
+          excel.IntCellValue((entry['busCount'] as num? ?? 0).toInt()),
+          excel.DoubleCellValue((entry['busTotal'] as num? ?? 0).toDouble()),
+          excel.DoubleCellValue((entry['totalAmount'] as num? ?? 0).toDouble()),
         ]);
       }
 
       // Add totals row:
-      // Sl., Date, Site Name, Coordinator, Sub Contractor, Worker Name, Category, Basic Rate, Attendance, Hours, OT Hours, OT Amount, Meals, Bus, Total Amount, Supervisor, Remarks
-      // 0,  1,    2,         3,           4,              5,           6,        7,          8,          9,     10,       11,        12,    13,  14,           15,         16
-      double totBasic = 0, totHrs = 0, totOtHrs = 0, totOtAmt = 0, totMeals = 0, totBus = 0, totTotal = 0;
+      double totBasic = 0, totHrs = 0, totOtRate = 0, totOtHrs = 0, totOtAmt = 0, totMealsExp = 0, totMealsAmt = 0, totBusFare = 0, totBusAmt = 0, totTotal = 0;
+      int totMealsCnt = 0, totBusCnt = 0;
+      final Set<String> subs = {};
+
       for (final r in reportData) {
         totBasic += (r['basicSalary'] as num? ?? 0).toDouble();
-        totHrs   += (r['hoursWorked'] as num? ?? 0).toDouble();
+        totHrs += (r['hoursWorked'] as num? ?? 0).toDouble();
+        totOtRate += (r['otRate'] as num? ?? 0).toDouble();
         totOtHrs += (r['otHours'] as num? ?? 0).toDouble();
         totOtAmt += (r['otAmount'] as num? ?? 0).toDouble();
-        totMeals += (r['mealsTotal'] as num? ?? 0).toDouble();
-        totBus   += (r['busTotal'] as num? ?? 0).toDouble();
+        totMealsExp += (r['mealsExpense'] as num? ?? 0).toDouble();
+        totMealsCnt += (r['mealsCount'] as num? ?? 0).toInt();
+        totMealsAmt += (r['mealsTotal'] as num? ?? 0).toDouble();
+        totBusFare += (r['busFare'] as num? ?? 0).toDouble();
+        totBusCnt += (r['busCount'] as num? ?? 0).toInt();
+        totBusAmt += (r['busTotal'] as num? ?? 0).toDouble();
         totTotal += (r['totalAmount'] as num? ?? 0).toDouble();
+
+        final sub = r['subContractor']?.toString();
+        if (sub != null && sub.isNotEmpty && sub != '-') {
+          subs.add(sub);
+        }
       }
 
       sheet.appendRow([
         excel.TextCellValue('TOTAL'),
         excel.TextCellValue('${reportData.length} Recs'),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
-        excel.TextCellValue('₹${totBasic.toStringAsFixed(2)}'),
-        excel.TextCellValue(''),
-        excel.TextCellValue(totHrs.toStringAsFixed(1)),
-        excel.TextCellValue(totOtHrs.toStringAsFixed(1)),
-        excel.TextCellValue('₹${totOtAmt.toStringAsFixed(2)}'),
-        excel.TextCellValue('₹${totMeals.toStringAsFixed(2)}'),
-        excel.TextCellValue('₹${totBus.toStringAsFixed(2)}'),
-        excel.TextCellValue('₹${totTotal.toStringAsFixed(2)}'),
-        excel.TextCellValue(''),
-        excel.TextCellValue(''),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('${subs.length} Subs'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('-'),
+        excel.DoubleCellValue(totBasic),
+        excel.DoubleCellValue(totHrs),
+        excel.DoubleCellValue(totOtRate),
+        excel.DoubleCellValue(totOtHrs),
+        excel.DoubleCellValue(totOtAmt),
+        excel.DoubleCellValue(totMealsExp),
+        excel.IntCellValue(totMealsCnt),
+        excel.DoubleCellValue(totMealsAmt),
+        excel.DoubleCellValue(totBusFare),
+        excel.IntCellValue(totBusCnt),
+        excel.DoubleCellValue(totBusAmt),
+        excel.DoubleCellValue(totTotal),
       ]);
 
       final output = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final file = File('${output.path}/site_labour_report_$timestamp.xlsx');
-      final List<int>? fileBytes = excelDoc.save();
+      final List<int>? fileBytes = excelDoc.encode();
       if (fileBytes != null) {
         await file.writeAsBytes(fileBytes);
         await Share.shareXFiles([XFile(file.path)]);
@@ -1983,7 +2041,7 @@ class _SiteLabourDetailsReportScreenState
 
       // Headers
       csvBuffer.writeln(
-        'Sl.,Date,Site Name,Coordinator,Sub Contractor,Worker Name,Category,Basic Rate,Attendance,Hours,OT Hours,OT Amount,Meals,Bus,Total Amount,Supervisor,Remarks',
+        'Sl,Site Code,Site Name,Contractor,Worker Name,Group,Category,Basic Wage,Hrs,OT Rate,OT Hrs,OT Amount,Meals Exp,Meals Count,Meals Total,Bus Fare,Bus Count,Bus Total,Total Earned Amount',
       );
 
       for (int i = 0; i < reportData.length; i++) {
@@ -1991,57 +2049,74 @@ class _SiteLabourDetailsReportScreenState
         csvBuffer.writeln(
           [
             i + 1,
-            '"${entry['date']?.toString().replaceAll('"', '""') ?? '-'}"',
+            '"${entry['siteId']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['siteName']?.toString().replaceAll('"', '""') ?? '-'}"',
-            '"${entry['coordinatorName']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['subContractor']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['workerName']?.toString().replaceAll('"', '""') ?? '-'}"',
+            '"${entry['group']?.toString().replaceAll('"', '""') ?? '-'}"',
             '"${entry['category']?.toString().replaceAll('"', '""') ?? '-'}"',
-            '"₹${(entry['basicSalary'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"${entry['attendanceType']?.toString().replaceAll('"', '""') ?? '-'}"',
-            '"${(entry['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0'}"',
-            '"${(entry['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0'}"',
-            '"₹${(entry['otAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"₹${(entry['mealsTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"₹${(entry['busTotal'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"₹${(entry['totalAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}"',
-            '"${entry['supervisorName']?.toString().replaceAll('"', '""') ?? '-'}"',
-            '"${entry['remarks']?.toString().replaceAll('"', '""') ?? ''}"',
+            (entry['basicSalary'] as num? ?? 0).toDouble().toStringAsFixed(2),
+            (entry['hoursWorked'] as num? ?? 0).toDouble().toStringAsFixed(1),
+            (entry['otRate'] as num? ?? 0).toDouble().toStringAsFixed(2),
+            (entry['otHours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+            (entry['otAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
+            (entry['mealsExpense'] as num? ?? 0).toDouble().toStringAsFixed(2),
+            (entry['mealsCount'] as num? ?? 0).toInt(),
+            (entry['mealsTotal'] as num? ?? 0).toDouble().toStringAsFixed(2),
+            (entry['busFare'] as num? ?? 0).toDouble().toStringAsFixed(2),
+            (entry['busCount'] as num? ?? 0).toInt(),
+            (entry['busTotal'] as num? ?? 0).toDouble().toStringAsFixed(2),
+            (entry['totalAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
           ].join(','),
         );
       }
 
       // Add totals row
-      double totBasic = 0, totHrs = 0, totOtHrs = 0, totOtAmt = 0, totMeals = 0, totBus = 0, totTotal = 0;
+      double totBasic = 0, totHrs = 0, totOtRate = 0, totOtHrs = 0, totOtAmt = 0, totMealsExp = 0, totMealsAmt = 0, totBusFare = 0, totBusAmt = 0, totTotal = 0;
+      int totMealsCnt = 0, totBusCnt = 0;
+      final Set<String> subs = {};
+
       for (final r in reportData) {
         totBasic += (r['basicSalary'] as num? ?? 0).toDouble();
-        totHrs   += (r['hoursWorked'] as num? ?? 0).toDouble();
+        totHrs += (r['hoursWorked'] as num? ?? 0).toDouble();
+        totOtRate += (r['otRate'] as num? ?? 0).toDouble();
         totOtHrs += (r['otHours'] as num? ?? 0).toDouble();
         totOtAmt += (r['otAmount'] as num? ?? 0).toDouble();
-        totMeals += (r['mealsTotal'] as num? ?? 0).toDouble();
-        totBus   += (r['busTotal'] as num? ?? 0).toDouble();
+        totMealsExp += (r['mealsExpense'] as num? ?? 0).toDouble();
+        totMealsCnt += (r['mealsCount'] as num? ?? 0).toInt();
+        totMealsAmt += (r['mealsTotal'] as num? ?? 0).toDouble();
+        totBusFare += (r['busFare'] as num? ?? 0).toDouble();
+        totBusCnt += (r['busCount'] as num? ?? 0).toInt();
+        totBusAmt += (r['busTotal'] as num? ?? 0).toDouble();
         totTotal += (r['totalAmount'] as num? ?? 0).toDouble();
+
+        final sub = r['subContractor']?.toString();
+        if (sub != null && sub.isNotEmpty && sub != '-') {
+          subs.add(sub);
+        }
       }
 
       csvBuffer.writeln(
         [
           'TOTAL',
           '"${reportData.length} Recs"',
-          '',
-          '',
-          '',
-          '',
-          '',
-          '"₹${totBasic.toStringAsFixed(2)}"',
-          '',
-          '"${totHrs.toStringAsFixed(1)}"',
-          '"${totOtHrs.toStringAsFixed(1)}"',
-          '"₹${totOtAmt.toStringAsFixed(2)}"',
-          '"₹${totMeals.toStringAsFixed(2)}"',
-          '"₹${totBus.toStringAsFixed(2)}"',
-          '"₹${totTotal.toStringAsFixed(2)}"',
-          '',
-          '',
+          '"-"',
+          '"${subs.length} Subs"',
+          '"-"',
+          '"-"',
+          '"-"',
+          totBasic.toStringAsFixed(2),
+          totHrs.toStringAsFixed(1),
+          totOtRate.toStringAsFixed(2),
+          totOtHrs.toStringAsFixed(1),
+          totOtAmt.toStringAsFixed(2),
+          totMealsExp.toStringAsFixed(2),
+          totMealsCnt,
+          totMealsAmt.toStringAsFixed(2),
+          totBusFare.toStringAsFixed(2),
+          totBusCnt,
+          totBusAmt.toStringAsFixed(2),
+          totTotal.toStringAsFixed(2),
         ].join(','),
       );
 
