@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'screens/splash_screen.dart';
-import 'screens/lets_start_page.dart';
-import 'screens/main_dashboard.dart';
+import 'screens/onboarding/splash_screen.dart';
+import 'screens/onboarding/lets_start_page.dart';
+import 'screens/onboarding/main_dashboard.dart';
 import 'screens/site_labour_attendance_report_screen.dart';
 
 void main() async {

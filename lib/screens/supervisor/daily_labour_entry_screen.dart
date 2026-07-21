@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:ideal_cst/screens/add_labour_entry_modal.dart';
-import 'package:ideal_cst/screens/site_progress_screen.dart';
-import 'package:ideal_cst/screens/material_request_form.dart';
+import 'package:ideal_cst/screens/supervisor/add_labour_entry_modal.dart';
+import 'package:ideal_cst/screens/supervisor/site_progress_screen.dart';
+import 'package:ideal_cst/screens/supervisor/material_request_form.dart';
 
 class DailyLabourEntryScreen extends StatefulWidget {
   final String supervisorId;
@@ -24,11 +24,15 @@ class DailyLabourEntryScreen extends StatefulWidget {
 }
 
 class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
-  final Color primaryColor = const Color(0xFF0b3470);
+  final Color primaryColor = const Color(0xFF4527A0);
+  final TextEditingController coordinatorController = TextEditingController();
   final TextEditingController weatherController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
   final FocusNode weatherFocusNode = FocusNode();
   final FocusNode notesFocusNode = FocusNode();
+  
+  bool isSavingCoordinator = false;
+  
   List<Map<String, dynamic>> workersList = [];
   bool isLoading = true;
   String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -53,24 +57,15 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
   void initState() {
     super.initState();
     loadData();
-    weatherFocusNode.addListener(() {
-      if (!weatherFocusNode.hasFocus) {
-        saveWeatherAndNotes();
-      }
-    });
-    notesFocusNode.addListener(() {
-      if (!notesFocusNode.hasFocus) {
-        saveWeatherAndNotes();
-      }
-    });
   }
 
   @override
   void dispose() {
-    weatherFocusNode.dispose();
-    notesFocusNode.dispose();
+    coordinatorController.dispose();
     weatherController.dispose();
     notesController.dispose();
+    weatherFocusNode.dispose();
+    notesFocusNode.dispose();
     super.dispose();
   }
 
@@ -85,25 +80,52 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
   Future<void> loadAttendance() async {
     try {
       final docId = '${widget.siteId}_$today';
-      final doc = await FirebaseFirestore.instance
-          .collection('attendance')
+      
+      // Load coordinator and other details
+      final mainDoc = await FirebaseFirestore.instance
+          .collection('daily_labour_entries')
           .doc(docId)
           .get();
-
-      if (doc.exists) {
-        final data = doc.data()!;
-        weatherController.text = data['weather'] ?? '';
-        notesController.text = data['notes'] ?? '';
-
-        final workersSnapshot = await doc.reference.collection('workers').get();
-        setState(() {
-          workersList = workersSnapshot.docs.map((d) {
-            final data = d.data();
-            data['id'] = d.id;
-            return data;
-          }).toList();
-        });
+          
+      if (mainDoc.exists) {
+         final data = mainDoc.data()!;
+         coordinatorController.text = data['coordinatorName'] ?? '';
+         weatherController.text = data['weather'] ?? '';
+         notesController.text = data['notes'] ?? '';
       }
+
+      // Try fetching workers from daily_labour_entries first
+      var workersSnapshot = await FirebaseFirestore.instance
+          .collection('daily_labour_entries')
+          .doc(docId)
+          .collection('workers')
+          .get();
+          
+      // Fallback to attendance collection for older entries
+      if (workersSnapshot.docs.isEmpty) {
+        workersSnapshot = await FirebaseFirestore.instance
+            .collection('attendance')
+            .doc(docId)
+            .collection('workers')
+            .get();
+            
+        // Load fallback weather/notes if needed
+        final attendanceDoc = await FirebaseFirestore.instance.collection('attendance').doc(docId).get();
+        if (attendanceDoc.exists) {
+            final attendanceData = attendanceDoc.data()!;
+            if (weatherController.text.isEmpty) weatherController.text = attendanceData['weather'] ?? '';
+            if (notesController.text.isEmpty) notesController.text = attendanceData['notes'] ?? '';
+        }
+      }
+
+      setState(() {
+        workersList = workersSnapshot.docs.map((d) {
+          final data = d.data();
+          data['id'] = d.id;
+          return data;
+        }).toList();
+      });
+      
     } catch (e) {
       debugPrint('Error loading attendance: $e');
     }
@@ -185,21 +207,44 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
     });
   }
 
-  Future<void> saveWeatherAndNotes() async {
+  Future<void> _saveHeaderInfo() async {
+    final coordinator = coordinatorController.text.trim();
+    final weather = weatherController.text.trim();
+    final notes = notesController.text.trim();
+    
+    setState(() => isSavingCoordinator = true);
+    
     try {
       final docId = '${widget.siteId}_$today';
-      await FirebaseFirestore.instance.collection('attendance').doc(docId).set({
+      await FirebaseFirestore.instance.collection('daily_labour_entries').doc(docId).set({
+        'coordinatorName': coordinator,
+        'weather': weather,
+        'notes': notes,
         'siteId': widget.siteId,
         'siteName': widget.siteName,
+        'date': today,
         'supervisorId': widget.supervisorId,
         'supervisorName': widget.supervisorName,
-        'date': today,
-        'weather': weatherController.text.trim(),
-        'notes': notesController.text.trim(),
-        'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Details saved successfully'),
+          backgroundColor: Colors.green,
+        ));
+      }
     } catch (e) {
-      debugPrint('Error saving weather/notes: $e');
+      debugPrint('Error saving details: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to save details'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isSavingCoordinator = false);
+      }
     }
   }
 
@@ -242,7 +287,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
     try {
       final docId = '${widget.siteId}_$today';
       final attendanceDocRef = FirebaseFirestore.instance
-          .collection('attendance')
+          .collection('daily_labour_entries')
           .doc(docId);
 
       final batch = FirebaseFirestore.instance.batch();
@@ -251,24 +296,9 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
         final workerId = worker['workerId'];
         if (workerId == null) continue;
 
-        // Update attendance/{docId}/workers subcollection
+        // Update daily_labour_entries/{docId}/workers subcollection
         batch.set(
           attendanceDocRef.collection('workers').doc(workerId),
-          {
-            'mealsCount': worker['mealsCount'] ?? 0,
-            'mealsAmount': worker['mealsAmount'] ?? 0,
-            'busCount': worker['busCount'] ?? 0,
-            'busAmount': worker['busAmount'] ?? 0,
-          },
-          SetOptions(merge: true),
-        );
-
-        // Update daily_labour_entries
-        final flatDocId = '${widget.siteId}_${today}_$workerId';
-        batch.set(
-          FirebaseFirestore.instance
-              .collection('daily_labour_entries')
-              .doc(flatDocId),
           {
             'mealsCount': worker['mealsCount'] ?? 0,
             'mealsAmount': worker['mealsAmount'] ?? 0,
@@ -440,36 +470,147 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
   }
 
 
+  Widget _buildPageHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          InkWell(
+            onTap: () => Navigator.pop(context),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.arrow_back_ios_new, color: primaryColor, size: 20),
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Supervisor',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Daily Labour Entry',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E1E2D),
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          InkWell(
+            onTap: () async {
+              final selectedDate = await showDatePicker(
+                context: context,
+                initialDate: DateTime.parse(today),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: ColorScheme.light(
+                        primary: primaryColor, 
+                        onPrimary: Colors.white,
+                        onSurface: Colors.black, 
+                      ),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (selectedDate != null) {
+                // Formatting date for dart logic
+                String y = selectedDate.year.toString();
+                String m = selectedDate.month.toString().padLeft(2, '0');
+                String d = selectedDate.day.toString().padLeft(2, '0');
+                
+                setState(() {
+                  today = '$y-$m-$d';
+                  todayFormatted = '$d/$m/$y';
+                  isLoading = true;
+                  workersList.clear();
+                  coordinatorController.clear();
+                  weatherController.clear();
+                  notesController.clear();
+                });
+                loadData();
+              }
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.calendar_month, color: primaryColor, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Daily Labour Entry', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      backgroundColor: const Color.fromARGB(255, 213, 207, 232),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
           : SafeArea(
-              child: CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        _buildHeaderSection(),
-                        const SizedBox(height: 24),
-                        _buildLabourListSection(),
-                        const SizedBox(height: 24),
-                        _buildMealsEntrySection(),
-                        const SizedBox(height: 24),
-                        _buildSummarySection(),
-                        const SizedBox(height: 24),
-                        _buildQuickActions(),
-                        const SizedBox(height: 40),
-                      ]),
+              child: Column(
+                children: [
+                  _buildPageHeader(context),
+                  Expanded(
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate([
+                              _buildHeaderSection(),
+                              const SizedBox(height: 24),
+                              _buildLabourListSection(),
+                              const SizedBox(height: 24),
+                              _buildMealsEntrySection(),
+                              const SizedBox(height: 24),
+                              _buildSummarySection(),
+                              const SizedBox(height: 24),
+                              _buildQuickActions(),
+                              const SizedBox(height: 40),
+                            ]),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -537,6 +678,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                 labelText: 'Weather (Optional)',
                 prefixIcon: const Icon(Icons.wb_sunny_outlined),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
                 filled: true,
                 fillColor: Colors.grey[50],
               ),
@@ -551,8 +693,38 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                 labelText: 'Notes',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
                 filled: true,
                 fillColor: Colors.grey[50],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: coordinatorController,
+              onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+              decoration: InputDecoration(
+                labelText: 'Project Coordinator',
+                prefixIcon: const Icon(Icons.person_outline),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isSavingCoordinator ? null : _saveHeaderInfo,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: isSavingCoordinator
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Save Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -839,14 +1011,17 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isLarge ? 16 : 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: isBold ? Colors.black87 : Colors.grey[700],
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isLarge ? 16 : 14,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                color: isBold ? Colors.black87 : Colors.grey[700],
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
