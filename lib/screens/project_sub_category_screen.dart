@@ -379,7 +379,7 @@ class _ProjectSubCategoryScreenState extends State<ProjectSubCategoryScreen> {
                                         : null;
 
                                 return DropdownButtonFormField<String>(
-                                  value: validSelected,
+                                  initialValue: validSelected,
                                   isExpanded: true,
                                   decoration: InputDecoration(
                                     filled: true,
@@ -499,7 +499,7 @@ class _ProjectSubCategoryScreenState extends State<ProjectSubCategoryScreen> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 6,
                 offset: const Offset(0, 3),
               ),

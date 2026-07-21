@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
 
 class AddLabourEntryModal extends StatefulWidget {
   final String siteId;
@@ -514,32 +513,38 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     required double otHours,
     double? overtimeRate,
   }) {
-    final double hourlyRate = basicSalary / defaultHours;
+    final double defaultHrsToUse = defaultHours > 0 ? defaultHours : 8.0;
+    final double hourlyRate = basicSalary / defaultHrsToUse;
     final double overtimeRateToUse = (overtimeRate != null && overtimeRate > 0)
         ? overtimeRate
-        : hourlyRate * 1.5;
+        : (hourlyRate > 0 ? hourlyRate * 1.5 : 0.0);
 
-    double regularHours = hoursWorked > defaultHours
-        ? defaultHours
+    double regularHours = hoursWorked > defaultHrsToUse
+        ? defaultHrsToUse
         : hoursWorked;
-    final automaticOvertimeHours = hoursWorked > defaultHours
-        ? hoursWorked - defaultHours
+    final automaticOvertimeHours = hoursWorked > defaultHrsToUse
+        ? hoursWorked - defaultHrsToUse
         : 0.0;
-    // OT is populated from the time fields. Keep manually entered OT working
-    // for entries without times, without double-counting calculated OT.
     final overtimeHours = automaticOvertimeHours > otHours
         ? automaticOvertimeHours
         : otHours;
 
-    double regularSalary = regularHours * hourlyRate;
+    double regularSalary;
+    if (hoursWorked == 0 || hoursWorked >= defaultHrsToUse) {
+      regularSalary = basicSalary;
+    } else {
+      regularSalary = regularHours * hourlyRate;
+    }
+
     double overtimeSalary = overtimeHours * overtimeRateToUse;
     double totalSalary = regularSalary + overtimeSalary;
 
     return {
       'basicSalary': basicSalary,
-      'defaultHours': defaultHours,
+      'defaultHours': defaultHrsToUse,
       'hoursWorked': hoursWorked,
       'overtimeHours': overtimeHours,
+      'overtimeRate': overtimeRateToUse,
       'overtimeAmount': overtimeSalary,
       'totalSalary': totalSalary,
     };
@@ -668,7 +673,11 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           'labourType': 'Sub Contractor',
           'isContractor': true,
         };
-        basicSalary = (data['basicSalary'] as num?)?.toDouble() ?? 0.0;
+        basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
+            (data['salaryRate'] as num?)?.toDouble() ??
+            (data['rate'] as num?)?.toDouble() ??
+            (data['salary'] as num?)?.toDouble() ??
+            0.0;
         defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
         overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
       } else {
@@ -688,7 +697,11 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           'labourType': data['labourType'] ?? 'Daily Wage',
           'isContractor': false,
         };
-        basicSalary = (data['basicSalary'] as num?)?.toDouble() ?? 0.0;
+        basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
+            (data['salaryRate'] as num?)?.toDouble() ??
+            (data['rate'] as num?)?.toDouble() ??
+            (data['salary'] as num?)?.toDouble() ??
+            0.0;
         defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
         overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
       }
@@ -711,23 +724,48 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       hoursWorked = calculateHoursWorked(inTime, outTime);
     }
 
-    // Fetch subcontractor overtime rate if worker is under a subcontractor
-    final subContractorId = workerData['contractorId']?.toString() ?? '';
-    final isSubContractorLabour = workerData['labourType'] == 'Sub Contractor';
-    if (isSubContractorLabour && subContractorId.isNotEmpty) {
+    // Fetch subcontractor overtime rate & basic salary rate if missing
+    final subContractorId = workerData['contractorId']?.toString() ?? selectedContractorDoc?.id ?? '';
+    if (subContractorId.isNotEmpty) {
       try {
-        final subContractorDoc = await FirebaseFirestore.instance
-            .collection('sub_contractors')
-            .doc(subContractorId)
-            .get();
-        if (subContractorDoc.exists) {
-          final scData = subContractorDoc.data();
-          if (scData != null && scData['overtimeRate'] != null) {
-            overtimeRate = (scData['overtimeRate'] as num).toDouble();
+        DocumentSnapshot? subContractorDoc;
+        if (selectedContractorDoc != null && selectedContractorDoc!.id == subContractorId) {
+          subContractorDoc = selectedContractorDoc;
+        } else {
+          final doc = await FirebaseFirestore.instance
+              .collection('sub_contractors')
+              .doc(subContractorId)
+              .get();
+          if (doc.exists) {
+            subContractorDoc = doc;
+          } else {
+            final cDoc = await FirebaseFirestore.instance
+                .collection('contractors')
+                .doc(subContractorId)
+                .get();
+            if (cDoc.exists) subContractorDoc = cDoc;
+          }
+        }
+
+        if (subContractorDoc != null && subContractorDoc.exists) {
+          final scData = subContractorDoc.data() as Map<String, dynamic>?;
+          if (scData != null) {
+            final otR = (scData['overtimeRate'] as num?)?.toDouble();
+            if (otR != null && otR > 0) {
+              overtimeRate = otR;
+            }
+            if (basicSalary == 0.0) {
+              final rate = scData['salaryRate'] ?? scData['basicSalary'] ?? scData['rate'] ?? scData['salary'];
+              if (rate is num) {
+                basicSalary = rate.toDouble();
+              } else if (rate is String) {
+                basicSalary = double.tryParse(rate) ?? 0.0;
+              }
+            }
           }
         }
       } catch (e) {
-        debugPrint('Error fetching subcontractor overtime rate: $e');
+        debugPrint('Error fetching subcontractor details: $e');
       }
     }
 
@@ -764,6 +802,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       'defaultHours': salaryData['defaultHours'],
       'hoursWorked': salaryData['hoursWorked'],
       'overtimeHours': salaryData['overtimeHours'],
+      'overtimeRate': salaryData['overtimeRate'],
       'overtimeAmount': salaryData['overtimeAmount'],
       'totalSalary': salaryData['totalSalary'],
     };
@@ -957,7 +996,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                 padding: EdgeInsets.only(left: 20, right: 20, bottom: MediaQuery.of(context).padding.bottom + 16, top: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(0, -4), blurRadius: 10)],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), offset: const Offset(0, -4), blurRadius: 10)],
                 ),
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : addWorkerEntry,
@@ -989,7 +1028,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, 2),
             blurRadius: 10,
           )
@@ -1055,7 +1094,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           color: isActive ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           boxShadow: isActive
-              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))]
               : [],
         ),
         child: Center(
@@ -1107,14 +1146,14 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text('WORKERS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey.shade600)),
                       ),
-                      ...filteredWorkers.map((doc) => _buildWorkerTile(doc, isWorker: true)).toList(),
+                      ...filteredWorkers.map((doc) => _buildWorkerTile(doc, isWorker: true)),
                     ],
                     if (filteredContractors.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
                         child: Text('SUB CONTRACTORS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey.shade600)),
                       ),
-                      ...filteredContractors.map((doc) => _buildWorkerTile(doc, isWorker: false)).toList(),
+                      ...filteredContractors.map((doc) => _buildWorkerTile(doc, isWorker: false)),
                     ],
                   ],
                 ),
@@ -1144,7 +1183,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSelected ? primaryColor.withOpacity(0.05) : Colors.white,
+        color: isSelected ? primaryColor.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade200, width: isSelected ? 1.5 : 1),
       ),
@@ -1311,7 +1350,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       items: items.toSet().map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14)))).toList(),
       onChanged: onChanged,
       icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),

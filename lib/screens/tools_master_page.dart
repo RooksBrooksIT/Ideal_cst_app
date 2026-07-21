@@ -254,7 +254,7 @@ class _ToolMasterPageState extends State<ToolMasterPage>
                     child: _isLoadingTools
                         ? Center(child: CircularProgressIndicator())
                         : DropdownButtonFormField<String>(
-                            value: _selectedToolDocId,
+                            initialValue: _selectedToolDocId,
                             decoration: InputDecoration(
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -371,7 +371,7 @@ class _ToolMasterPageState extends State<ToolMasterPage>
 
   Widget _buildDropdown(ThemeData theme) {
     return DropdownButtonFormField<String>(
-      value: _toolOwner,
+      initialValue: _toolOwner,
       decoration: InputDecoration(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

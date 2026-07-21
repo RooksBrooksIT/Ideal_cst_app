@@ -661,7 +661,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
@@ -705,6 +705,26 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
+                              color: (worker['labourType'] == 'Sub Contractor' || isContractor)
+                                  ? Colors.orange.shade50
+                                  : Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              worker['labourType']?.toString() ?? (isContractor ? 'Sub Contractor' : 'Daily Wage'),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: (worker['labourType'] == 'Sub Contractor' || isContractor)
+                                    ? Colors.orange.shade800
+                                    : Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
                               color: worker['attendanceType'] == 'Full Day' ? Colors.green.shade50 : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -722,8 +742,8 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                       const SizedBox(height: 4),
                       Text(
                         isContractor
-                            ? '${worker['category'] ?? worker['workerType'] ?? ''} • Self'
-                            : '${worker['category'] ?? worker['workerType'] ?? ''} • Sub: ${worker['contractorName'] ?? worker['contractor'] ?? 'None'}',
+                            ? '${worker['category'] ?? worker['workerType'] ?? ''} • ${worker['labourType'] ?? 'Sub Contractor'} • Self'
+                            : '${worker['category'] ?? worker['workerType'] ?? ''} • ${worker['labourType'] ?? 'Daily Wage'} • Sub: ${worker['contractorName'] ?? worker['contractor'] ?? 'None'}',
                         style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -771,10 +791,10 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
   Widget _buildSummarySection() {
     return Card(
       elevation: 0,
-      color: primaryColor.withOpacity(0.04),
+      color: primaryColor.withValues(alpha: 0.04),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: primaryColor.withOpacity(0.1)),
+        side: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -830,7 +850,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -913,7 +933,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -922,7 +942,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 28),
@@ -1055,8 +1075,11 @@ class __MealsEntryInlineSectionState extends State<_MealsEntryInlineSection> {
           : (worker['contractorName'] ?? worker['contractor'] ?? 'General');
 
       if (contractorName == _selectedSubContractorName) {
-        if (isContractor) contractors.add(worker);
-        else workers.add(worker);
+        if (isContractor) {
+          contractors.add(worker);
+        } else {
+          workers.add(worker);
+        }
       }
     }
     return [...contractors, ...workers];
@@ -1108,14 +1131,14 @@ class __MealsEntryInlineSectionState extends State<_MealsEntryInlineSection> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedSubContractorName,
+            initialValue: _selectedSubContractorName,
             decoration: InputDecoration(
               labelText: 'Select Sub Contractor',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -1134,7 +1157,7 @@ class __MealsEntryInlineSectionState extends State<_MealsEntryInlineSection> {
           const SizedBox(height: 16),
           if (_selectedSubContractorName != null)
             DropdownButtonFormField<String>(
-              value: _selectedWorkerId,
+              initialValue: _selectedWorkerId,
               decoration: InputDecoration(
                 labelText: 'Select Worker',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

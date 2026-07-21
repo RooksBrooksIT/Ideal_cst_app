@@ -143,7 +143,7 @@ class _ProjectFinancialStatusReportPageState
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: primaryColor.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -168,7 +168,7 @@ class _ProjectFinancialStatusReportPageState
                         'Select a site ID or enter project details manually',
                         style: TextStyle(
                           fontSize: 14,
-                          color: textColor.withOpacity(0.7),
+                          color: textColor.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -200,7 +200,7 @@ class _ProjectFinancialStatusReportPageState
                               ),
                             )
                           : DropdownButtonFormField<String>(
-                              value: selectedSiteId,
+                              initialValue: selectedSiteId,
                               hint: Text(
                                 "Select Site ID",
                                 style: TextStyle(color: Colors.grey[600]),
@@ -285,7 +285,7 @@ class _ProjectFinancialStatusReportPageState
                                 ),
                                 prefixIcon: Icon(
                                   Icons.search,
-                                  color: primaryColor.withOpacity(0.7),
+                                  color: primaryColor.withValues(alpha: 0.7),
                                 ),
                               ),
                               icon: Icon(Icons.arrow_drop_down,
@@ -416,7 +416,7 @@ class _ProjectFinancialStatusReportPageState
       prefixIcon: icon != null
           ? Icon(
               icon,
-              color: primaryColor.withOpacity(0.7),
+              color: primaryColor.withValues(alpha: 0.7),
             )
           : null,
     );
@@ -437,7 +437,7 @@ class _ProjectFinancialStatusReportPageState
           borderRadius: BorderRadius.circular(12),
         ),
         elevation: 2,
-        shadowColor: primaryColor.withOpacity(0.3),
+        shadowColor: primaryColor.withValues(alpha: 0.3),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

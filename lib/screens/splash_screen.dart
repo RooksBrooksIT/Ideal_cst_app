@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ideal_cst/screens/Organization_Dashboard.dart';
 import 'package:ideal_cst/screens/config_account_dashboard.dart';
 import 'package:ideal_cst/screens/supervisor_dashboard.dart';
-import 'package:ideal_cst/screens/contractor_dashboard.dart';
 import 'package:ideal_cst/screens/contractor_entry_page.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -48,19 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
           );
-        } else if (role == 'Contractor') {
-          final contractorId = prefs.getString('contractorId') ?? '';
-          final contractorName = prefs.getString('contractorName') ?? '';
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ContractorDashboard(
-                contractorId: contractorId,
-                contractorName: contractorName,
-              ),
-            ),
-          );
-        } else if (role == 'ContractorEntry') {
+        }  else if (role == 'ContractorEntry') {
           final supervisorId = prefs.getString('sup_supervisorId') ?? '';
           final contractorName = prefs.getString('sup_contractorName') ?? '';
           final contractorField = prefs.getString('sup_contractorField') ?? '';

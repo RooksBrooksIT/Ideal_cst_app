@@ -221,7 +221,7 @@ class _ToolsInventoryDetailsPageState extends State<ToolsInventoryDetailsPage> {
                 Card(
                   margin: const EdgeInsets.all(16),
                   elevation: 6,
-                  shadowColor: primaryColor.withOpacity(0.3),
+                  shadowColor: primaryColor.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -276,7 +276,7 @@ class _ToolsInventoryDetailsPageState extends State<ToolsInventoryDetailsPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Card(
                       elevation: 3,
-                      shadowColor: primaryColor.withOpacity(0.25),
+                      shadowColor: primaryColor.withValues(alpha: 0.25),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -286,7 +286,7 @@ class _ToolsInventoryDetailsPageState extends State<ToolsInventoryDetailsPage> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: primaryColor.withValues(alpha: 0.1),
                               borderRadius: const BorderRadius.vertical(
                                 top: Radius.circular(12),
                               ),
@@ -341,8 +341,8 @@ class _ToolsInventoryDetailsPageState extends State<ToolsInventoryDetailsPage> {
                                                     vertical: 6,
                                                   ),
                                               decoration: BoxDecoration(
-                                                color: primaryColor.withOpacity(
-                                                  0.08,
+                                                color: primaryColor.withValues(
+                                                  alpha: 0.08,
                                                 ),
                                                 borderRadius:
                                                     BorderRadius.circular(8),
@@ -430,7 +430,7 @@ class _ToolsInventoryDetailsPageState extends State<ToolsInventoryDetailsPage> {
           fontWeight: FontWeight.w600,
         ),
       ),
-      backgroundColor: primaryColor.withOpacity(0.08),
+      backgroundColor: primaryColor.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       side: BorderSide.none,
     );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/animation.dart';
 
 class ProjectIndicatorPage extends StatefulWidget {
   final String? siteId;
@@ -158,7 +157,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
                   Text(
                     'Loading project data...',
                     style: TextStyle(
-                      color: textColor.withOpacity(0.7),
+                      color: textColor.withValues(alpha: 0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -236,7 +235,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -248,7 +247,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.assignment, color: primaryColor, size: 24),
@@ -297,7 +296,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -309,7 +308,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.attach_money, color: primaryColor, size: 24),
@@ -353,7 +352,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.08),
+              color: primaryColor.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 18, color: primaryColor),
@@ -367,7 +366,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
                   label,
                   style: TextStyle(
                     fontSize: 13,
-                    color: textColor.withOpacity(0.7),
+                    color: textColor.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -431,13 +430,13 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
+          color: Colors.grey.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -449,7 +448,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -488,14 +487,14 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
                     width: constraints.maxWidth * (percent / 100),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [color, color.withOpacity(0.7)],
+                        colors: [color, color.withValues(alpha: 0.7)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(5),
                       boxShadow: [
                         BoxShadow(
-                          color: color.withOpacity(0.3),
+                          color: color.withValues(alpha: 0.3),
                           blurRadius: 4,
                           offset: const Offset(0, 1),
                         ),
@@ -541,7 +540,7 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
           Text(
             description,
             style: TextStyle(
-              color: textColor.withOpacity(0.7),
+              color: textColor.withValues(alpha: 0.7),
               fontSize: 14,
             ),
           ),
@@ -565,10 +564,10 @@ class _ProjectIndicatorPageState extends State<ProjectIndicatorPage>
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             width: 1,
           ),
         ),

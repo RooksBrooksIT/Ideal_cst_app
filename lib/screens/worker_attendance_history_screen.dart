@@ -23,7 +23,7 @@ class _WorkerAttendanceHistoryScreenState
     extends State<WorkerAttendanceHistoryScreen> {
   final AttendanceService _attendanceService = AttendanceService();
   List<WorkerAttendance> _attendanceRecords = [];
-  List<AttendanceSummary> _summaryRecords = [];
+  final List<AttendanceSummary> _summaryRecords = [];
   bool _isLoading = true;
   DateTime? _startDate;
   DateTime? _endDate;
@@ -251,7 +251,7 @@ class _WorkerAttendanceHistoryScreenState
                 vertical: 6,
               ),
               decoration: BoxDecoration(
-                color: _getStatusColor(record.status).withOpacity(0.1),
+                color: _getStatusColor(record.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: _getStatusColor(record.status),

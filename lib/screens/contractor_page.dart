@@ -259,7 +259,7 @@ class _ContractorPageState extends State<ContractorPage> {
                     // Contractor illustration / avatar
                     CircleAvatar(
                       radius: 44,
-                      backgroundColor: primaryColor.withOpacity(0.15),
+                      backgroundColor: primaryColor.withValues(alpha: 0.15),
                       child: Icon(
                         Icons.engineering,
                         color: primaryColor,
@@ -338,7 +338,7 @@ class _ContractorPageState extends State<ContractorPage> {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               elevation: 6,
-                              shadowColor: primaryColor.withOpacity(0.6),
+                              shadowColor: primaryColor.withValues(alpha: 0.6),
                             ),
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
@@ -429,7 +429,7 @@ class _ContractorPageState extends State<ContractorPage> {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       headingRowColor: WidgetStateProperty.all(
-                        primaryColor.withOpacity(0.12),
+                        primaryColor.withValues(alpha: 0.12),
                       ),
                       headingTextStyle: TextStyle(
                         color: primaryColor,
@@ -596,7 +596,7 @@ class _ContractorPageState extends State<ContractorPage> {
             ? _selectedProjectField
             : null;
         return DropdownButtonFormField<String>(
-          value: currentValue,
+          initialValue: currentValue,
           decoration: InputDecoration(
             labelText: "Project Stage",
             labelStyle: const TextStyle(
@@ -683,7 +683,7 @@ class _ContractorPageState extends State<ContractorPage> {
                       }
                     });
                   },
-                  selectedColor: primaryColor.withOpacity(0.2),
+                  selectedColor: primaryColor.withValues(alpha: 0.2),
                   checkmarkColor: primaryColor,
                 );
               }).toList(),

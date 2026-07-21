@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ideal_cst/screens/Organisation_LoginPage.dart';
-import 'package:ideal_cst/screens/config_login.dart';
-import 'package:ideal_cst/screens/supervisor_login_page.dart';
-import 'package:ideal_cst/screens/contractor_login_page.dart';
+import 'package:ideal_cst/screens/auth/organisation_login_page.dart';
+import 'package:ideal_cst/screens/auth/manager_login_page.dart';
+import 'package:ideal_cst/screens/auth/supervisor_login_page.dart';
 
 class AppColors {
   static const primaryColor = Color(0xFF003768);
@@ -70,17 +69,7 @@ class _MainDashboardState extends State<MainDashboard>
       },
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.primaryGradientStart,
-                AppColors.primaryGradientEnd,
-              ],
-              stops: [0.0, 0.9],
-            ),
-          ),
+          color: const Color(0xFFDDEBF6), // Match Get Started page background
           child: Column(
             children: [
               _buildAppBar(),
@@ -112,67 +101,39 @@ class _MainDashboardState extends State<MainDashboard>
                                   physics: const BouncingScrollPhysics(),
                                   padding: const EdgeInsets.only(bottom: 20),
                                   children: [
-                                    _buildDashboardCard(
-                                      context: context,
+                                    DashboardCard(
                                       theme: theme,
                                       title: 'Organization',
                                       subtitle:
                                           'Manage organizations and their details',
                                       icon: Icons.account_balance_rounded,
-                                      colors: [
-                                        AppColors.primaryColor,
-                                        AppColors.primaryGradientEnd,
-                                      ],
+                                      color: AppColors.primaryColor, // Original brand color
                                       destination:
                                           const Organisation_LoginPage(),
                                     ),
                                     SizedBox(
-                                      height: screenWidth > 600 ? 30 : 20,
+                                      height: screenWidth > 600 ? 24 : 16,
                                     ),
-                                    _buildDashboardCard(
-                                      context: context,
+                                    DashboardCard(
                                       theme: theme,
                                       title: 'Manager',
                                       subtitle:
                                           'Configure system settings and preferences',
                                       icon: Icons.settings_rounded,
-                                      colors: [
-                                        AppColors.primaryColor,
-                                        AppColors.primaryGradientEnd,
-                                      ],
-                                      destination: const ConfigLoginPage(),
+                                      color: const Color(0xFF00695C), // Dark Teal
+                                      destination: const ManagerLoginPage(),
                                     ),
                                     SizedBox(
-                                      height: screenWidth > 600 ? 30 : 20,
+                                      height: screenWidth > 600 ? 24 : 16,
                                     ),
-                                    _buildDashboardCard(
-                                      context: context,
+                                    DashboardCard(
                                       theme: theme,
                                       title: 'Supervisor',
                                       subtitle:
                                           'Manage supervisors and their activities',
                                       icon: Icons.supervisor_account_rounded,
-                                      colors: [
-                                        AppColors.primaryColor,
-                                        AppColors.primaryGradientEnd,
-                                      ],
+                                      color: const Color(0xFF4527A0), // Deep Purple
                                       destination: const Supervisor_LoginPage(),
-                                    ),
-                                    SizedBox(
-                                      height: screenWidth > 600 ? 30 : 20,
-                                    ),
-                                    _buildDashboardCard(
-                                      context: context,
-                                      theme: theme,
-                                      title: 'Sub-Contractor',
-                                      subtitle:
-                                          'Manage your workers and activities',
-                                      icon: Icons.engineering,
-                                      colors: [
-                                        AppColors.primaryColor,
-                                        AppColors.primaryGradientEnd,
-                                      ],
-                                      destination: const ContractorLoginPage(),
                                     ),
                                   ],
                                 ),
@@ -200,7 +161,7 @@ class _MainDashboardState extends State<MainDashboard>
           fontSize: 20,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
-          color: Colors.white,
+          color: AppColors.primaryColor,
         ),
       ),
       centerTitle: true,
@@ -219,116 +180,201 @@ class _MainDashboardState extends State<MainDashboard>
           'Welcome to CST',
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.primaryColor,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Select your role to continue',
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withOpacity(0.9),
+            color: AppColors.primaryColor.withValues(alpha: 0.8),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildDashboardCard({
-    required BuildContext context,
-    required ThemeData theme,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> colors,
-    required Widget destination,
-  }) {
+class DashboardCard extends StatefulWidget {
+  final ThemeData theme;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final Widget destination;
+
+  const DashboardCard({
+    super.key,
+    required this.theme,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.destination,
+  });
+
+  @override
+  State<DashboardCard> createState() => _DashboardCardState();
+}
+
+class _DashboardCardState extends State<DashboardCard> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  void _navigate() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => widget.destination,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeOutCubic;
+
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardHeight = screenWidth > 600 ? 180.0 : 140.0;
+    final cardHeight = screenWidth > 600 ? 140.0 : 120.0;
+    
+    final scale = _isPressed ? 0.96 : 1.0;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          _navigate();
         },
-        child: Container(
-          height: cardHeight,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-            gradient: LinearGradient(
-              colors: colors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colors[0].withOpacity(0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: 16,
-                top: 16,
-                child: Opacity(
-                  opacity: 0.15,
-                  child: Icon(
-                    icon,
-                    size: cardHeight * 0.4,
-                    color: Colors.white,
-                  ),
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: AnimatedScale(
+          scale: scale,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutQuad,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: cardHeight,
+            decoration: BoxDecoration(
+              color: widget.color,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withValues(alpha: _isHovered ? 0.4 : 0.2),
+                  blurRadius: _isHovered ? 20 : 15,
+                  offset: Offset(0, _isHovered ? 12 : 8),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, size: 28, color: Colors.white),
-                    ),
-                    SizedBox(width: screenWidth > 600 ? 24 : 16),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 20,
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Subtle background icon
+                Positioned(
+                  right: -20,
+                  bottom: -20,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: _isHovered ? 0.15 : 0.1,
+                    child: Icon(
+                      widget.icon,
+                      size: cardHeight * 0.8,
                       color: Colors.white,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                // Left accent border
+                Positioned(
+                  left: 0,
+                  top: 20,
+                  bottom: 20,
+                  child: Container(
+                    width: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(6)),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(widget.icon, size: 32, color: Colors.white),
+                      ),
+                      SizedBox(width: screenWidth > 600 ? 24 : 16),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: widget.theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              widget.subtitle,
+                              style: widget.theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      AnimatedSlide(
+                        offset: _isHovered ? const Offset(0.3, 0) : Offset.zero,
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutCubic,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 20,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

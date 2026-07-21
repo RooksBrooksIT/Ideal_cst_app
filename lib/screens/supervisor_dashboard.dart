@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/screens/site_selection_screen.dart';
-import 'package:ideal_cst/screens/supervisor_login_page.dart';
-import 'package:ideal_cst/screens/workers_config_page.dart';
-import 'package:ideal_cst/screens/contractor_page.dart';
-import 'package:ideal_cst/screens/contractor_dashboard.dart';
 import 'package:ideal_cst/screens/sub_contractor_management_screen.dart';
-import 'package:ideal_cst/screens/daily_attendance_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -237,9 +232,10 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
 
   void _showAssignCoordinatorDialog(BuildContext context) {
     String? selectedSite;
-    final TextEditingController _coordinatorController = TextEditingController();
-    DateTime? _selectedDate = DateTime.now();
-    bool _isSaving = false;
+    final TextEditingController coordinatorController =
+        TextEditingController();
+    DateTime? selectedDate = DateTime.now();
+    bool isSaving = false;
 
     showDialog(
       context: context,
@@ -255,14 +251,15 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                     const Text('No sites assigned.')
                   else
                     DropdownButtonFormField<String>(
-                      value: selectedSite,
+                      initialValue: selectedSite,
                       decoration: const InputDecoration(
                         labelText: 'Select Site',
                         border: OutlineInputBorder(),
                       ),
                       items: assignedSites.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;
-                        final siteName = data['site'] ?? data['siteId'] ?? doc.id;
+                        final siteName =
+                            data['site'] ?? data['siteId'] ?? doc.id;
                         return DropdownMenuItem<String>(
                           value: siteName.toString(),
                           child: Text(siteName.toString()),
@@ -276,7 +273,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                     ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _coordinatorController,
+                    controller: coordinatorController,
                     decoration: const InputDecoration(
                       labelText: 'Coordinator Name',
                       border: OutlineInputBorder(),
@@ -287,9 +284,9 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                     children: [
                       Expanded(
                         child: Text(
-                          _selectedDate == null
+                          selectedDate == null
                               ? 'Select Date'
-                              : 'Date: ${_selectedDate!.toLocal().toString().split(' ')[0]}',
+                              : 'Date: ${selectedDate!.toLocal().toString().split(' ')[0]}',
                           style: const TextStyle(fontSize: 16),
                         ),
                       ),
@@ -298,7 +295,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         onPressed: () async {
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: _selectedDate ?? DateTime.now(),
+                            initialDate: selectedDate ?? DateTime.now(),
                             firstDate: DateTime(2000),
                             lastDate: DateTime(2101),
                             builder: (context, child) {
@@ -314,7 +311,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                           );
                           if (picked != null) {
                             setState(() {
-                              _selectedDate = picked;
+                              selectedDate = picked;
                             });
                           }
                         },
@@ -329,63 +326,75 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: _isSaving || assignedSites.isEmpty
+                  onPressed: isSaving || assignedSites.isEmpty
                       ? null
                       : () async {
                           if (selectedSite == null ||
-                              _coordinatorController.text.trim().isEmpty ||
-                              _selectedDate == null) {
+                              coordinatorController.text.trim().isEmpty ||
+                              selectedDate == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Please fill all fields and select a date.')),
+                                content: Text(
+                                  'Please fill all fields and select a date.',
+                                ),
+                              ),
                             );
                             return;
                           }
                           setState(() {
-                            _isSaving = true;
+                            isSaving = true;
                           });
                           try {
                             await FirebaseFirestore.instance
                                 .collection('Site_Co-ordinator')
                                 .add({
-                              'siteName': selectedSite,
-                              'supervisorName': widget.supervisorName,
-                              'coordinatorName':
-                                  _coordinatorController.text.trim(),
-                              'coordinatorDate': Timestamp.fromDate(_selectedDate!),
-                              'createdAt': FieldValue.serverTimestamp(),
-                            });
-                            
+                                  'siteName': selectedSite,
+                                  'supervisorName': widget.supervisorName,
+                                  'coordinatorName': coordinatorController.text
+                                      .trim(),
+                                  'coordinatorDate': Timestamp.fromDate(
+                                    selectedDate!,
+                                  ),
+                                  'createdAt': FieldValue.serverTimestamp(),
+                                });
+
                             // Also update the supervisor document so it reflects on the dashboard
                             await FirebaseFirestore.instance
                                 .collection('supervisor')
                                 .doc(widget.supervisorId)
                                 .update({
-                              'CoordinatorName': _coordinatorController.text.trim(),
-                              'CoordinatorDate': Timestamp.fromDate(_selectedDate!),
-                            });
+                                  'CoordinatorName': coordinatorController.text
+                                      .trim(),
+                                  'CoordinatorDate': Timestamp.fromDate(
+                                    selectedDate!,
+                                  ),
+                                });
 
                             fetchCoordinatorName();
-                            
+
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Coordinator assigned successfully!')),
+                                content: Text(
+                                  'Coordinator assigned successfully!',
+                                ),
+                              ),
                             );
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error: $e')),
                             );
                             setState(() {
-                              _isSaving = false;
+                              isSaving = false;
                             });
                           }
                         },
-                  child: _isSaving
+                  child: isSaving
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Save'),
                 ),
               ],
@@ -410,8 +419,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                primaryColor.withOpacity(0.85),
-                primaryColor.withOpacity(0.55),
+                primaryColor.withValues(alpha: 0.85),
+                primaryColor.withValues(alpha: 0.55),
               ],
               stops: const [0.0, 0.7],
             ),
@@ -632,7 +641,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () => _showAssignCoordinatorDialog(context),
+                            onPressed: () =>
+                                _showAssignCoordinatorDialog(context),
                             icon: const Icon(
                               Icons.person_add,
                               color: Colors.white,
@@ -655,7 +665,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Sub Contractor Config Button
+                        // Sub Contractor Management Button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
@@ -665,9 +675,9 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                 MaterialPageRoute(
                                   builder: (context) =>
                                       SubContractorManagementScreen(
-                                        supervisorId: widget.supervisorId,
-                                        supervisorName: widget.supervisorName,
-                                      ),
+                                    supervisorId: widget.supervisorId,
+                                    supervisorName: widget.supervisorName,
+                                  ),
                                 ),
                               );
                             },
@@ -691,91 +701,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 24),
 
-                        // Assigned Contractors Section
-                        const Text(
-                          "Assigned Sub-Contractors",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (assignedContractors.isEmpty)
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: Center(
-                                child: Text(
-                                  'No sub-contractors assigned yet',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          ...assignedContractors.map((contractor) {
-                            final data =
-                                contractor.data() as Map<String, dynamic>;
-                            final contractorId =
-                                data['contractorId'] as String? ?? '';
-                            final contractorName =
-                                data['contractorName'] as String? ?? 'Unknown';
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: ListTile(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ContractorDashboard(
-                                        contractorId: contractorId,
-                                        contractorName: contractorName,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                leading: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: primaryColor.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.engineering,
-                                    color: primaryColor,
-                                  ),
-                                ),
-                                title: Text(
-                                  contractorName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(data['contractorField'] ?? ''),
-                                    Text('Contact: ${data['contactNo'] ?? ''}'),
-                                  ],
-                                ),
-                                trailing: Icon(
-                                  Icons.chevron_right,
-                                  color: primaryColor,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
@@ -804,7 +730,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
               child: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 20),

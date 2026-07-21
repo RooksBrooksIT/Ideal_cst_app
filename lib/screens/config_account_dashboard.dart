@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:ideal_cst/screens/config_material_information.dart';
 import 'package:ideal_cst/screens/Site_Supervisor_Config.dart';
-import 'package:ideal_cst/screens/config_login.dart';
 import 'package:ideal_cst/screens/config_mat_sub_cat.dart';
 import 'package:ideal_cst/screens/config_materialavailability.dart';
 import 'package:ideal_cst/screens/conflig_Materials.dart';
@@ -10,7 +9,6 @@ import 'package:ideal_cst/screens/config_layout_and_drawing.dart';
 import 'package:ideal_cst/screens/contractor_entry_page.dart';
 import 'package:ideal_cst/screens/contractor_page.dart';
 import 'package:ideal_cst/screens/labour_screen.dart';
-import 'package:ideal_cst/screens/main_dashboard.dart';
 import 'package:ideal_cst/screens/manager_expenses_homescreen.dart';
 import 'package:ideal_cst/screens/material_screen.dart';
 import 'package:ideal_cst/screens/project_category_screen.dart';
@@ -388,7 +386,7 @@ class _ConfigAccountDashboardState extends State<ConfigAccountDashboard> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: item.color.withOpacity(0.15),
+                  color: item.color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(item.icon, color: item.color, size: 28),

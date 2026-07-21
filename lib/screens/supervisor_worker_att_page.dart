@@ -576,7 +576,7 @@ class _AttendanceManagementPageState extends State<AttendanceManagementPage> {
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              value: _selectedSite,
+              initialValue: _selectedSite,
               decoration: InputDecoration(
                 labelText: 'Site *',
                 border: OutlineInputBorder(),
@@ -717,7 +717,7 @@ class _AttendanceManagementPageState extends State<AttendanceManagementPage> {
                                   decoration: BoxDecoration(
                                     color: _getStatusColor(
                                       currentStatus,
-                                    ).withOpacity(0.1),
+                                    ).withValues(alpha: 0.1),
                                     border: Border.all(
                                       color: _getStatusColor(currentStatus),
                                     ),
@@ -791,7 +791,7 @@ class _AttendanceManagementPageState extends State<AttendanceManagementPage> {
           width: 30,
           height: 30,
           decoration: BoxDecoration(
-            color: isSelected ? color : color.withOpacity(0.1),
+            color: isSelected ? color : color.withValues(alpha: 0.1),
             border: Border.all(color: color),
             borderRadius: BorderRadius.circular(6),
           ),

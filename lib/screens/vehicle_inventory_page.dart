@@ -349,7 +349,7 @@ class _VehicleInventoryReportPageState
           items: _sites
               .map((s) => DropdownMenuItem(value: s, child: Text(s)))
               .toList(),
-          value: _selectedSite,
+          initialValue: _selectedSite,
           onChanged: (v) => setState(() => _selectedSite = v),
           validator: (v) => v == null || v.isEmpty ? 'Select a site' : null,
         );

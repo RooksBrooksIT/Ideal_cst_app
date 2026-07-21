@@ -239,7 +239,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
         String loc = siteData?['location'] ?? locationController.text;
 
         // Doc ID = siteId_supervisorId
-        String docId = '${siteId}_${selectedSupervisorId}';
+        String docId = '${siteId}_$selectedSupervisorId';
 
         Map<String, dynamic> data = {
           "joinedOn": joinedDate!.toIso8601String(),
@@ -369,7 +369,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
         textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         elevation: isSelected ? 6 : 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        shadowColor: isSelected ? primaryColor.withOpacity(0.4) : null,
+        shadowColor: isSelected ? primaryColor.withValues(alpha: 0.4) : null,
       ),
       onPressed: onPressed,
       child: Text(text),
@@ -393,7 +393,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
       children: [
         Card(
           elevation: 9,
-          shadowColor: primaryColor.withOpacity(0.30),
+          shadowColor: primaryColor.withValues(alpha: 0.30),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -502,7 +502,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
                 SizedBox(height: 20),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
-                  value: selectedSupervisorId,
+                  initialValue: selectedSupervisorId,
                   hint: Text(
                     'Select Supervisor ID',
                     style: TextStyle(color: primaryColor, fontSize: fontSize),
@@ -741,7 +741,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
           scrollDirection: Axis.horizontal,
           child: DataTable(
             headingRowColor: WidgetStateProperty.all(
-              primaryColor.withOpacity(0.12),
+              primaryColor.withValues(alpha: 0.12),
             ),
             headingTextStyle: TextStyle(
               color: primaryColor,
@@ -889,11 +889,11 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: color.withOpacity(0.25),
+            color: color.withValues(alpha: 0.25),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.3),
+                color: color.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: Offset(0, 4),
               ),

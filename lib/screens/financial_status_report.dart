@@ -65,14 +65,14 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
                 style: pw.TextStyle(
                   fontSize: 24,
                   fontWeight: pw.FontWeight.bold,
-                  color: PdfColor.fromInt(primaryColor.value),
+                  color: PdfColor.fromInt(primaryColor.toARGB32()),
                 ),
               ),
               pw.Container(
                 width: 60,
                 height: 60,
                 decoration: pw.BoxDecoration(
-                  color: PdfColor.fromInt(primaryColor.value),
+                  color: PdfColor.fromInt(primaryColor.toARGB32()),
                   shape: pw.BoxShape.circle,
                 ),
                 child: pw.Center(
@@ -93,7 +93,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
             style: pw.TextStyle(
               fontSize: 18,
               fontWeight: pw.FontWeight.bold,
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
             ),
           ),
           pw.SizedBox(height: 12),
@@ -104,7 +104,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
               color: PdfColors.white,
             ),
             headerDecoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
             ),
             data: [
               ['Site ID', project['siteid'] ?? project['siteId'] ?? '-'],
@@ -123,7 +123,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
             style: pw.TextStyle(
               fontSize: 18,
               fontWeight: pw.FontWeight.bold,
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
             ),
           ),
           pw.SizedBox(height: 12),
@@ -134,7 +134,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
               color: PdfColors.white,
             ),
             headerDecoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
             ),
             data: [
               ['Project Budget', '₹${budget.toStringAsFixed(2)}'],
@@ -147,9 +147,9 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
           pw.Container(
             padding: const pw.EdgeInsets.all(12),
             decoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
               border: pw.Border.all(
-                color: PdfColor.fromInt(primaryColor.value),
+                color: PdfColor.fromInt(primaryColor.toARGB32()),
                 width: 1,
               ),
               borderRadius: pw.BorderRadius.circular(8),
@@ -159,7 +159,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
               style: pw.TextStyle(
                 fontSize: 14,
                 fontWeight: pw.FontWeight.bold,
-                color: PdfColor.fromInt(primaryColor.value),
+                color: PdfColor.fromInt(primaryColor.toARGB32()),
               ),
             ),
           ),
@@ -168,7 +168,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
             'Generated on ${DateFormat('dd MMM yyyy - HH:mm').format(DateTime.now())}',
             style: pw.TextStyle(
               fontSize: 10,
-              color: PdfColor.fromInt(secondaryTextColor.value),
+              color: PdfColor.fromInt(secondaryTextColor.toARGB32()),
             ),
             textAlign: pw.TextAlign.center,
           ),
@@ -281,13 +281,13 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
                       ],
                       border: Border.all(
-                        color: primaryColor.withOpacity(0.2),
+                        color: primaryColor.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -300,7 +300,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.1),
+                                color: primaryColor.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -508,12 +508,12 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(children: children),
     );
@@ -566,7 +566,7 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 20, color: color),
@@ -618,12 +618,12 @@ class _FinancialStatusReportPageState extends State<FinancialStatusReportPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

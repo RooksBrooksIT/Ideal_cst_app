@@ -467,7 +467,7 @@ class _ProjectstageInsightsDashboardState
                   'Generate detailed reports by project stage',
                   style: TextStyle(
                     fontSize: 14,
-                    color: textColor.withOpacity(0.7),
+                    color: textColor.withValues(alpha: 0.7),
                   ),
                 ),
                 SizedBox(height: 24),
@@ -488,7 +488,7 @@ class _ProjectstageInsightsDashboardState
                       ),
                       SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: selectedSiteId,
+                        initialValue: selectedSiteId,
                         items: allSiteIds.map((siteId) {
                           return DropdownMenuItem<String>(
                             value: siteId,
@@ -547,7 +547,7 @@ class _ProjectstageInsightsDashboardState
                       ),
                       SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: selectedProjectStage,
+                        initialValue: selectedProjectStage,
                         items: projectStages.map((stage) {
                           return DropdownMenuItem<String>(
                             value: stage,
@@ -800,9 +800,9 @@ class _ProjectstageInsightsDashboardState
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.05),
+                    color: primaryColor.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: primaryColor.withOpacity(0.2)),
+                    border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -813,7 +813,7 @@ class _ProjectstageInsightsDashboardState
                           'Select a site and project stage to generate detailed reports',
                           style: TextStyle(
                             fontSize: 14,
-                            color: textColor.withOpacity(0.8),
+                            color: textColor.withValues(alpha: 0.8),
                           ),
                         ),
                       ),
@@ -837,7 +837,7 @@ class _ProjectstageInsightsDashboardState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -872,7 +872,7 @@ class _ProjectstageInsightsDashboardState
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: selectedReportType == type
-                    ? primaryColor.withOpacity(0.1)
+                    ? primaryColor.withValues(alpha: 0.1)
                     : Colors.grey[50],
                 shape: BoxShape.circle,
               ),
@@ -901,7 +901,7 @@ class _ProjectstageInsightsDashboardState
                     style: TextStyle(
                       fontSize: 14,
                       color: selectedReportType == type
-                          ? primaryColor.withOpacity(0.7)
+                          ? primaryColor.withValues(alpha: 0.7)
                           : Colors.grey[600],
                     ),
                   ),

@@ -620,9 +620,9 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: primaryColor.withOpacity(0.3)),
+            border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
           ),
           child: Column(
             children: [
@@ -806,7 +806,7 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
               vertical: 14,
             ),
           ),
-          value: _selectedDesignation,
+          initialValue: _selectedDesignation,
           items: _designationList
               .map(
                 (designation) => DropdownMenuItem(
@@ -967,7 +967,7 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: FutureBuilder<QuerySnapshot>(
@@ -1084,10 +1084,10 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
                             horizontal: 12,
                           ),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.08),
+                            color: primaryColor.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: primaryColor.withOpacity(0.2),
+                              color: primaryColor.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
@@ -1183,7 +1183,7 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
                               borderRadius: BorderRadius.circular(8),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 2,
                                   offset: Offset(0, 1),
                                 ),

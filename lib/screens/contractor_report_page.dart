@@ -654,7 +654,7 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                     isLoadingContractors
                         ? Center(child: CircularProgressIndicator(color: primaryColor))
                         : DropdownButtonFormField<String>(
-                            value: selectedContractor,
+                            initialValue: selectedContractor,
                             hint: Text('Select Contractor', style: TextStyle(color: lightTextColor)),
                             isExpanded: true,
                             dropdownColor: cardColor,
@@ -669,7 +669,7 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: primaryColor.withOpacity(0.3)),
+                                borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -734,7 +734,7 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                       isLoadingSites
                           ? Center(child: CircularProgressIndicator(color: primaryColor))
                           : DropdownButtonFormField<String>(
-                              value: selectedSiteId,
+                              initialValue: selectedSiteId,
                               hint: Text('Select Site ID', style: TextStyle(color: lightTextColor)),
                               isExpanded: true,
                               dropdownColor: cardColor,
@@ -749,7 +749,7 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: primaryColor.withOpacity(0.3)),
+                                  borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
@@ -786,7 +786,7 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                   textStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 2,
-                  shadowColor: primaryColor.withOpacity(0.3),
+                  shadowColor: primaryColor.withValues(alpha: 0.3),
                 ),
                 child: isLoadingExpenses 
                   ? SizedBox(
@@ -875,7 +875,7 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
+                            color: primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -909,12 +909,12 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                               constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 32),
                               child: DataTable(
                                 headingRowColor: WidgetStateProperty.resolveWith<Color>(
-                                  (Set<WidgetState> states) => primaryColor.withOpacity(0.05),
+                                  (Set<WidgetState> states) => primaryColor.withValues(alpha: 0.05),
                                 ),
                                 dataRowColor: WidgetStateProperty.resolveWith<Color>(
                                   (Set<WidgetState> states) {
                                     return states.contains(WidgetState.selected)
-                                        ? primaryColor.withOpacity(0.2)
+                                        ? primaryColor.withValues(alpha: 0.2)
                                         : Colors.transparent;
                                   },
                                 ),
@@ -1006,7 +1006,7 @@ class _ContractorReportPageState extends State<ContractorReportPage> {
                                   if (lastExpenses!.isNotEmpty) {
                                     listRows.add(
                                       DataRow(
-                                        color: WidgetStateProperty.all(primaryColor.withOpacity(0.12)),
+                                        color: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
                                         cells: [
                                           DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
                                           DataCell(Text('${lastExpenses!.length} Entries', style: TextStyle(fontWeight: FontWeight.bold))),

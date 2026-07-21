@@ -16,7 +16,7 @@ class NotificationPage extends StatelessWidget {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF772323), Color(0xFF772323).withOpacity(0.8)],
+              colors: [Color(0xFF772323), Color(0xFF772323).withValues(alpha: 0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -93,7 +93,7 @@ class NotificationPage extends StatelessWidget {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: _getStatusColor(data['status'] ?? 'Pending').withOpacity(0.2),
+                          color: _getStatusColor(data['status'] ?? 'Pending').withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(

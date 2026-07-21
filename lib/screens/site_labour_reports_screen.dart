@@ -424,14 +424,36 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 0.0)
           : 0.0;
 
-      final entrySalaryBasic = (e['basicSalary'] as num?)?.toDouble() ?? 0.0;
-      final salaryBasic = group == 'SC' && subContractorSalary > 0 ? subContractorSalary : entrySalaryBasic;
-      final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? 0.0;
-      final recordedTotalSalary = (e['totalSalary'] as num?)?.toDouble() ?? 0.0;
-      final totalSalary = group == 'SC' && recordedTotalSalary == 0 && subContractorSalary > 0 ? subContractorSalary : recordedTotalSalary;
-      final overtimeAmt = (e['overtimeAmount'] as num?)?.toDouble() ?? 0.0;
-      final otRate = (e['overtimeRate'] as num?)?.toDouble() ?? 0.0;
+      final entrySalaryBasic = (e['basicSalary'] as num?)?.toDouble() ??
+          (e['salaryBasic'] as num?)?.toDouble() ??
+          (e['rate'] as num?)?.toDouble() ??
+          0.0;
+      final salaryBasic = entrySalaryBasic > 0
+          ? entrySalaryBasic
+          : (group == 'SC' && subContractorSalary > 0 ? subContractorSalary : 0.0);
+      final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? (e['hours'] as num?)?.toDouble() ?? 0.0;
+      final otHours = e['otHours'] ?? e['overtimeHours'];
+      final doubleOtHours = otHours is num ? otHours.toDouble() : double.tryParse(otHours?.toString().split(' ').first ?? '0.0') ?? 0.0;
+      final defaultHrs = (e['defaultHours'] as num?)?.toDouble() ?? 8.0;
 
+      double basicHours;
+      if (hoursWorked > doubleOtHours) {
+        basicHours = hoursWorked - doubleOtHours;
+      } else if (hoursWorked > 0) {
+        basicHours = hoursWorked;
+      } else {
+        final att = e['attendanceType']?.toString() ?? 'Full Day';
+        if (att == 'Full Day' || att == 'Night Shift') {
+          basicHours = defaultHrs;
+        } else if (att == 'Half Day') {
+          basicHours = defaultHrs / 2;
+        } else {
+          basicHours = 0.0;
+        }
+      }
+
+      final recordedTotalSalary = (e['totalSalary'] as num?)?.toDouble() ?? (e['totalAmount'] as num?)?.toDouble() ?? 0.0;
+      final overtimeAmt = (e['overtimeAmount'] as num?)?.toDouble() ?? (e['otAmount'] as num?)?.toDouble() ?? 0.0;
       final mealsCount = (e['mealsCount'] as num?)?.toInt() ?? 0;
       final mealsAmount = (e['mealsAmount'] as num?)?.toDouble() ?? 0.0;
       final totalMealsAmt = mealsCount * mealsAmount;
@@ -439,8 +461,21 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final busCount = (e['busCount'] as num?)?.toInt() ?? 0;
       final busAmount = (e['busAmount'] as num?)?.toDouble() ?? 0.0;
       final totalBusAmt = busCount * busAmount;
-      final otHours = e['otHours'] ?? e['overtimeHours'];
-      final doubleOtHours = otHours is num ? otHours.toDouble() : double.tryParse(otHours?.toString().split(' ').first ?? '0.0') ?? 0.0;
+
+      final totalSalary = (recordedTotalSalary >= (salaryBasic + overtimeAmt) && recordedTotalSalary > 0)
+          ? recordedTotalSalary
+          : (salaryBasic + overtimeAmt + totalMealsAmt + totalBusAmt);
+      double otRate = (e['overtimeRate'] as num?)?.toDouble() ??
+          (e['otRate'] as num?)?.toDouble() ??
+          (e['otSalaryBasic'] as num?)?.toDouble() ??
+          0.0;
+      if (otRate == 0.0) {
+        if (doubleOtHours > 0 && overtimeAmt > 0) {
+          otRate = overtimeAmt / doubleOtHours;
+        } else if (salaryBasic > 0 && defaultHrs > 0) {
+          otRate = (salaryBasic / defaultHrs) * 1.5;
+        }
+      }
 
       rows.add({
         'siteId': siteId,
@@ -452,7 +487,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         'labourCount': 1,
         'salaryBasic': salaryBasic,
         'totalSalary': totalSalary,
-        'hours': hoursWorked,
+        'hours': basicHours,
         'otSalaryBasic': otRate,
         'otTotalAmount': overtimeAmt,
         'mealsExpense': mealsAmount,
@@ -659,8 +694,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       child: Scaffold(
         backgroundColor: bgColor,
         appBar: _buildAppBar(),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -687,12 +723,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 const SizedBox(height: 12),
               ],
 
-
-
               // Result Rendering Area
-              Expanded(
-                child: _buildResultArea(),
-              ),
+              _buildResultArea(),
             ],
           ),
         ),
@@ -728,14 +760,14 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.06),
+            color: primaryColor.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           )
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: selectedReportType,
+        initialValue: selectedReportType,
         dropdownColor: cardColor,
         isExpanded: true,
         style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold),
@@ -833,7 +865,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final validValue = options.any((o) => o.id == value) ? value : null;
 
     return DropdownButtonFormField<String>(
-      value: validValue,
+      initialValue: validValue,
       isExpanded: true,
       dropdownColor: cardColor,
       style: TextStyle(color: textColor, fontSize: 13),
@@ -873,7 +905,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.05),
+            color: primaryColor.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -905,7 +937,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: selectedLabourType,
+                  initialValue: selectedLabourType,
                   isExpanded: true,
                   dropdownColor: cardColor,
                   style: TextStyle(color: textColor, fontSize: 13),
@@ -999,10 +1031,16 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // ── Result Area Routing ──────────────────────────────────────────────────
   Widget _buildResultArea() {
     if (isLoading) {
-      return Center(child: CircularProgressIndicator(color: primaryColor));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator(color: primaryColor)),
+      );
     }
     if (reportGenerated && reportData.isEmpty && siteGroups.isEmpty) {
-      return _buildEmptyState();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: _buildEmptyState(),
+      );
     }
 
     // Client-side search filters
@@ -1047,7 +1085,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       children: [
         if (filteredRows.isNotEmpty || siteGroups.isNotEmpty)
           _buildSummaryKpiBanner(filteredRows),
-        Expanded(child: reportWidget),
+        reportWidget,
       ],
     );
   }
@@ -1114,7 +1152,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               children: [
                 _buildKpiBadge('Total Subs', '${totals.totalSubContractors}', Icons.badge_outlined, Colors.indigo),
                 _buildKpiBadge('Total Workers', '${totals.totalWorkers}', Icons.people_outline, Colors.blue),
-                _buildKpiBadge('Total Hours', '${totals.totalHours.toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
+                _buildKpiBadge('Total Hours', '${(totals.totalHours + totals.totalOtHours).toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
                 _buildKpiBadge('OT Amount', '₹${totals.totalOtAmount.toStringAsFixed(2)}', Icons.more_time, Colors.deepOrange),
                 _buildKpiBadge('Meals & Bus', '₹${(totals.totalMealsAmount + totals.totalBusAmount).toStringAsFixed(2)}', Icons.directions_bus_outlined, Colors.teal),
                 _buildKpiBadge('Grand Total', '₹${totals.totalEarnedSalary.toStringAsFixed(2)}', Icons.account_balance_wallet_outlined, Colors.green, isBold: true),
@@ -1168,7 +1206,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off_rounded, size: 64, color: mutedColor.withOpacity(0.3)),
+          Icon(Icons.search_off_rounded, size: 64, color: mutedColor.withValues(alpha: 0.3)),
           const SizedBox(height: 12),
           Text('No Data Found', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
           const SizedBox(height: 4),
@@ -1192,9 +1230,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['group']?.toString() ?? '-')),
         DataCell(Text(r['category']?.toString() ?? '-')),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}')),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['mealsExpense'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['mealsCount']}')),
@@ -1202,6 +1240,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text('₹${(r['busFare'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['busCount']}')),
         DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
+        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
       ]);
     });
 
@@ -1218,9 +1257,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             DataCell(const Text('-')),
             DataCell(const Text('-')),
             DataCell(Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
             DataCell(Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataCell(Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalMealsExpense.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalMealsCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
@@ -1228,6 +1267,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             DataCell(Text('₹${totals.totalBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalBusCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
           ],
         ),
       );
@@ -1236,19 +1276,17 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 12,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sl', 'Site Code', 'Site Name', 'Sub Contractor', 'Worker Name', 'Group',
-              'Category', 'Basic Wage', 'Total Earned', 'Hours', 'OT Basic', 'OT Amount',
-              'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 12,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group',
+            'Category', 'Basic Wage', 'Hrs', 'OT Rate', 'OT Hrs', 'OT Amount',
+            'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total',
+            'Total Earned Amount'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1257,6 +1295,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // ── 2. Attendance List Layout (Grouped Site/Supervisor) ──────────────────
   Widget _buildAttendanceList() {
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: siteGroups.length,
       itemBuilder: (context, index) {
         final site = siteGroups[index];
@@ -1342,8 +1382,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['category']?.toString() ?? '-')),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text(r['attendanceType']?.toString() ?? '-')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(r['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
@@ -1381,18 +1421,15 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 12,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sl', 'Date', 'Site Name', 'Worker Name', 'Category', 'Basic Rate',
-              'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Wages', 'Supervisor', 'Remarks'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 12,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sl', 'Date', 'Site Name', 'Worker Name', 'Category', 'Basic Rate',
+            'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Wages', 'Supervisor', 'Remarks'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1412,8 +1449,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['category']?.toString() ?? '-')),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text(r['attendanceType']?.toString() ?? '-')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(r['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
@@ -1452,18 +1489,15 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 12,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category', 'Basic Rate',
-              'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Amount', 'Supervisor', 'Remarks'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 12,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category', 'Basic Rate',
+            'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Amount', 'Supervisor', 'Remarks'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1501,17 +1535,14 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 36,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sub Contractor Name', 'Site Code', 'Labour Type'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 36,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sub Contractor Name', 'Site Code', 'Labour Type'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1532,8 +1563,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['subContractor']?.toString() ?? '-')),
         DataCell(Text(r['workerName']?.toString() ?? '-')),
         DataCell(Text(r['category']?.toString() ?? '-')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(r['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${stdAmt.toStringAsFixed(2)}')),
         DataCell(Text('₹${ot.toStringAsFixed(2)}')),
@@ -1571,8 +1602,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       return DataRow(cells: [
         DataCell(Text(row['name']?.toString() ?? '-')),
         DataCell(Text('${row['count']}')),
-        DataCell(Text('${(row['stdHours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(row['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((row['stdHours'] as double).toStringAsFixed(1))),
+        DataCell(Text((row['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(row['stdAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(row['otAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(row['mealsAmount'] as double).toStringAsFixed(2)}')),
@@ -1609,49 +1640,47 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Detailed entries
-          Text('Detailed Billing Entries', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
-          const SizedBox(height: 6),
-          Container(
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 12,
-                headingRowColor: WidgetStateProperty.all(primaryColor),
-                columns: _headersToColumns([
-                  'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category',
-                  'Std Hours', 'OT Hours', 'Basic Rate', 'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Total Bill'
-                ]),
-                rows: detailRows,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Detailed entries
+        Text('Detailed Billing Entries', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 12,
+              headingRowColor: WidgetStateProperty.all(primaryColor),
+              columns: _headersToColumns([
+                'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category',
+                'Std Hours', 'OT Hours', 'Basic Rate', 'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Total Bill'
+              ]),
+              rows: detailRows,
             ),
           ),
-          const SizedBox(height: 18),
-          // Grouped summaries
-          Text('Sub Contractor Summary', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
-          const SizedBox(height: 6),
-          Container(
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 12,
-                headingRowColor: WidgetStateProperty.all(primaryLight),
-                columns: _headersToColumns([
-                  'Sub Contractor', 'Man-Days', 'Std Hours', 'OT Hours',
-                  'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Net Bill'
-                ]),
-                rows: summaryRows,
-              ),
+        ),
+        const SizedBox(height: 18),
+        // Grouped summaries
+        Text('Sub Contractor Summary', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 12,
+              headingRowColor: WidgetStateProperty.all(primaryLight),
+              columns: _headersToColumns([
+                'Sub Contractor', 'Man-Days', 'Std Hours', 'OT Hours',
+                'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Net Bill'
+              ]),
+              rows: summaryRows,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1832,8 +1861,11 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         for (final sup in site.supervisors) {
           for (final row in sup.rows) {
             final wc = row['workerCount'];
-            if (wc is int) totalAttWorkers += wc;
-            else totalAttWorkers += (int.tryParse(wc?.toString() ?? '') ?? 0);
+            if (wc is int) {
+              totalAttWorkers += wc;
+            } else {
+              totalAttWorkers += (int.tryParse(wc?.toString() ?? '') ?? 0);
+            }
             result.add([
               (row['siteCode'] ?? '').toString(),
               (row['siteName'] ?? '').toString(),
@@ -2136,7 +2168,12 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // 1. Details PDF
   Future<pw.Document> _buildDetailsPDFDocument() {
     final totals = _ReportTotals.fromRows(reportData);
-    final headers = ['Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group', 'Category', 'Wage', 'Earned', 'Hrs', 'OT Rate', 'OT Amt', 'Meals', 'Bus'];
+    final headers = [
+      'Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group',
+      'Category', 'Basic Wage', 'Hrs', 'OT Rate', 'OT Hrs', 'OT Amount',
+      'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total',
+      'Total Earned Amount'
+    ];
     final data = List<List<String>>.generate(reportData.length, (index) {
       final r = reportData[index];
       return [
@@ -2148,12 +2185,17 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         r['group']?.toString() ?? '-',
         r['category']?.toString() ?? '-',
         '₹${(r['salaryBasic'] as double).toStringAsFixed(2)}',
-        '₹${(r['totalSalary'] as double).toStringAsFixed(2)}',
-        '${(r['hours'] as double).toStringAsFixed(1)}',
+        (r['hours'] as double).toStringAsFixed(1),
         '₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}',
+        (r['otHours'] as double).toStringAsFixed(1),
         '₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}',
+        '₹${(r['mealsExpense'] as double).toStringAsFixed(2)}',
+        '${r['mealsCount']}',
         '₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}',
+        '₹${(r['busFare'] as double).toStringAsFixed(2)}',
+        '${r['busCount']}',
         '₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}',
+        '₹${(r['totalSalary'] as double).toStringAsFixed(2)}',
       ];
     });
 
@@ -2167,12 +2209,17 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '-',
         '-',
         '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
-        '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
-        '${totals.totalHours.toStringAsFixed(1)}',
+        totals.totalHours.toStringAsFixed(1),
         '₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}',
+        totals.totalOtHours.toStringAsFixed(1),
         '₹${totals.totalOtAmount.toStringAsFixed(2)}',
+        '₹${totals.totalMealsExpense.toStringAsFixed(2)}',
+        '${totals.totalMealsCount}',
         '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
+        '₹${totals.totalBusFare.toStringAsFixed(2)}',
+        '${totals.totalBusCount}',
         '₹${totals.totalBusAmount.toStringAsFixed(2)}',
+        '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
       ]);
     }
     return _buildPdfBase('SITE LABOUR DETAILS REPORT', headers, data);
@@ -2259,8 +2306,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         r['category']?.toString() ?? '-',
         '₹${(r['salaryBasic'] as double).toStringAsFixed(2)}',
         r['attendanceType']?.toString() ?? '-',
-        '${(r['hours'] as double).toStringAsFixed(1)}',
-        '${(r['otHours'] as double).toStringAsFixed(1)}',
+        ((r['hours'] as double).toStringAsFixed(1)),
+        ((r['otHours'] as double).toStringAsFixed(1)),
         '₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}',
@@ -2278,8 +2325,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '-',
         '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
         '-',
-        '${totals.totalHours.toStringAsFixed(1)}',
-        '${totals.totalOtHours.toStringAsFixed(1)}',
+        (totals.totalHours.toStringAsFixed(1)),
+        (totals.totalOtHours.toStringAsFixed(1)),
         '₹${totals.totalOtAmount.toStringAsFixed(2)}',
         '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
         '₹${totals.totalBusAmount.toStringAsFixed(2)}',
@@ -2305,8 +2352,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         r['category']?.toString() ?? '-',
         '₹${(r['salaryBasic'] as double).toStringAsFixed(2)}',
         r['attendanceType']?.toString() ?? '-',
-        '${(r['hours'] as double).toStringAsFixed(1)}',
-        '${(r['otHours'] as double).toStringAsFixed(1)}',
+        ((r['hours'] as double).toStringAsFixed(1)),
+        ((r['otHours'] as double).toStringAsFixed(1)),
         '₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}',
@@ -2325,8 +2372,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '-',
         '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
         '-',
-        '${totals.totalHours.toStringAsFixed(1)}',
-        '${totals.totalOtHours.toStringAsFixed(1)}',
+        (totals.totalHours.toStringAsFixed(1)),
+        (totals.totalOtHours.toStringAsFixed(1)),
         '₹${totals.totalOtAmount.toStringAsFixed(2)}',
         '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
         '₹${totals.totalBusAmount.toStringAsFixed(2)}',
@@ -2409,13 +2456,13 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               r['category']?.toString() ?? '-',
               '1',
               r['attendanceType']?.toString() ?? 'Regular',
-              '${(r['salaryBasic'] as double).toStringAsFixed(2)}',
-              '${stdAmt.toStringAsFixed(2)}',
-              '${hrs.toStringAsFixed(1)}',
-              '${ot.toStringAsFixed(2)}',
-              '${meals.toStringAsFixed(2)}',
-              '${bus.toStringAsFixed(2)}',
-              '${total.toStringAsFixed(2)}',
+              ((r['salaryBasic'] as double).toStringAsFixed(2)),
+              (stdAmt.toStringAsFixed(2)),
+              (hrs.toStringAsFixed(1)),
+              (ot.toStringAsFixed(2)),
+              (meals.toStringAsFixed(2)),
+              (bus.toStringAsFixed(2)),
+              (total.toStringAsFixed(2)),
             ];
           });
 
@@ -2423,15 +2470,15 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           detailData.add([
             'Total',
             '',
-            '${sumNo.toStringAsFixed(0)}',
+            (sumNo.toStringAsFixed(0)),
             '',
             '',
-            '${sumAmt.toStringAsFixed(2)}',
-            '${sumHrs.toStringAsFixed(1)}',
-            '${sumOT.toStringAsFixed(2)}',
-            '${sumFood.toStringAsFixed(2)}',
-            '${sumBus.toStringAsFixed(2)}',
-            '${sumTotal.toStringAsFixed(2)}',
+            (sumAmt.toStringAsFixed(2)),
+            (sumHrs.toStringAsFixed(1)),
+            (sumOT.toStringAsFixed(2)),
+            (sumFood.toStringAsFixed(2)),
+            (sumBus.toStringAsFixed(2)),
+            (sumTotal.toStringAsFixed(2)),
           ]);
 
           return [
@@ -3178,7 +3225,7 @@ class _ExportPreviewDialogContentState extends State<_ExportPreviewDialogContent
             defaultColumnWidth: const IntrinsicColumnWidth(),
             children: [
               TableRow(
-                decoration: BoxDecoration(color: widget.primaryColor.withOpacity(0.08)),
+                decoration: BoxDecoration(color: widget.primaryColor.withValues(alpha: 0.08)),
                 children: headers.map((h) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Text(

@@ -430,8 +430,8 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                                   decoration: BoxDecoration(
                                     color:
                                         (data['status'] ?? 'Active') == 'Active'
-                                        ? Colors.green.withOpacity(0.2)
-                                        : Colors.red.withOpacity(0.2),
+                                        ? Colors.green.withValues(alpha: 0.2)
+                                        : Colors.red.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
