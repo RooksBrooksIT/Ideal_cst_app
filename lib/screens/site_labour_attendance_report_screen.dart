@@ -227,7 +227,7 @@ class _SiteLabourAttendanceReportScreenState
         FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
         FirebaseFirestore.instance.collection('supervisor').get(),
       ]);
-      final snap = results[0];
+      final parentSnap = results[0];
       final siteSupervisorMapSnap = results[1];
       final supervisorCollectionSnap = results[2];
 
@@ -253,11 +253,69 @@ class _SiteLabourAttendanceReportScreenState
         }
       }
 
-      List<Map<String, dynamic>> entries = snap.docs.map((d) {
-        final data = Map<String, dynamic>.from(d.data());
-        data['_docId'] = d.id;
-        return data;
-      }).toList();
+      // Fetch workers subcollection for each parent daily_labour_entry document
+      final List<Map<String, dynamic>> flatWorkerEntries = [];
+
+      await Future.wait(parentSnap.docs.map((parentDoc) async {
+        final parentData = Map<String, dynamic>.from(parentDoc.data());
+        final parentDocId = parentDoc.id;
+
+        final parentSiteId   = parentData['siteId']?.toString() ?? '-';
+        final parentSiteName = parentData['siteName']?.toString() ?? '-';
+        final parentDate     = parentData['date']?.toString() ?? '-';
+        final parentCoordinator =
+            parentData['coordinatorName']?.toString() ?? parentData['coordinator']?.toString() ?? '-';
+        final parentSupervisor =
+            parentData['supervisorName']?.toString() ?? parentData['supervisor']?.toString() ?? '-';
+
+        final workersSnap = await FirebaseFirestore.instance
+            .collection('daily_labour_entries')
+            .doc(parentDocId)
+            .collection('workers')
+            .get();
+
+        if (workersSnap.docs.isEmpty) {
+          // Fallback: treat parent document as a single entry
+          flatWorkerEntries.add({
+            ...parentData,
+            '_docId': parentDocId,
+            '_parentDocId': parentDocId,
+          });
+          return;
+        }
+
+        for (final workerDoc in workersSnap.docs) {
+          final wData = Map<String, dynamic>.from(workerDoc.data());
+          flatWorkerEntries.add({
+            'siteId':          parentSiteId,
+            'siteName':        parentSiteName,
+            'date':            parentDate,
+            'coordinatorName': parentCoordinator,
+            'supervisorName':  wData['supervisorName'] ?? parentSupervisor,
+            'workerName':      wData['workerName']?.toString() ?? wData['name']?.toString() ?? '-',
+            'contractorName':  wData['contractor']?.toString() ?? wData['contractorName']?.toString() ?? wData['subContractor']?.toString() ?? '-',
+            'category':        wData['category']?.toString() ?? '-',
+            'labourType':      wData['labourType']?.toString() ?? wData['salaryType']?.toString() ?? '',
+            'basicSalary':     wData['basicSalary'] ?? wData['salaryBasic'] ?? wData['salary'] ?? wData['rate'],
+            'hoursWorked':     wData['hoursWorked'] ?? wData['hours'],
+            'otHours':         wData['overtimeHours'] ?? wData['otHours'],
+            'overtimeAmount':  wData['overtimeAmount'] ?? wData['otAmount'],
+            'mealsCount':      wData['mealsCount'],
+            'mealsAmount':     wData['mealsAmount'] ?? wData['mealsExpense'],
+            'busCount':        wData['busCount'],
+            'busAmount':       wData['busAmount'] ?? wData['busFare'],
+            'attendanceType':  wData['attendanceType'] ?? wData['attendance'] ?? 'Full Day',
+            'inTime':          wData['inTime'] ?? '',
+            'outTime':         wData['outTime'] ?? '',
+            'remarks':         wData['remarks'] ?? '',
+            'defaultHours':    wData['defaultHours'] ?? parentData['defaultHours'],
+            '_docId':          workerDoc.id,
+            '_parentDocId':    parentDocId,
+          });
+        }
+      }));
+
+      List<Map<String, dynamic>> entries = flatWorkerEntries;
 
       // Also merge site_labour_reports if present
       try {
@@ -386,9 +444,11 @@ class _SiteLabourAttendanceReportScreenState
       sup['totalCount'] = (sup['totalCount'] as int) + 1;
 
       // Resolve coordinator name
+      final docCoord = e['coordinatorName']?.toString() ?? e['coordinator']?.toString();
       final supervisorUserName = siteIdToSupervisorName[siteId] ?? supervisor;
-      final coordinator =
-          supervisorNameToCoordinator[supervisorUserName.toLowerCase()] ?? '-';
+      final coordinator = (docCoord != null && docCoord.trim().isNotEmpty && docCoord.trim() != '-')
+          ? docCoord.trim()
+          : (supervisorNameToCoordinator[supervisorUserName.toLowerCase()] ?? '-');
 
       final rows = sup['rows'] as Map<String, Map<String, dynamic>>;
       if (!rows.containsKey(rowKey)) {
@@ -1192,25 +1252,11 @@ class _SiteLabourAttendanceReportScreenState
       );
     }
 
-    final totalPages = (filtered.length / rowsPerPage).ceil();
-    final pageRows = filtered
-        .skip(currentPage * rowsPerPage)
-        .take(rowsPerPage)
-        .toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Site-grouped register view
-        ...siteGroups.map(_buildSiteRegisterCard),
-        const SizedBox(height: 16),
-        // Flat paginated table
-        _buildFlatTable(pageRows),
-        if (totalPages > 1) ...[
-          const SizedBox(height: 12),
-          _buildPagination(totalPages, filtered.length),
-        ],
-      ],
+      children: siteGroups
+          .map((site) => _SiteAttendanceCard(site: site, searchQuery: searchQuery))
+          .toList(),
     );
   }
 
@@ -1243,319 +1289,11 @@ class _SiteLabourAttendanceReportScreenState
     );
   }
 
-  Widget _buildSiteRegisterCard(_SiteGroup site) {
-    // Filter site groups when search is active
-    if (searchQuery.isNotEmpty) {
-      final q = searchQuery.toLowerCase();
-      final siteMatch =
-          site.siteCode.toLowerCase().contains(q) ||
-          site.siteName.toLowerCase().contains(q);
-      final hasMatch = site.supervisors.any((sup) =>
-          sup.supervisor.toLowerCase().contains(q) ||
-          sup.rows.any((r) =>
-              (r['subContractor']?.toString().toLowerCase().contains(q) ??
-                  false) ||
-              (r['categoryType']?.toString().toLowerCase().contains(q) ??
-                  false)));
-      if (!siteMatch && !hasMatch) return const SizedBox.shrink();
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Site header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primaryColor, primaryLight],
-              ),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.location_city, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Site Code: ${site.siteCode}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      if (site.siteName != site.siteCode)
-                        Text(
-                          site.siteName,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 11,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Total: ${site.totalCount}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Register table
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columnSpacing: 10,
-              headingRowHeight: 40,
-              dataRowHeight: 44,
-              headingRowColor: WidgetStateProperty.all(
-                primaryColor.withValues(alpha: 0.08),
-              ),
-              columns: [
-                _col('S.No'),
-                _col('Date'),
-                _col('Co-ordinator'),
-                _col('Site Code'),
-                _col('Supervisor'),
-                _col('CT'),
-                _col('LT'),
-                _col('Sub.Contractor'),
-                _col('Nos'),
-                _col('Total'),
-                _col('OT/ST Details'),
-              ],
-              rows: _buildRegisterRows(site),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static DataColumn _col(String label) {
-    return DataColumn(
-      label: Text(
-        label,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 11,
-          color: Color(0xFF0b3470),
-        ),
-      ),
-    );
-  }
-
-  List<DataRow> _buildRegisterRows(_SiteGroup site) {
-    final rows = <DataRow>[];
-    bool firstSiteRow = true;
-    int sNoCounter = 1;
-    for (final sup in site.supervisors) {
-      for (int i = 0; i < sup.rows.length; i++) {
-        final r = sup.rows[i];
-        final showSupervisor = i == 0;
-        rows.add(DataRow(
-          cells: [
-            DataCell(Text(
-              '$sNoCounter',
-              style: const TextStyle(fontSize: 11),
-            )),
-            DataCell(Text(
-              _formatDate(r['date']?.toString()),
-              style: const TextStyle(fontSize: 11),
-            )),
-            DataCell(Text(
-              r['coordinator']?.toString() ?? '-',
-              style: const TextStyle(fontSize: 11),
-            )),
-            DataCell(Text(
-              firstSiteRow ? site.siteCode : '',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: firstSiteRow ? FontWeight.w600 : FontWeight.normal,
-              ),
-            )),
-            DataCell(Text(
-              showSupervisor ? sup.supervisor : '',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: showSupervisor ? FontWeight.w600 : FontWeight.normal,
-              ),
-            )),
-            DataCell(Text(
-              r['categoryType']?.toString() ?? '-',
-              style: const TextStyle(fontSize: 11),
-            )),
-            DataCell(Text(
-              r['labourType']?.toString() ?? '-',
-              style: const TextStyle(fontSize: 11),
-            )),
-            DataCell(Text(
-              r['subContractor']?.toString() ?? '-',
-              style: const TextStyle(fontSize: 11),
-            )),
-            DataCell(Text(
-              '${r['workerCount'] ?? 0}',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            )),
-            DataCell(Text(
-              i == sup.rows.length - 1 ? '${sup.totalCount}' : '',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0b3470),
-              ),
-            )),
-            DataCell(Text(
-              r['otDetails']?.toString() ?? '-',
-              style: const TextStyle(fontSize: 10),
-            )),
-          ],
-        ));
-        firstSiteRow = false;
-        sNoCounter++;
-      }
-    }
-    return rows;
-  }
-
   String _formatDate(String? raw) {
     if (raw == null || raw.isEmpty) return '-';
     final dt = DateTime.tryParse(raw);
     if (dt != null) return DateFormat('dd/MM/yyyy').format(dt);
     return raw;
-  }
-
-  Widget _buildFlatTable(List<Map<String, dynamic>> pageRows) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Text(
-              'Detailed Labour Register',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-              ),
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columnSpacing: 10,
-              headingRowHeight: 44,
-              dataRowHeight: 48,
-              headingRowColor: WidgetStateProperty.all(primaryColor),
-              columns: const [
-                DataColumn(label: Text('S.No', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('Date', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('Co-ordinator', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('Site Code', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('Supervisor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('CT', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('LT', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('Sub.Contractor', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                DataColumn(label: Text('Nos', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)), numeric: true),
-                DataColumn(label: Text('Total', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)), numeric: true),
-                DataColumn(label: Text('OT/ST Details', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-              ],
-              rows: pageRows.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final r = entry.value;
-                final globalIdx = currentPage * rowsPerPage + idx + 1;
-                return DataRow(cells: [
-                  DataCell(Text('$globalIdx', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(_formatDate(r['date']?.toString()), style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['coordinator']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['siteCode']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['supervisor']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['categoryType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['labourType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['subContractor']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text('${r['workerCount'] ?? 0}', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text('${r['totalCount'] ?? '-'}', style: const TextStyle(fontSize: 11))),
-                  DataCell(Text(r['otDetails']?.toString() ?? '-', style: const TextStyle(fontSize: 10))),
-                ]);
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPagination(int totalPages, int totalRows) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          onPressed: currentPage > 0
-              ? () => setState(() => currentPage--)
-              : null,
-          icon: const Icon(Icons.chevron_left),
-          color: primaryColor,
-        ),
-        Text(
-          'Page ${currentPage + 1} of $totalPages ($totalRows rows)',
-          style: TextStyle(fontSize: 13, color: mutedColor),
-        ),
-        IconButton(
-          onPressed: currentPage < totalPages - 1
-              ? () => setState(() => currentPage++)
-              : null,
-          icon: const Icon(Icons.chevron_right),
-          color: primaryColor,
-        ),
-      ],
-    );
   }
 
   // ── Export helpers (register layout) ───────────────────────────────────────
@@ -2258,4 +1996,207 @@ class _RegisterExportRow {
     required this.siteTotalLabel,
     required this.siteTotalValue,
   });
+}
+
+class _SiteAttendanceCard extends StatefulWidget {
+  final _SiteGroup site;
+  final String searchQuery;
+
+  const _SiteAttendanceCard({
+    required this.site,
+    required this.searchQuery,
+  });
+
+  @override
+  State<_SiteAttendanceCard> createState() => _SiteAttendanceCardState();
+}
+
+class _SiteAttendanceCardState extends State<_SiteAttendanceCard> {
+  bool _isExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final site = widget.site;
+    final searchQuery = widget.searchQuery;
+
+    if (searchQuery.isNotEmpty) {
+      final q = searchQuery.toLowerCase();
+      final siteMatch =
+          site.siteCode.toLowerCase().contains(q) ||
+          site.siteName.toLowerCase().contains(q);
+      final hasMatch = site.supervisors.any((sup) =>
+          sup.supervisor.toLowerCase().contains(q) ||
+          sup.rows.any((r) =>
+              (r['subContractor']?.toString().toLowerCase().contains(q) ??
+                  false) ||
+              (r['categoryType']?.toString().toLowerCase().contains(q) ??
+                  false)));
+      if (!siteMatch && !hasMatch) return const SizedBox.shrink();
+    }
+
+    const primaryColor = Color(0xFF0b3470);
+    const primaryLight = Color(0xFF1a4a8c);
+    const cardColor = Colors.white;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header banner (tappable to expand/collapse)
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(12),
+              bottom: Radius.circular(_isExpanded ? 0 : 12),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [primaryColor, primaryLight],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  top: const Radius.circular(12),
+                  bottom: Radius.circular(_isExpanded ? 0 : 12),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_city, color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Site Code: ${site.siteCode}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (site.siteName != site.siteCode && site.siteName.isNotEmpty)
+                          Text(
+                            site.siteName,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 11,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Total: ${site.totalCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Attendance Table Body (Single detailed attendance register per site)
+          if (_isExpanded)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: 12,
+                headingRowHeight: 40,
+                dataRowHeight: 44,
+                headingRowColor: WidgetStateProperty.all(
+                  primaryColor.withValues(alpha: 0.08),
+                ),
+                columns: const [
+                  DataColumn(label: Text('S.No', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Co-ordinator', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Site Code', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Supervisor', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('CT', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('LT', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Sub.Contractor', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Nos', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                  DataColumn(label: Text('OT/ST Details', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: primaryColor))),
+                ],
+                rows: _buildRegisterRows(site),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<DataRow> _buildRegisterRows(_SiteGroup site) {
+    final rows = <DataRow>[];
+    bool firstSiteRow = true;
+    int sNoCounter = 1;
+    int grandTotalWorkers = 0;
+
+    for (final sup in site.supervisors) {
+      for (int i = 0; i < sup.rows.length; i++) {
+        final r = sup.rows[i];
+        final showSupervisor = i == 0;
+        final workerCnt = (r['workerCount'] as int? ?? 0);
+        grandTotalWorkers += workerCnt;
+
+        final isLastRowOfSite = (sup == site.supervisors.last) && (i == sup.rows.length - 1);
+
+        rows.add(DataRow(
+          cells: [
+            DataCell(Text('$sNoCounter', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(_formatDate(r['date']?.toString()), style: const TextStyle(fontSize: 11))),
+            DataCell(Text(r['coordinator']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(firstSiteRow ? site.siteCode : '', style: TextStyle(fontSize: 11, fontWeight: firstSiteRow ? FontWeight.w600 : FontWeight.normal))),
+            DataCell(Text(showSupervisor ? sup.supervisor : '', style: TextStyle(fontSize: 11, fontWeight: showSupervisor ? FontWeight.w600 : FontWeight.normal))),
+            DataCell(Text(r['categoryType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(r['labourType']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text(r['subContractor']?.toString() ?? '-', style: const TextStyle(fontSize: 11))),
+            DataCell(Text('$workerCnt', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+            DataCell(Text(isLastRowOfSite ? '$grandTotalWorkers' : '', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF0b3470)))),
+            DataCell(Text(r['otDetails']?.toString() ?? '-', style: const TextStyle(fontSize: 10))),
+          ],
+        ));
+        firstSiteRow = false;
+        sNoCounter++;
+      }
+    }
+    return rows;
+  }
+
+  String _formatDate(String? raw) {
+    if (raw == null || raw.isEmpty) return '-';
+    final dt = DateTime.tryParse(raw);
+    if (dt != null) return DateFormat('dd/MM/yyyy').format(dt);
+    return raw;
+  }
 }

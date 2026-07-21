@@ -181,13 +181,69 @@ class _SiteLabourDetailsReportScreenState
         query = query.where('date', isLessThanOrEqualTo: endStr);
       }
 
-      final snap = await query.get();
+      final parentSnap = await query.get();
 
-      List<Map<String, dynamic>> entries = snap.docs.map((d) {
-        final data = Map<String, dynamic>.from(d.data());
-        data['_docId'] = d.id;
-        return data;
-      }).toList();
+      final List<Map<String, dynamic>> entries = [];
+
+      await Future.wait(parentSnap.docs.map((parentDoc) async {
+        final parentData = Map<String, dynamic>.from(parentDoc.data());
+        final parentDocId = parentDoc.id;
+
+        final parentSiteId   = parentData['siteId']?.toString() ?? parentData['siteCode']?.toString() ?? '-';
+        final parentSiteName = parentData['siteName']?.toString() ?? '-';
+        final parentDate     = parentData['date']?.toString() ?? '-';
+        final parentCoordinator =
+            parentData['coordinatorName']?.toString() ?? parentData['coordinator']?.toString() ?? '-';
+        final parentSupervisor =
+            parentData['supervisorName']?.toString() ?? parentData['supervisor']?.toString() ?? '-';
+
+        final workersSnap = await FirebaseFirestore.instance
+            .collection('daily_labour_entries')
+            .doc(parentDocId)
+            .collection('workers')
+            .get();
+
+        if (workersSnap.docs.isEmpty) {
+          // Fallback: treat parent document as a single entry
+          entries.add({
+            ...parentData,
+            '_docId': parentDocId,
+            '_parentDocId': parentDocId,
+          });
+          return;
+        }
+
+        for (final workerDoc in workersSnap.docs) {
+          final wData = Map<String, dynamic>.from(workerDoc.data());
+          entries.add({
+            'siteId':          parentSiteId,
+            'siteCode':        parentSiteId,
+            'siteName':        parentSiteName,
+            'date':            parentDate,
+            'coordinatorName': parentCoordinator,
+            'supervisorName':  wData['supervisorName'] ?? parentSupervisor,
+            'workerName':      wData['workerName']?.toString() ?? wData['name']?.toString() ?? '-',
+            'contractorName':  wData['contractor']?.toString() ?? wData['contractorName']?.toString() ?? wData['subContractor']?.toString() ?? '-',
+            'category':        wData['category']?.toString() ?? wData['categoryType']?.toString() ?? '-',
+            'basicSalary':     wData['basicSalary'] ?? wData['salaryBasic'] ?? wData['salary'] ?? wData['rate'],
+            'hoursWorked':     wData['hoursWorked'] ?? wData['hours'],
+            'otHours':         wData['overtimeHours'] ?? wData['otHours'],
+            'overtimeAmount':  wData['overtimeAmount'] ?? wData['otAmount'],
+            'mealsCount':      wData['mealsCount'],
+            'mealsAmount':     wData['mealsAmount'] ?? wData['mealsExpense'],
+            'busCount':        wData['busCount'],
+            'busAmount':       wData['busAmount'] ?? wData['busFare'],
+            'attendanceType':  wData['attendanceType'] ?? wData['attendance'] ?? 'Full Day',
+            'inTime':          wData['inTime'] ?? '',
+            'outTime':         wData['outTime'] ?? '',
+            'remarks':         wData['remarks'] ?? '',
+            'defaultHours':    wData['defaultHours'] ?? parentData['defaultHours'],
+            'contractorId':    wData['contractorId'],
+            '_docId':          workerDoc.id,
+            '_parentDocId':    parentDocId,
+          });
+        }
+      }));
 
       // Fetch subcontractors salary mappings for fallback
       final subContractorsSnap = await FirebaseFirestore.instance.collection('sub_contractors').get();
@@ -1510,7 +1566,7 @@ class _SiteLabourDetailsReportScreenState
     pdf.addPage(
       pw.MultiPage(
         theme: pdfTheme,
-        pageFormat: PdfPageFormat.a4.landscape,
+        pageFormat: PdfPageFormat.a3.landscape,
         margin: const pw.EdgeInsets.all(20),
         header: (context) {
           return pw.Container(
