@@ -462,9 +462,10 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final busAmount = (e['busAmount'] as num?)?.toDouble() ?? 0.0;
       final totalBusAmt = busCount * busAmount;
 
-      final totalSalary = (recordedTotalSalary >= (salaryBasic + overtimeAmt) && recordedTotalSalary > 0)
-          ? recordedTotalSalary
-          : (salaryBasic + overtimeAmt + totalMealsAmt + totalBusAmt);
+      // Always compute the total as the sum of all four components so that
+      // meals and bus are never silently excluded when a stored Firestore value
+      // only covers basicSalary + overtimeAmount.
+      final totalSalary = salaryBasic + overtimeAmt + totalMealsAmt + totalBusAmt;
       double otRate = (e['overtimeRate'] as num?)?.toDouble() ??
           (e['otRate'] as num?)?.toDouble() ??
           (e['otSalaryBasic'] as num?)?.toDouble() ??
@@ -1219,6 +1220,38 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // ── 1. Details Table Layout ──────────────────────────────────────────────
   Widget _buildDetailsTable(List<Map<String, dynamic>> rows) {
     final totals = _ReportTotals.fromRows(rows);
+
+    // ── Highlight color constants ──────────────────────────────────────────
+    const Color otHighlightBg    = Color(0xFFFFF3E0); // amber-50
+    const Color otHighlightFg    = Color(0xFFE65100); // deep-orange
+    const Color mealsHighlightBg = Color(0xFFE0F7FA); // cyan-50
+    const Color mealsHighlightFg = Color(0xFF00838F); // cyan-800
+    const Color busHighlightBg   = Color(0xFFEDE7F6); // deep-purple-50
+    const Color busHighlightFg   = Color(0xFF4527A0); // deep-purple-800
+    const Color earnedBg         = Color(0xFFE8F5E9); // green-50
+    const Color earnedFg         = Color(0xFF1B5E20); // green-900
+
+    // Helper: highlighted DataCell
+    DataCell _hCell(String text, Color bg, Color fg, {bool bold = false}) {
+      return DataCell(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              color: fg,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      );
+    }
+
     final List<DataRow> dataRows = List.generate(rows.length, (index) {
       final r = rows[index];
       return DataRow(cells: [
@@ -1233,14 +1266,18 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
-        DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
+        // OT Amount — amber highlight
+        _hCell('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}', otHighlightBg, otHighlightFg),
         DataCell(Text('₹${(r['mealsExpense'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['mealsCount']}')),
-        DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
+        // Meals Total — cyan highlight
+        _hCell('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg),
         DataCell(Text('₹${(r['busFare'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['busCount']}')),
-        DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
+        // Bus Total — purple highlight
+        _hCell('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}', busHighlightBg, busHighlightFg),
+        // Total Earned Amount — green highlight
+        _hCell('₹${(r['totalSalary'] as double).toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
       ]);
     });
 
@@ -1260,17 +1297,39 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             DataCell(Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            // OT Amount total — amber bold
+            _hCell('₹${totals.totalOtAmount.toStringAsFixed(2)}', otHighlightBg, otHighlightFg, bold: true),
             DataCell(Text('₹${totals.totalMealsExpense.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalMealsCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalMealsAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            // Meals Total total — cyan bold
+            _hCell('₹${totals.totalMealsAmount.toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg, bold: true),
             DataCell(Text('₹${totals.totalBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalBusCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
+            // Bus Total total — purple bold
+            _hCell('₹${totals.totalBusAmount.toStringAsFixed(2)}', busHighlightBg, busHighlightFg, bold: true),
+            // Grand Total Earned — green bold
+            _hCell('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
           ],
         ),
       );
+    }
+
+    // All column headers use the same plain white style — highlights are data-cells only
+    List<DataColumn> _buildColumns() {
+      const headerStyle = TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11);
+      DataColumn plain(String h) => DataColumn(label: Text(h, style: headerStyle));
+
+      return [
+        plain('Sl'), plain('Site Code'), plain('Site Name'), plain('Contractor'),
+        plain('Worker Name'), plain('Group'), plain('Category'), plain('Basic Wage'),
+        plain('Hrs'), plain('OT Rate'), plain('OT Hrs'),
+        plain('OT Amount'),
+        plain('Meals Exp'), plain('Meals Count'),
+        plain('Meals Total'),
+        plain('Bus Fare'), plain('Bus Count'),
+        plain('Bus Total'),
+        plain('Total Earned Amount'),
+      ];
     }
 
     return Container(
@@ -1280,17 +1339,13 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         child: DataTable(
           columnSpacing: 12,
           headingRowColor: WidgetStateProperty.all(primaryColor),
-          columns: _headersToColumns([
-            'Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group',
-            'Category', 'Basic Wage', 'Hrs', 'OT Rate', 'OT Hrs', 'OT Amount',
-            'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total',
-            'Total Earned Amount'
-          ]),
+          columns: _buildColumns(),
           rows: dataRows,
         ),
       ),
     );
   }
+
 
   // ── 2. Attendance List Layout (Grouped Site/Supervisor) ──────────────────
   Widget _buildAttendanceList() {
@@ -1808,28 +1863,49 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final totals = _ReportTotals.fromRows(reportData);
 
     if (selectedReportType == 'Site Labour Details Report') {
-      result.add(['Sl', 'Site Code', 'Site Name', 'Sub Contractor', 'Worker Name', 'Group', 'Category', 'Basic Wage', 'Total Earned', 'Hours', 'OT Basic', 'OT Amount', 'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total']);
+      result.add([
+        'Sl',
+        'Site Code',
+        'Site Name',
+        'Contractor',
+        'Worker Name',
+        'Group',
+        'Category',
+        'Basic Wage',
+        'Hrs',
+        'OT Rate',
+        'OT Hrs',
+        'OT Amount',
+        'Meals Exp',
+        'Meals Count',
+        'Meals Total',
+        'Bus Fare',
+        'Bus Count',
+        'Bus Total',
+        'Total Earned Amount',
+      ]);
       for (int i = 0; i < reportData.length; i++) {
         final r = reportData[i];
         result.add([
           (i + 1).toString(),
-          (r['siteId'] ?? '').toString(),
-          (r['siteName'] ?? '').toString(),
-          (r['subContractor'] ?? '').toString(),
-          (r['workerName'] ?? '').toString(),
-          (r['group'] ?? '').toString(),
-          (r['category'] ?? '').toString(),
-          (r['salaryBasic'] ?? '').toString(),
-          (r['totalSalary'] ?? '').toString(),
-          (r['hours'] ?? '').toString(),
-          (r['otSalaryBasic'] ?? '').toString(),
-          (r['otTotalAmount'] ?? '').toString(),
-          (r['mealsExpense'] ?? '').toString(),
-          (r['mealsCount'] ?? '').toString(),
-          (r['totalMealsAmount'] ?? '').toString(),
-          (r['busFare'] ?? '').toString(),
-          (r['busCount'] ?? '').toString(),
-          (r['totalBusAmount'] ?? '').toString(),
+          (r['siteId'] ?? '-').toString(),
+          (r['siteName'] ?? '-').toString(),
+          (r['subContractor'] ?? '-').toString(),
+          (r['workerName'] ?? '-').toString(),
+          (r['group'] ?? '-').toString(),
+          (r['category'] ?? '-').toString(),
+          '₹${(r['salaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['hours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+          '₹${(r['otSalaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['otHours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+          '₹${(r['otTotalAmount'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          '₹${(r['mealsExpense'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['mealsCount'] as num? ?? 0).toInt().toString(),
+          '₹${(r['totalMealsAmount'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          '₹${(r['busFare'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          (r['busCount'] as num? ?? 0).toInt().toString(),
+          '₹${(r['totalBusAmount'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
+          '₹${(r['totalSalary'] as num? ?? 0).toDouble().toStringAsFixed(2)}',
         ]);
       }
       if (reportData.isNotEmpty) {
@@ -1841,17 +1917,18 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           '-',
           '-',
           '-',
-          totals.totalBasicSalary.toStringAsFixed(2),
-          totals.totalEarnedSalary.toStringAsFixed(2),
+          '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
           totals.totalHours.toStringAsFixed(1),
-          totals.totalOtSalaryBasic.toStringAsFixed(2),
-          totals.totalOtAmount.toStringAsFixed(2),
-          totals.totalMealsExpense.toStringAsFixed(2),
+          '₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}',
+          totals.totalOtHours.toStringAsFixed(1),
+          '₹${totals.totalOtAmount.toStringAsFixed(2)}',
+          '₹${totals.totalMealsExpense.toStringAsFixed(2)}',
           totals.totalMealsCount.toString(),
-          totals.totalMealsAmount.toStringAsFixed(2),
-          totals.totalBusFare.toStringAsFixed(2),
+          '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
+          '₹${totals.totalBusFare.toStringAsFixed(2)}',
           totals.totalBusCount.toString(),
-          totals.totalBusAmount.toStringAsFixed(2),
+          '₹${totals.totalBusAmount.toStringAsFixed(2)}',
+          '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
         ]);
       }
     } else if (selectedReportType == 'Site Labour Attendance Report') {
@@ -2645,12 +2722,25 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final excelDoc = excel.Excel.createExcel();
     final sheet = excelDoc['Details Report'];
     sheet.appendRow([
-      excel.TextCellValue('Sl'), excel.TextCellValue('Site Code'), excel.TextCellValue('Site Name'),
-      excel.TextCellValue('Sub Contractor'), excel.TextCellValue('Worker Name'), excel.TextCellValue('Group'),
-      excel.TextCellValue('Category'), excel.TextCellValue('Basic Wage'), excel.TextCellValue('Total Earned'),
-      excel.TextCellValue('Hours'), excel.TextCellValue('OT Basic'), excel.TextCellValue('OT Amount'),
-      excel.TextCellValue('Meals Exp'), excel.TextCellValue('Meals Count'), excel.TextCellValue('Meals Total'),
-      excel.TextCellValue('Bus Fare'), excel.TextCellValue('Bus Count'), excel.TextCellValue('Bus Total')
+      excel.TextCellValue('Sl'),
+      excel.TextCellValue('Site Code'),
+      excel.TextCellValue('Site Name'),
+      excel.TextCellValue('Contractor'),
+      excel.TextCellValue('Worker Name'),
+      excel.TextCellValue('Group'),
+      excel.TextCellValue('Category'),
+      excel.TextCellValue('Basic Wage'),
+      excel.TextCellValue('Hrs'),
+      excel.TextCellValue('OT Rate'),
+      excel.TextCellValue('OT Hrs'),
+      excel.TextCellValue('OT Amount'),
+      excel.TextCellValue('Meals Exp'),
+      excel.TextCellValue('Meals Count'),
+      excel.TextCellValue('Meals Total'),
+      excel.TextCellValue('Bus Fare'),
+      excel.TextCellValue('Bus Count'),
+      excel.TextCellValue('Bus Total'),
+      excel.TextCellValue('Total Earned Amount'),
     ]);
 
     for (int i = 0; i < reportData.length; i++) {
@@ -2663,34 +2753,105 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         excel.TextCellValue(r['workerName']?.toString() ?? '-'),
         excel.TextCellValue(r['group']?.toString() ?? '-'),
         excel.TextCellValue(r['category']?.toString() ?? '-'),
-        excel.DoubleCellValue(r['salaryBasic']),
-        excel.DoubleCellValue(r['totalSalary']),
-        excel.DoubleCellValue(r['hours']),
-        excel.DoubleCellValue(r['otSalaryBasic']),
-        excel.DoubleCellValue(r['otTotalAmount']),
-        excel.DoubleCellValue(r['mealsExpense']),
-        excel.IntCellValue(r['mealsCount']),
-        excel.DoubleCellValue(r['totalMealsAmount']),
-        excel.DoubleCellValue(r['busFare']),
-        excel.IntCellValue(r['busCount']),
-        excel.DoubleCellValue(r['totalBusAmount']),
+        excel.DoubleCellValue((r['salaryBasic'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['hours'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['otSalaryBasic'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['otHours'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['otTotalAmount'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['mealsExpense'] as num? ?? 0).toDouble()),
+        excel.IntCellValue((r['mealsCount'] as num? ?? 0).toInt()),
+        excel.DoubleCellValue((r['totalMealsAmount'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['busFare'] as num? ?? 0).toDouble()),
+        excel.IntCellValue((r['busCount'] as num? ?? 0).toInt()),
+        excel.DoubleCellValue((r['totalBusAmount'] as num? ?? 0).toDouble()),
+        excel.DoubleCellValue((r['totalSalary'] as num? ?? 0).toDouble()),
       ]);
     }
-    final bytes = excelDoc.save();
+
+    if (reportData.isNotEmpty) {
+      final totals = _ReportTotals.fromRows(reportData);
+      sheet.appendRow([
+        excel.TextCellValue('TOTAL'),
+        excel.TextCellValue('${totals.totalRecords} Recs'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('${totals.totalSubContractors} Subs'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('-'),
+        excel.TextCellValue('-'),
+        excel.DoubleCellValue(totals.totalBasicSalary),
+        excel.DoubleCellValue(totals.totalHours),
+        excel.DoubleCellValue(totals.totalOtSalaryBasic),
+        excel.DoubleCellValue(totals.totalOtHours),
+        excel.DoubleCellValue(totals.totalOtAmount),
+        excel.DoubleCellValue(totals.totalMealsExpense),
+        excel.IntCellValue(totals.totalMealsCount),
+        excel.DoubleCellValue(totals.totalMealsAmount),
+        excel.DoubleCellValue(totals.totalBusFare),
+        excel.IntCellValue(totals.totalBusCount),
+        excel.DoubleCellValue(totals.totalBusAmount),
+        excel.DoubleCellValue(totals.totalEarnedSalary),
+      ]);
+    }
+
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Site_Labour_Details_Report.xlsx', 'application/vnd.ms-excel');
   }
 
   Future<void> _exportDetailsCSV() async {
     final csv = StringBuffer();
-    csv.writeln('Sl,Site Code,Site Name,Sub Contractor,Worker Name,Group,Category,Basic Wage,Total Earned,Hours,OT Basic,OT Amount,Meals Exp,Meals Count,Meals Total,Bus Fare,Bus Count,Bus Total');
+    csv.writeln(
+      'Sl,Site Code,Site Name,Contractor,Worker Name,Group,Category,Basic Wage,Hrs,OT Rate,OT Hrs,OT Amount,Meals Exp,Meals Count,Meals Total,Bus Fare,Bus Count,Bus Total,Total Earned Amount',
+    );
     for (int i = 0; i < reportData.length; i++) {
       final r = reportData[i];
       csv.writeln([
-        i + 1, r['siteId'], r['siteName'], r['subContractor'], r['workerName'], r['group'], r['category'],
-        r['salaryBasic'], r['totalSalary'], r['hours'], r['otSalaryBasic'], r['otTotalAmount'],
-        r['mealsExpense'], r['mealsCount'], r['totalMealsAmount'], r['busFare'], r['busCount'], r['totalBusAmount']
+        i + 1,
+        '"${r['siteId']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['siteName']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['subContractor']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['workerName']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['group']?.toString().replaceAll('"', '""') ?? '-'}"',
+        '"${r['category']?.toString().replaceAll('"', '""') ?? '-'}"',
+        (r['salaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['hours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+        (r['otSalaryBasic'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['otHours'] as num? ?? 0).toDouble().toStringAsFixed(1),
+        (r['otTotalAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['mealsExpense'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['mealsCount'] as num? ?? 0).toInt(),
+        (r['totalMealsAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['busFare'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['busCount'] as num? ?? 0).toInt(),
+        (r['totalBusAmount'] as num? ?? 0).toDouble().toStringAsFixed(2),
+        (r['totalSalary'] as num? ?? 0).toDouble().toStringAsFixed(2),
       ].join(','));
     }
+
+    if (reportData.isNotEmpty) {
+      final totals = _ReportTotals.fromRows(reportData);
+      csv.writeln([
+        'TOTAL',
+        '"${totals.totalRecords} Recs"',
+        '"-"',
+        '"${totals.totalSubContractors} Subs"',
+        '"-"',
+        '"-"',
+        '"-"',
+        totals.totalBasicSalary.toStringAsFixed(2),
+        totals.totalHours.toStringAsFixed(1),
+        totals.totalOtSalaryBasic.toStringAsFixed(2),
+        totals.totalOtHours.toStringAsFixed(1),
+        totals.totalOtAmount.toStringAsFixed(2),
+        totals.totalMealsExpense.toStringAsFixed(2),
+        totals.totalMealsCount,
+        totals.totalMealsAmount.toStringAsFixed(2),
+        totals.totalBusFare.toStringAsFixed(2),
+        totals.totalBusCount,
+        totals.totalBusAmount.toStringAsFixed(2),
+        totals.totalEarnedSalary.toStringAsFixed(2),
+      ].join(','));
+    }
+
     await _shareFile(csv.toString().codeUnits, 'Site_Labour_Details_Report.csv', 'text/csv');
   }
 
@@ -2722,7 +2883,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }
     }
-    final bytes = excelDoc.save();
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Site_Labour_Attendance_Report.xlsx', 'application/vnd.ms-excel');
   }
 
@@ -2773,7 +2934,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         excel.TextCellValue(r['remarks']?.toString() ?? '-'),
       ]);
     }
-    final bytes = excelDoc.save();
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Daily_Wage_Report.xlsx', 'application/vnd.ms-excel');
   }
 
@@ -2823,7 +2984,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         excel.TextCellValue(r['remarks']?.toString() ?? '-'),
       ]);
     }
-    final bytes = excelDoc.save();
+    final bytes = excelDoc.encode();
     if (bytes != null) await _shareFile(bytes, 'Sub_Contractor_Report.xlsx', 'application/vnd.ms-excel');
   }
 
@@ -2862,8 +3023,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         ]);
       }
     }
-    final bytes = excelDoc.save();
-    if (bytes != null) await _shareFile(bytes, 'Worker_Presence_Report.xlsx', 'application/vnd.ms-excel');
+    final bytes = excelDoc.encode();
+    if (bytes != null) await _shareFile(bytes, 'Worker_On_Site_Report.xlsx', 'application/vnd.ms-excel');
   }
 
   Future<void> _exportPresenceCSV() async {
@@ -3058,6 +3219,15 @@ class _ExportPreviewDialogContent extends StatefulWidget {
 class _ExportPreviewDialogContentState extends State<_ExportPreviewDialogContent> {
   bool _isLoading = true;
   Uint8List? _pdfBytes;
+  final ScrollController _verticalScrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _verticalScrollController.dispose();
+    _horizontalScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -3214,36 +3384,43 @@ class _ExportPreviewDialogContentState extends State<_ExportPreviewDialogContent
     final rows = widget.tableData.sublist(1);
     
     return Scrollbar(
+      controller: _verticalScrollController,
       thumbVisibility: true,
       child: SingleChildScrollView(
+        controller: _verticalScrollController,
         scrollDirection: Axis.vertical,
         padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Table(
-            border: TableBorder.all(color: Colors.grey.shade300, width: 1),
-            defaultColumnWidth: const IntrinsicColumnWidth(),
-            children: [
-              TableRow(
-                decoration: BoxDecoration(color: widget.primaryColor.withValues(alpha: 0.08)),
-                children: headers.map((h) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Text(
-                    h,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                  ),
-                )).toList(),
-              ),
-              ...rows.map((row) => TableRow(
-                children: row.map((cell) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(
-                    cell,
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                )).toList(),
-              )),
-            ],
+        child: Scrollbar(
+          controller: _horizontalScrollController,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _horizontalScrollController,
+            scrollDirection: Axis.horizontal,
+            child: Table(
+              border: TableBorder.all(color: Colors.grey.shade300, width: 1),
+              defaultColumnWidth: const IntrinsicColumnWidth(),
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: widget.primaryColor.withValues(alpha: 0.08)),
+                  children: headers.map((h) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Text(
+                      h,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  )).toList(),
+                ),
+                ...rows.map((row) => TableRow(
+                  children: row.map((cell) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Text(
+                      cell,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  )).toList(),
+                )),
+              ],
+            ),
           ),
         ),
       ),
