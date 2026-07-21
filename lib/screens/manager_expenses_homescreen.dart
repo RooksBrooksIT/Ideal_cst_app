@@ -113,7 +113,7 @@ class _SectionCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
-      shadowColor: color.withOpacity(0.2),
+      shadowColor: color.withValues(alpha: 0.2),
       color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -132,7 +132,7 @@ class _SectionCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: color.withOpacity(0.3),
+                        color: color.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -162,7 +162,7 @@ class _SectionCard extends StatelessWidget {
                 description,
                 style: TextStyle(
                   fontSize: 15, 
-                  color: textColor.withOpacity(0.8),
+                  color: textColor.withValues(alpha: 0.8),
                   height: 1.5,
                 ),
               ),
@@ -184,7 +184,7 @@ class _SectionCard extends StatelessWidget {
                     letterSpacing: 0.5,
                   ),
                   elevation: 2,
-                  shadowColor: color.withOpacity(0.3),
+                  shadowColor: color.withValues(alpha: 0.3),
                 ),
                 onPressed: onTap,
                 child: Row(

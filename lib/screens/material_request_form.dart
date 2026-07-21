@@ -370,7 +370,7 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
         labelText: label,
         labelStyle: TextStyle(color: primaryColor),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primaryColor, width: 2),
@@ -389,12 +389,12 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
     required ValueChanged<T?> onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: primaryColor),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primaryColor, width: 2),
@@ -423,9 +423,9 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
       padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       margin: EdgeInsets.only(top: 20, bottom: 8),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: primaryColor.withOpacity(0.3)),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -460,7 +460,7 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
             labelStyle: TextStyle(color: primaryColor),
             hintText: 'Select Date',
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
             ),
             focusedBorder: OutlineInputBorder(
               borderSide: BorderSide(color: primaryColor, width: 2),
@@ -505,7 +505,7 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryColor.withOpacity(0.8), primaryColor],
+                colors: [primaryColor.withValues(alpha: 0.8), primaryColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -539,10 +539,10 @@ class _MaterialRequestFormState extends State<MaterialRequestForm> {
                         padding: EdgeInsets.all(12),
                         margin: EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: errorColor.withOpacity(0.1),
+                          color: errorColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border:
-                              Border.all(color: errorColor.withOpacity(0.3)),
+                              Border.all(color: errorColor.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [

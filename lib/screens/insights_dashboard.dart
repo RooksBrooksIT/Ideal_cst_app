@@ -186,10 +186,10 @@ class InsightsDashboard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0b3470).withOpacity(0.05),
+                color: const Color(0xFF0b3470).withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF0b3470).withOpacity(0.2),
+                  color: const Color(0xFF0b3470).withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -205,7 +205,7 @@ class InsightsDashboard extends StatelessWidget {
                       'Select any report to view detailed analytics and insights',
                       style: TextStyle(
                         fontSize: 14,
-                        color: const Color(0xFF2c3e50).withOpacity(0.8),
+                        color: const Color(0xFF2c3e50).withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -247,7 +247,7 @@ class InsightsDashboard extends StatelessWidget {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 padding: const EdgeInsets.all(14),

@@ -410,7 +410,7 @@ class _SupervisorWorkSchedulePageState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               DropdownButtonFormField<String>(
-                                value: _selectedSiteId,
+                                initialValue: _selectedSiteId,
                                 decoration: InputDecoration(
                                   labelText: 'Site ID',
                                   border: OutlineInputBorder(
@@ -536,7 +536,7 @@ class _SupervisorWorkSchedulePageState
                                         )
                                       : DropdownButtonFormField<
                                           Map<String, dynamic>>(
-                                          value: _selectedLabour,
+                                          initialValue: _selectedLabour,
                                           isExpanded: true,
                                           decoration: InputDecoration(
                                             labelText: 'Select Labour',

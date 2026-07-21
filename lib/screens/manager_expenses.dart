@@ -63,7 +63,7 @@ class _ManagerExpensesState extends State<ManagerExpenses> {
     Function(String?) onChanged,
   ) {
     return DropdownButtonFormField<String>(
-      value: selectedValue,
+      initialValue: selectedValue,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(),
@@ -89,7 +89,7 @@ class _ManagerExpensesState extends State<ManagerExpenses> {
       scrollDirection: Axis.horizontal,
       child: DataTable(
         headingRowColor: WidgetStateProperty.all(
-          primaryColor.withOpacity(0.1),
+          primaryColor.withValues(alpha: 0.1),
         ),
         columns: const [
           DataColumn(label: Text('Bill No')),
@@ -257,7 +257,7 @@ class _ManagerExpensesState extends State<ManagerExpenses> {
                     isLoadingSites
                         ? const Center(child: CircularProgressIndicator())
                         : DropdownButtonFormField<String>(
-                            value: selectedSiteId,
+                            initialValue: selectedSiteId,
                             decoration: const InputDecoration(
                               labelText: 'Site ID',
                               border: OutlineInputBorder(),

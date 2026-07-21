@@ -741,7 +741,7 @@ class _SiteContractorEntryPageState extends State<SiteContractorEntryPage> {
                             ? _selectedContractorName
                             : null;
                         return DropdownButtonFormField<String>(
-                          value: value,
+                          initialValue: value,
                           items: names
                               .map((n) => DropdownMenuItem<String>(
                                   value: n, child: Text(n)))
@@ -896,7 +896,7 @@ class _SiteContractorEntryPageState extends State<SiteContractorEntryPage> {
                                                   const SizedBox(height: 8),
                                                   DropdownButtonFormField<
                                                       String>(
-                                                    value: selectedMaterial,
+                                                    initialValue: selectedMaterial,
                                                     isExpanded: true,
                                                     decoration: InputDecoration(
                                                       labelText: 'Material',
@@ -1151,7 +1151,7 @@ class _SiteContractorEntryPageState extends State<SiteContractorEntryPage> {
                                                   const SizedBox(height: 8),
                                                   DropdownButtonFormField<
                                                       String>(
-                                                    value: selectedLabour,
+                                                    initialValue: selectedLabour,
                                                     isExpanded: true,
                                                     decoration: InputDecoration(
                                                       labelText: 'Labour',

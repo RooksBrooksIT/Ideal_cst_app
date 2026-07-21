@@ -611,7 +611,7 @@ class _SiteLabourDetailsReportScreenState
     final validValue = options.any((o) => o.id == value) ? value : null;
 
     return DropdownButtonFormField<String>(
-      value: validValue,
+      initialValue: validValue,
       isExpanded: true,
       dropdownColor: cardColor,
       style: TextStyle(color: textColor, fontSize: 13),
@@ -1125,8 +1125,9 @@ class _SiteLabourDetailsReportScreenState
     for (final e in entries) {
       final otRaw = e['otHours'];
       if (otRaw is num) siteOT += otRaw.toDouble();
-      if (otRaw is String)
+      if (otRaw is String) {
         siteOT += double.tryParse(otRaw.split(' ').first) ?? 0;
+      }
       siteCost += (e['totalAmount'] as num?)?.toDouble() ?? 0;
     }
 
@@ -1844,10 +1845,10 @@ class _SiteLabourDetailsReportScreenState
           ),
           excel.TextCellValue(entry['attendanceType']?.toString() ?? '-'),
           excel.TextCellValue(
-            '${(entry['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
+            (entry['hoursWorked'] as double?)?.toStringAsFixed(1) ?? '0.0',
           ),
           excel.TextCellValue(
-            '${(entry['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0'}',
+            (entry['otHours'] as double?)?.toStringAsFixed(1) ?? '0.0',
           ),
           excel.TextCellValue(
             '₹${(entry['otAmount'] as double?)?.toStringAsFixed(2) ?? '0.00'}',

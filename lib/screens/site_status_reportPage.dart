@@ -32,7 +32,7 @@ class SiteStatusReportPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = getStatusColor(status);
-    final lighterStatusColor = statusColor.withOpacity(0.1);
+    final lighterStatusColor = statusColor.withValues(alpha: 0.1);
 
     return Scaffold(
       appBar: AppBar(
@@ -69,7 +69,7 @@ class SiteStatusReportPage extends StatelessWidget {
                     Icon(
                       Icons.search_off,
                       size: 64,
-                      color: statusColor.withOpacity(0.5),
+                      color: statusColor.withValues(alpha: 0.5),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -97,7 +97,7 @@ class SiteStatusReportPage extends StatelessWidget {
             return ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               itemCount: docs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final data = docs[index].data() as Map<String, dynamic>;
                 final siteLocation = data['siteLocation']?.toString() ?? '-';
@@ -203,7 +203,7 @@ class _ExpandableSiteTileState extends State<_ExpandableSiteTile> {
   Widget build(BuildContext context) {
     final details = widget.siteDetails;
     final balanceColor = getBalanceIndicatorColor(details);
-    final lighterStatusColor = widget.statusColor.withOpacity(0.1);
+    final lighterStatusColor = widget.statusColor.withValues(alpha: 0.1);
 
     String durationValue = '-';
     DateTime? start = parseDate(details['plannedStartDate']);
@@ -230,7 +230,7 @@ class _ExpandableSiteTileState extends State<_ExpandableSiteTile> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -444,9 +444,9 @@ class _FinancialInfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

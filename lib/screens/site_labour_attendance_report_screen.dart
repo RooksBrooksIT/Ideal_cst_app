@@ -805,7 +805,7 @@ class _SiteLabourAttendanceReportScreenState
     final validValue = options.any((o) => o.id == value) ? value : null;
 
     return DropdownButtonFormField<String>(
-      value: validValue,
+      initialValue: validValue,
       isExpanded: true,
       dropdownColor: cardColor,
       style: TextStyle(color: textColor, fontSize: 13),

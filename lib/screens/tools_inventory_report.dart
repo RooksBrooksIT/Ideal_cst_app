@@ -315,7 +315,7 @@ class _ToolsInventoryPageState extends State<ToolsInventoryPage> {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.12),
+            color: Colors.grey.withValues(alpha: 0.12),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -377,7 +377,7 @@ class _SummaryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 3),
@@ -395,11 +395,11 @@ class _SummaryCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: primaryColor.withOpacity(0.75),
+                  color: primaryColor.withValues(alpha: 0.75),
                   letterSpacing: 1.2,
                 ),
               ),
-              Icon(icon, color: primaryColor.withOpacity(0.7)),
+              Icon(icon, color: primaryColor.withValues(alpha: 0.7)),
             ],
           ),
           const SizedBox(height: 12),
@@ -440,7 +440,7 @@ class _ToolInventoryCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        splashColor: Colors.blue.withOpacity(0.15),
+        splashColor: Colors.blue.withValues(alpha: 0.15),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(
@@ -509,9 +509,9 @@ class _InventoryBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

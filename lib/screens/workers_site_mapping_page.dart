@@ -418,7 +418,7 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
           children: [
             // Site Dropdown
             DropdownButtonFormField<String>(
-              value: _selectedSite,
+              initialValue: _selectedSite,
               decoration: InputDecoration(
                 labelText: 'Site *',
                 border: OutlineInputBorder(),
@@ -487,7 +487,7 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _selectedWorker,
+                    initialValue: _selectedWorker,
                     decoration: InputDecoration(
                       labelText: 'Select Worker',
                       border: OutlineInputBorder(),

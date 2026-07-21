@@ -400,7 +400,7 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
           indicatorWeight: 4,
           indicatorSize: TabBarIndicatorSize.tab,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withOpacity(0.7),
+          unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
           labelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
@@ -552,13 +552,13 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: _primaryColor.withOpacity(0.3),
+                          color: _primaryColor.withValues(alpha: 0.3),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: _primaryColor.withOpacity(0.3),
+                          color: _primaryColor.withValues(alpha: 0.3),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -829,13 +829,13 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: _primaryColor.withOpacity(0.3),
+                          color: _primaryColor.withValues(alpha: 0.3),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: _primaryColor.withOpacity(0.3),
+                          color: _primaryColor.withValues(alpha: 0.3),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -1223,15 +1223,15 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: icon != null
-            ? Icon(icon, color: _primaryColor.withOpacity(0.7))
+            ? Icon(icon, color: _primaryColor.withValues(alpha: 0.7))
             : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primaryColor.withOpacity(0.3)),
+          borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primaryColor.withOpacity(0.3)),
+          borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -1259,16 +1259,16 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primaryColor.withOpacity(0.3)),
+          borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primaryColor.withOpacity(0.3)),
+          borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -1308,15 +1308,15 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
           labelText: 'Date',
           prefixIcon: Icon(
             Icons.calendar_today,
-            color: _primaryColor.withOpacity(0.7),
+            color: _primaryColor.withValues(alpha: 0.7),
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: _primaryColor.withOpacity(0.3)),
+            borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: _primaryColor.withOpacity(0.3)),
+            borderSide: BorderSide(color: _primaryColor.withValues(alpha: 0.3)),
           ),
           filled: true,
           fillColor: Colors.white,
@@ -1365,7 +1365,7 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
               : BorderSide(color: _primaryColor, width: 1.5),
         ),
         elevation: isPrimary ? 2 : 0,
-        shadowColor: _primaryColor.withOpacity(0.3),
+        shadowColor: _primaryColor.withValues(alpha: 0.3),
       ),
     );
   }
@@ -1378,14 +1378,14 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
       scrollDirection: Axis.horizontal,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: _primaryColor.withOpacity(0.2)),
+          border: Border.all(color: _primaryColor.withValues(alpha: 0.2)),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
             Container(
               decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.1),
+                color: _primaryColor.withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(10),
                 ),
@@ -1468,10 +1468,10 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
               return Container(
                 decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(color: _primaryColor.withOpacity(0.1)),
+                    top: BorderSide(color: _primaryColor.withValues(alpha: 0.1)),
                   ),
                   color: i.isEven
-                      ? _primaryColor.withOpacity(0.03)
+                      ? _primaryColor.withValues(alpha: 0.03)
                       : Colors.transparent,
                 ),
                 child: Row(
@@ -1550,7 +1550,6 @@ class _AvailableCountWithWarning extends StatelessWidget {
   final Color errorColor;
 
   const _AvailableCountWithWarning({
-    super.key,
     this.availableCount,
     required this.primaryColor,
     required this.successColor,
@@ -1563,7 +1562,7 @@ class _AvailableCountWithWarning extends StatelessWidget {
     if (availableCount == null) {
       return Text(
         'Available: N/A',
-        style: TextStyle(fontSize: 12, color: primaryColor.withOpacity(0.7)),
+        style: TextStyle(fontSize: 12, color: primaryColor.withValues(alpha: 0.7)),
       );
     }
     if (availableCount == 0) {

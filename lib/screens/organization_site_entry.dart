@@ -968,7 +968,7 @@ class _OrganizationSiteEntryState extends State<OrganizationSiteEntry> {
                                           child: CircularProgressIndicator(),
                                         )
                                       : DropdownButtonFormField<String>(
-                                          value: selectedSiteId,
+                                          initialValue: selectedSiteId,
                                           isExpanded: true,
                                           decoration: InputDecoration(
                                             labelText: 'Site ID',
@@ -1221,7 +1221,7 @@ class _OrganizationSiteEntryState extends State<OrganizationSiteEntry> {
                                                 ),
                                                 const SizedBox(height: 8),
                                                 DropdownButtonFormField<String>(
-                                                  value: selectedMaterial,
+                                                  initialValue: selectedMaterial,
                                                   isExpanded: true,
                                                   decoration: InputDecoration(
                                                     labelText: 'Material',
@@ -1538,7 +1538,7 @@ class _OrganizationSiteEntryState extends State<OrganizationSiteEntry> {
                                                 ),
                                                 const SizedBox(height: 8),
                                                 DropdownButtonFormField<String>(
-                                                  value: selectedLabour,
+                                                  initialValue: selectedLabour,
                                                   isExpanded: true,
                                                   decoration: InputDecoration(
                                                     labelText: 'Labour',

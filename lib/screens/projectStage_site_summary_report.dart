@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 
 class ProjectstageSiteSummaryReport extends StatefulWidget {
@@ -694,10 +693,10 @@ class _ProjectstageSiteSummaryReportState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: primaryColor.withOpacity(0.3),
+          color: primaryColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -999,7 +998,7 @@ class _ProjectstageSiteSummaryReportState
                 style: pw.TextStyle(
                   fontSize: 22,
                   fontWeight: pw.FontWeight.bold,
-                  color: PdfColor.fromInt(primaryColor.value),
+                  color: PdfColor.fromInt(primaryColor.toARGB32()),
                 ),
               ),
               if (logo != null)
@@ -1109,7 +1108,7 @@ class _ProjectstageSiteSummaryReportState
             style: pw.TextStyle(
               fontSize: 18,
               fontWeight: pw.FontWeight.bold,
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
             ),
           ),
           pw.SizedBox(height: 12),
@@ -1247,9 +1246,9 @@ class _ProjectstageSiteSummaryReportState
           pw.Container(
             padding: const pw.EdgeInsets.all(16),
             decoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
               border: pw.Border.all(
-                  color: PdfColor.fromInt(primaryColor.value)),
+                  color: PdfColor.fromInt(primaryColor.toARGB32())),
               borderRadius: pw.BorderRadius.circular(8),
             ),
             child: pw.Row(
@@ -1260,7 +1259,7 @@ class _ProjectstageSiteSummaryReportState
                   style: pw.TextStyle(
                     fontSize: 16,
                     fontWeight: pw.FontWeight.bold,
-                    color: PdfColor.fromInt(primaryColor.value),
+                    color: PdfColor.fromInt(primaryColor.toARGB32()),
                   ),
                 ),
                 pw.Text(
@@ -1268,7 +1267,7 @@ class _ProjectstageSiteSummaryReportState
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
-                    color: PdfColor.fromInt(primaryColor.value),
+                    color: PdfColor.fromInt(primaryColor.toARGB32()),
                   ),
                 ),
               ],

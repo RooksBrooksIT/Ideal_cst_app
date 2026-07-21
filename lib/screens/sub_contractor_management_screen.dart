@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/sub_contractor.dart';
-import '../models/worker.dart';
 import '../services/workforce_service.dart';
 import 'sub_contractor_workers_screen.dart';
 
@@ -79,149 +78,210 @@ class _SubContractorManagementScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text(
           "Sub Contractor Management",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+          ),
         ),
-        backgroundColor: primaryColor,
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
-          IconButton(
-            onPressed: () => _showAddEditSubContractorDialog(),
-            icon: const Icon(Icons.add, color: Colors.white),
+          Container(
+            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+            decoration: BoxDecoration(
+              color: primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              onPressed: () => _showAddEditSubContractorDialog(),
+              icon: Icon(Icons.add, color: primaryColor),
+              tooltip: 'Add Sub Contractor',
+            ),
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              primaryColor.withOpacity(0.85),
-              primaryColor.withOpacity(0.55),
-            ],
-          ),
-        ),
-        child: isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              )
-            : StreamBuilder<List<SubContractor>>(
-                stream: _workforceService.getSubContractorsBySupervisor(
-                  widget.supervisorId,
-                ),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        "Error loading contractors: ${snapshot.error}",
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    );
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No Sub Contractors yet',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    );
-                  }
-                  final contractors = snapshot.data!;
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: contractors.length,
-                    itemBuilder: (context, index) {
-                      final contractor = contractors[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : StreamBuilder<List<SubContractor>>(
+              stream: _workforceService.getSubContractorsBySupervisor(
+                widget.supervisorId,
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      "Error loading contractors: ${snapshot.error}",
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  );
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.engineering_outlined, size: 80, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No Sub Contractors Yet',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
                         ),
-                        elevation: 6,
-                        child: ListTile(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SubContractorWorkersScreen(
-                                      subContractor: contractor,
-                                      supervisorId: widget.supervisorId,
-                                      supervisorName: widget.supervisorName,
-                                    ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap + to add a new sub contractor',
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final contractors = snapshot.data!;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: contractors.length,
+                  itemBuilder: (context, index) {
+                    final contractor = contractors[index];
+                    return Card(
+                      elevation: 0,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      color: Colors.white,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SubContractorWorkersScreen(
+                                subContractor: contractor,
+                                supervisorId: widget.supervisorId,
+                                supervisorName: widget.supervisorName,
                               ),
-                            );
-                          },
-                          leading: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
-                              shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.engineering, color: primaryColor),
-                          ),
-                          title: Text(
-                            '${contractor.name} (${contractor.contractorId})',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
                             children: [
-                              Text(contractor.category),
-                              Text('Mobile: ${contractor.mobileNumber}'),
-                              Text(
-                                'Assigned Sites: ${contractor.assignedSiteIds.length}',
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.handyman, color: Colors.blue.shade700, size: 28),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          contractor.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          contractor.category,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_vert, color: Colors.grey.shade500),
+                                    onSelected: (value) {
+                                      switch (value) {
+                                        case 'edit':
+                                          _showAddEditSubContractorDialog(contractor);
+                                          break;
+                                        case 'delete':
+                                          _showDeleteConfirmationDialog(contractor.id!);
+                                          break;
+                                        case 'toggle_status':
+                                          _toggleContractorStatus(contractor);
+                                          break;
+                                      }
+                                    },
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(value: 'edit', child: Text('Edit details')),
+                                      PopupMenuItem(
+                                        value: 'toggle_status',
+                                        child: Text(contractor.isActive ? 'Deactivate account' : 'Activate account'),
+                                      ),
+                                      const PopupMenuItem(value: 'delete', child: Text('Delete account', style: TextStyle(color: Colors.red))),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) {
-                              switch (value) {
-                                case 'edit':
-                                  _showAddEditSubContractorDialog(contractor);
-                                  break;
-                                case 'delete':
-                                  _showDeleteConfirmationDialog(contractor.id!);
-                                  break;
-                                case 'toggle_status':
-                                  _toggleContractorStatus(contractor);
-                                  break;
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'edit',
-                                child: Text('Edit'),
-                              ),
-                              PopupMenuItem(
-                                value: 'toggle_status',
-                                child: Text(
-                                  contractor.isActive
-                                      ? 'Deactivate'
-                                      : 'Activate',
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _buildInfoChip(Icons.phone, contractor.mobileNumber),
+                                    _buildInfoChip(Icons.location_city, '${contractor.assignedSiteIds.length} Sites'),
+                                    _buildInfoChip(
+                                      Icons.circle,
+                                      contractor.isActive ? 'Active' : 'Inactive',
+                                      color: contractor.isActive ? Colors.green : Colors.red,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete'),
-                              ),
                             ],
                           ),
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditSubContractorDialog(),
-        backgroundColor: primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label, {Color? color}) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color ?? Colors.grey.shade600),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: color ?? Colors.grey.shade700,
+          ),
+        ),
+      ],
     );
   }
 
@@ -421,7 +481,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
               _isLoadingLabours
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       items: _labours.map<DropdownMenuItem<String>>((labour) {
                         return DropdownMenuItem(
                           value: labour['designation'],
@@ -459,7 +519,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedSalaryType,
+                initialValue: _selectedSalaryType,
                 items: const ['Daily Wages', 'Sub Contract']
                     .map(
                       (type) =>
@@ -519,7 +579,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
                         }
                       });
                     },
-                    selectedColor: const Color(0xFF0b3470).withOpacity(0.2),
+                    selectedColor: const Color(0xFF0b3470).withValues(alpha: 0.2),
                     checkmarkColor: const Color(0xFF0b3470),
                   );
                 }).toList(),

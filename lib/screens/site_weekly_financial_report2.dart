@@ -83,7 +83,7 @@ class SiteWeeklyFinancialReport2 extends StatelessWidget {
                               Icon(
                                 Icons.error_outline,
                                 size: 64,
-                                color: dangerColor.withOpacity(0.5),
+                                color: dangerColor.withValues(alpha: 0.5),
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -116,7 +116,7 @@ class SiteWeeklyFinancialReport2 extends StatelessWidget {
                               Icon(
                                 Icons.receipt_long,
                                 size: 64,
-                                color: primaryColor.withOpacity(0.5),
+                                color: primaryColor.withValues(alpha: 0.5),
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -552,12 +552,12 @@ class SiteWeeklyFinancialReport2 extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -567,7 +567,7 @@ class SiteWeeklyFinancialReport2 extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 24, color: color),

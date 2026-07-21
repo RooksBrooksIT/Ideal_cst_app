@@ -870,7 +870,7 @@ class _MaterialScreenState extends State<MaterialScreen>
 
   Widget _buildCategoryDropdown() {
     return DropdownButtonFormField<String>(
-      value: selectedCategoryRef?.path, // Use document path as unique value
+      initialValue: selectedCategoryRef?.path, // Use document path as unique value
       decoration: InputDecoration(
         labelText: 'Material Category',
         prefixIcon: const Icon(
@@ -912,7 +912,7 @@ class _MaterialScreenState extends State<MaterialScreen>
 
   Widget _buildSubCategoryDropdown() {
     return DropdownButtonFormField<String>(
-      value: selectedSubCategoryRef?.path, // Use document path as unique value
+      initialValue: selectedSubCategoryRef?.path, // Use document path as unique value
       decoration: InputDecoration(
         labelText: 'Material Sub Category',
         prefixIcon: const Icon(
@@ -1070,7 +1070,7 @@ class _MaterialScreenState extends State<MaterialScreen>
       children: [
         Container(
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
             border: Border.all(color: color, width: 1.5),
           ),

@@ -424,7 +424,7 @@ class _SiteScreenState extends State<SiteScreen>
           child: DataTable(
             columnSpacing: 26,
             headingRowColor: WidgetStateProperty.all(
-              primaryColor.withOpacity(0.1),
+              primaryColor.withValues(alpha: 0.1),
             ),
             headingTextStyle: const TextStyle(
               fontWeight: FontWeight.bold,
@@ -506,7 +506,7 @@ class _SiteScreenState extends State<SiteScreen>
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primaryColor.withOpacity(0.7)),
+              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.7)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -541,7 +541,7 @@ class _SiteScreenState extends State<SiteScreen>
         ),
         const SizedBox(height: 7),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           items: items
               .map(
                 (item) => DropdownMenuItem(
@@ -563,11 +563,11 @@ class _SiteScreenState extends State<SiteScreen>
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primaryColor.withOpacity(0.6)),
+              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.6)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primaryColor.withOpacity(0.4)),
+              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.4)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -612,11 +612,11 @@ class _SiteScreenState extends State<SiteScreen>
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: primaryColor.withOpacity(0.6)),
+                borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.6)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: primaryColor.withOpacity(0.4)),
+                borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.4)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -708,7 +708,7 @@ class _SiteScreenState extends State<SiteScreen>
       children: [
         Material(
           shape: const CircleBorder(),
-          color: color.withOpacity(0.15),
+          color: color.withValues(alpha: 0.15),
           child: IconButton(
             iconSize: 28,
             icon: Icon(icon),

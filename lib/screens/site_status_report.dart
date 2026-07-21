@@ -146,12 +146,12 @@ class _SiteStatusReportScreenState extends State<SiteStatusReportScreen> {
             color: cardColor,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha: 0.3),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               )
@@ -215,7 +215,7 @@ class _SiteStatusReportScreenState extends State<SiteStatusReportScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               elevation: 2,
-              shadowColor: primaryColor.withOpacity(0.3),
+              shadowColor: primaryColor.withValues(alpha: 0.3),
             ),
             child: const Text(
               'GENERATE REPORT',
@@ -239,7 +239,7 @@ class _SiteStatusReportScreenState extends State<SiteStatusReportScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               side: BorderSide(
-                color: primaryColor.withOpacity(0.5),
+                color: primaryColor.withValues(alpha: 0.5),
                 width: 1.5,
               ),
             ),
@@ -326,11 +326,11 @@ class _SiteStatusReportScreenState extends State<SiteStatusReportScreen> {
                     children: [
                       Card(
                         elevation: 0,
-                        color: primaryColor.withOpacity(0.05),
+                        color: primaryColor.withValues(alpha: 0.05),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(
-                            color: primaryColor.withOpacity(0.2),
+                            color: primaryColor.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),

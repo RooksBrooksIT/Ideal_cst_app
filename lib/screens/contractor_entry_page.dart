@@ -605,7 +605,7 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
     return Row(
       children: [
         CircleAvatar(
-          backgroundColor: (color ?? _primaryColor).withOpacity(0.11),
+          backgroundColor: (color ?? _primaryColor).withValues(alpha: 0.11),
           radius: 16,
           child: Icon(icon, color: color ?? _primaryColor, size: 20),
         ),
@@ -909,7 +909,7 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
                           _buildInputField(
                             label: 'Site ID',
                             child: DropdownButtonFormField<String>(
-                              value: selectedSiteIdForEntry,
+                              initialValue: selectedSiteIdForEntry,
                               items: siteIdOptions
                                   .map((id) => DropdownMenuItem<String>(
                                         value: id,
@@ -1004,7 +1004,7 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               DropdownButtonFormField<String>(
-                                value: selectedMaterial,
+                                initialValue: selectedMaterial,
                                 decoration: InputDecoration(
                                   labelText: 'Material',
                                   border: OutlineInputBorder(
@@ -1175,7 +1175,7 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               DropdownButtonFormField<String>(
-                                value: selectedLabour,
+                                initialValue: selectedLabour,
                                 decoration: InputDecoration(
                                   labelText: 'Labour',
                                   border: OutlineInputBorder(

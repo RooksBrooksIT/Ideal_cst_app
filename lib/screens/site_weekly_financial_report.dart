@@ -73,7 +73,7 @@ class _SiteWeeklyFinancialReportState
       supervisorMaps = snapshot.docs.isEmpty
           ? []
           : snapshot.docs
-                .map((doc) => doc.data() as Map<String, dynamic>)
+                .map((doc) => doc.data())
                 .toList();
 
       if (mounted) {
@@ -126,7 +126,7 @@ class _SiteWeeklyFinancialReportState
                   Icon(
                     Icons.receipt_long,
                     size: 64,
-                    color: primaryColor.withOpacity(0.5),
+                    color: primaryColor.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -159,7 +159,7 @@ class _SiteWeeklyFinancialReportState
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -177,7 +177,7 @@ class _SiteWeeklyFinancialReportState
                               width: 60,
                               height: 60,
                               decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.1),
+                                color: primaryColor.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -215,12 +215,12 @@ class _SiteWeeklyFinancialReportState
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: primaryColor.withOpacity(0.2),
+                            color: primaryColor.withValues(alpha: 0.2),
                             width: 1.5,
                           ),
                         ),
                         child: DropdownButtonFormField<int>(
-                          value: selectedIndex < supervisorMaps.length
+                          initialValue: selectedIndex < supervisorMaps.length
                               ? selectedIndex
                               : null,
                           decoration: InputDecoration(
@@ -278,12 +278,12 @@ class _SiteWeeklyFinancialReportState
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: primaryColor.withOpacity(0.2),
+                            color: primaryColor.withValues(alpha: 0.2),
                             width: 1.5,
                           ),
                         ),
                         child: DropdownButtonFormField<int>(
-                          value: _selectedYear,
+                          initialValue: _selectedYear,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -320,12 +320,12 @@ class _SiteWeeklyFinancialReportState
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: primaryColor.withOpacity(0.2),
+                            color: primaryColor.withValues(alpha: 0.2),
                             width: 1.5,
                           ),
                         ),
                         child: DropdownButtonFormField<int>(
-                          value: _selectedMonth,
+                          initialValue: _selectedMonth,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -384,7 +384,7 @@ class _SiteWeeklyFinancialReportState
                             ),
                             selected: _selectedWeek == i + 1,
                             selectedColor: primaryColor,
-                            backgroundColor: primaryColor.withOpacity(0.1),
+                            backgroundColor: primaryColor.withValues(alpha: 0.1),
                             onSelected: (selected) {
                               setState(() {
                                 _selectedWeek = selected ? i + 1 : null;
@@ -393,7 +393,7 @@ class _SiteWeeklyFinancialReportState
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                               side: BorderSide(
-                                color: primaryColor.withOpacity(0.3),
+                                color: primaryColor.withValues(alpha: 0.3),
                               ),
                             ),
                           ),
@@ -406,10 +406,10 @@ class _SiteWeeklyFinancialReportState
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.05),
+                            color: primaryColor.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: primaryColor.withOpacity(0.2),
+                              color: primaryColor.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Column(

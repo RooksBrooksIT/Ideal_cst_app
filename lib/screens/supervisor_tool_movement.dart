@@ -635,7 +635,7 @@ class _SiteToCompanyReturnState extends State<SiteToCompanyReturn> {
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
@@ -734,7 +734,7 @@ class _SiteToCompanyReturnState extends State<SiteToCompanyReturn> {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: _accentColor.withOpacity(0.3),
+                color: _accentColor.withValues(alpha: 0.3),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(8),
                 ),
@@ -875,7 +875,7 @@ class _SiteToCompanyReturnState extends State<SiteToCompanyReturn> {
 
 class _AvailableCountWithWarning extends StatelessWidget {
   final int? availableCount;
-  const _AvailableCountWithWarning({super.key, this.availableCount});
+  const _AvailableCountWithWarning({this.availableCount});
 
   @override
   Widget build(BuildContext context) {

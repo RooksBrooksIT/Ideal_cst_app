@@ -295,7 +295,7 @@ class _DailySiteExpensesReportPageState
             child: pw.Container(
               padding: const pw.EdgeInsets.all(16),
               decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(primaryColor.value),
+                color: PdfColor.fromInt(primaryColor.toARGB32()),
                 borderRadius: pw.BorderRadius.circular(12),
               ),
               child: pw.Column(
@@ -522,7 +522,7 @@ class _DailySiteExpensesReportPageState
                         'No report found for this date.',
                         style: TextStyle(
                           fontSize: 16,
-                          color: textColor.withOpacity(0.7),
+                          color: textColor.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -774,10 +774,10 @@ class _DailySiteExpensesReportPageState
 
           final totalAmount =
               (supervisorTotal is num ? supervisorTotal : 0) +
-              (managerTotal is num ? managerTotal : 0) +
-              (orgTotal is num ? orgTotal : 0) +
-              (contractorTotal is num ? contractorTotal : 0) +
-              (incentiveTotal is num ? incentiveTotal : 0);
+              (managerTotal) +
+              (orgTotal) +
+              (contractorTotal) +
+              (incentiveTotal);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
@@ -1208,7 +1208,7 @@ class _DailySiteExpensesReportPageState
               '$label:',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: textColor.withOpacity(0.7),
+                color: textColor.withValues(alpha: 0.7),
                 fontSize: 14,
               ),
             ),
@@ -1265,7 +1265,7 @@ class _DailySiteExpensesReportPageState
           horizontalMargin: 16,
           columnSpacing: 24,
           headingRowColor: WidgetStateProperty.all(
-            primaryColor.withOpacity(0.1),
+            primaryColor.withValues(alpha: 0.1),
           ),
           columns: columns,
           rows: rows,
@@ -1280,7 +1280,7 @@ class _DailySiteExpensesReportPageState
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Text(

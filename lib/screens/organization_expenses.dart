@@ -63,7 +63,7 @@ class _OrganizationExpensesState extends State<OrganizationExpenses> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        headingRowColor: WidgetStateProperty.all(primaryColor.withOpacity(0.1)),
+        headingRowColor: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.1)),
         columns: const [
           DataColumn(label: Text('Bill No')),
           DataColumn(label: Text('Bill Date')),
@@ -477,7 +477,7 @@ class _OrganizationExpensesState extends State<OrganizationExpenses> {
                     isLoadingSites
                         ? const Center(child: CircularProgressIndicator())
                         : DropdownButtonFormField<String>(
-                            value: selectedSiteId,
+                            initialValue: selectedSiteId,
                             decoration: const InputDecoration(
                               labelText: 'Site ID',
                               border: OutlineInputBorder(),

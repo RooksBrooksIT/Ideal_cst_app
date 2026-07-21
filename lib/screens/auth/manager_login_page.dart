@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:ideal_cst/screens/auth/auth_layout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'config_account_dashboard.dart';
+import 'package:ideal_cst/screens/config_account_dashboard.dart';
 
 class AppColors {
   static const primaryColor = Color(0xFF003768);
@@ -9,14 +10,14 @@ class AppColors {
   static const primaryGradientEnd = Color(0xFF005A9E);
 }
 
-class ConfigLoginPage extends StatefulWidget {
-  const ConfigLoginPage({super.key});
+class ManagerLoginPage extends StatefulWidget {
+  const ManagerLoginPage({super.key});
 
   @override
-  State<ConfigLoginPage> createState() => _ConfigLoginPageState();
+  State<ManagerLoginPage> createState() => _ManagerLoginPageState();
 }
 
-class _ConfigLoginPageState extends State<ConfigLoginPage>
+class _ManagerLoginPageState extends State<ManagerLoginPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late AnimationController _controller;
@@ -54,7 +55,7 @@ class _ConfigLoginPageState extends State<ConfigLoginPage>
 
     _gradientAnimation = ColorTween(
       begin: AppColors.primaryGradientStart,
-      end: AppColors.primaryGradientEnd.withOpacity(0.85),
+      end: AppColors.primaryGradientEnd.withValues(alpha: 0.85),
     ).animate(_controller);
 
     _controller.forward();
@@ -185,200 +186,47 @@ class _ConfigLoginPageState extends State<ConfigLoginPage>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
+    return AuthLayout(
+      themeColor: const Color(0xFF00695C), // Manager Color (Dark Teal)
+      icon: Icons.settings,
+      onBack: () => Navigator.pop(context),
+      formContent: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            AuthTextField(
+              controller: _usernameController,
+              label: 'Email / Username',
+              hint: 'Enter your username',
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 20),
+            AuthTextField(
+              controller: _passwordController,
+              label: 'Password',
+              hint: '********',
+              obscureText: !_showPassword,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _showPassword ? Icons.visibility : Icons.visibility_off,
+                  color: const Color(0xFF00695C),
+                ),
+                onPressed: () => setState(() => _showPassword = !_showPassword),
+              ),
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Required' : null,
+            ),
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: const Text(
-          'Manager Login',
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: AppColors.primaryColor,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  _gradientAnimation.value!,
-                  _gradientAnimation.value!.withOpacity(0.85),
-                ],
-              ),
+            const SizedBox(height: 24),
+            AuthButton(
+              onPressed: _login,
+              text: 'LOGIN',
+              color: const Color(0xFF00695C),
+              isLoading: _isLoading,
             ),
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth * 0.1,
-                  vertical: screenHeight * 0.05,
-                ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: 450),
-                  child: Transform.translate(
-                    offset: Offset(0, _translateAnimation.value),
-                    child: Opacity(
-                      opacity: _opacityAnimation.value,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 40,
-                          horizontal: 28,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircleAvatar(
-                                radius: 38,
-                                backgroundColor: AppColors.primaryColor,
-                                child: const Icon(
-                                  Icons.settings_rounded,
-                                  size: 48,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              Text(
-                                'Manager Login',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryColor,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Sign in to continue',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                              const SizedBox(height: 28),
-                              TextFormField(
-                                controller: _usernameController,
-                                decoration: InputDecoration(
-                                  labelText: 'Username',
-                                  prefixIcon: Icon(
-                                    Icons.person,
-                                    color: AppColors.primaryColor,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.grey[100],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                                validator: (value) =>
-                                    value!.isEmpty ? 'Required' : null,
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _passwordController,
-                                obscureText: !_showPassword,
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  prefixIcon: Icon(
-                                    Icons.lock,
-                                    color: AppColors.primaryColor,
-                                  ),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _showPassword
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      color: AppColors.primaryColor,
-                                    ),
-                                    onPressed: () => setState(
-                                      () => _showPassword = !_showPassword,
-                                    ),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.grey[100],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                                validator: (value) =>
-                                    value!.isEmpty ? 'Required' : null,
-                              ),
-                              const SizedBox(height: 10),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: _showForgotPasswordDialog,
-                                  child: Text(
-                                    'Forgot Password?',
-                                    style: TextStyle(
-                                      color: AppColors.primaryColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48,
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _login,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primaryColor,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: _isLoading
-                                      ? const CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
-                                        )
-                                      : const Text(
-                                          'LOGIN',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                            letterSpacing: 1.2,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -411,7 +259,7 @@ class _ConfigLoginPageState extends State<ConfigLoginPage>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),

@@ -725,14 +725,14 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.06),
+            color: primaryColor.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           )
         ],
       ),
       child: DropdownButtonFormField<String>(
-        value: selectedReportType,
+        initialValue: selectedReportType,
         dropdownColor: cardColor,
         isExpanded: true,
         style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold),
@@ -830,7 +830,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final validValue = options.any((o) => o.id == value) ? value : null;
 
     return DropdownButtonFormField<String>(
-      value: validValue,
+      initialValue: validValue,
       isExpanded: true,
       dropdownColor: cardColor,
       style: TextStyle(color: textColor, fontSize: 13),
@@ -870,7 +870,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.05),
+            color: primaryColor.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -902,7 +902,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: selectedLabourType,
+                  initialValue: selectedLabourType,
                   isExpanded: true,
                   dropdownColor: cardColor,
                   style: TextStyle(color: textColor, fontSize: 13),
@@ -1171,7 +1171,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off_rounded, size: 64, color: mutedColor.withOpacity(0.3)),
+          Icon(Icons.search_off_rounded, size: 64, color: mutedColor.withValues(alpha: 0.3)),
           const SizedBox(height: 12),
           Text('No Data Found', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor)),
           const SizedBox(height: 4),
@@ -1196,7 +1196,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['category']?.toString() ?? '-')),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['mealsExpense'] as double).toStringAsFixed(2)}')),
@@ -1344,8 +1344,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['category']?.toString() ?? '-')),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text(r['attendanceType']?.toString() ?? '-')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(r['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
@@ -1411,8 +1411,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['category']?.toString() ?? '-')),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text(r['attendanceType']?.toString() ?? '-')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(r['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
@@ -1525,8 +1525,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['subContractor']?.toString() ?? '-')),
         DataCell(Text(r['workerName']?.toString() ?? '-')),
         DataCell(Text(r['category']?.toString() ?? '-')),
-        DataCell(Text('${(r['hours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(r['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${stdAmt.toStringAsFixed(2)}')),
         DataCell(Text('₹${ot.toStringAsFixed(2)}')),
@@ -1564,8 +1564,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       return DataRow(cells: [
         DataCell(Text(row['name']?.toString() ?? '-')),
         DataCell(Text('${row['count']}')),
-        DataCell(Text('${(row['stdHours'] as double).toStringAsFixed(1)}')),
-        DataCell(Text('${(row['otHours'] as double).toStringAsFixed(1)}')),
+        DataCell(Text((row['stdHours'] as double).toStringAsFixed(1))),
+        DataCell(Text((row['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(row['stdAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(row['otAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(row['mealsAmount'] as double).toStringAsFixed(2)}')),
@@ -1823,8 +1823,11 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         for (final sup in site.supervisors) {
           for (final row in sup.rows) {
             final wc = row['workerCount'];
-            if (wc is int) totalAttWorkers += wc;
-            else totalAttWorkers += (int.tryParse(wc?.toString() ?? '') ?? 0);
+            if (wc is int) {
+              totalAttWorkers += wc;
+            } else {
+              totalAttWorkers += (int.tryParse(wc?.toString() ?? '') ?? 0);
+            }
             result.add([
               (row['siteCode'] ?? '').toString(),
               (row['siteName'] ?? '').toString(),
@@ -2140,7 +2143,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         r['category']?.toString() ?? '-',
         '₹${(r['salaryBasic'] as double).toStringAsFixed(2)}',
         '₹${(r['totalSalary'] as double).toStringAsFixed(2)}',
-        '${(r['hours'] as double).toStringAsFixed(1)}',
+        ((r['hours'] as double).toStringAsFixed(1)),
         '₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}',
         '₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}',
@@ -2159,7 +2162,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '-',
         '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
         '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
-        '${totals.totalHours.toStringAsFixed(1)}',
+        (totals.totalHours.toStringAsFixed(1)),
         '₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}',
         '₹${totals.totalOtAmount.toStringAsFixed(2)}',
         '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
@@ -2250,8 +2253,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         r['category']?.toString() ?? '-',
         '₹${(r['salaryBasic'] as double).toStringAsFixed(2)}',
         r['attendanceType']?.toString() ?? '-',
-        '${(r['hours'] as double).toStringAsFixed(1)}',
-        '${(r['otHours'] as double).toStringAsFixed(1)}',
+        ((r['hours'] as double).toStringAsFixed(1)),
+        ((r['otHours'] as double).toStringAsFixed(1)),
         '₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}',
@@ -2269,8 +2272,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '-',
         '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
         '-',
-        '${totals.totalHours.toStringAsFixed(1)}',
-        '${totals.totalOtHours.toStringAsFixed(1)}',
+        (totals.totalHours.toStringAsFixed(1)),
+        (totals.totalOtHours.toStringAsFixed(1)),
         '₹${totals.totalOtAmount.toStringAsFixed(2)}',
         '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
         '₹${totals.totalBusAmount.toStringAsFixed(2)}',
@@ -2296,8 +2299,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         r['category']?.toString() ?? '-',
         '₹${(r['salaryBasic'] as double).toStringAsFixed(2)}',
         r['attendanceType']?.toString() ?? '-',
-        '${(r['hours'] as double).toStringAsFixed(1)}',
-        '${(r['otHours'] as double).toStringAsFixed(1)}',
+        ((r['hours'] as double).toStringAsFixed(1)),
+        ((r['otHours'] as double).toStringAsFixed(1)),
         '₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}',
         '₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}',
@@ -2316,8 +2319,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '-',
         '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
         '-',
-        '${totals.totalHours.toStringAsFixed(1)}',
-        '${totals.totalOtHours.toStringAsFixed(1)}',
+        (totals.totalHours.toStringAsFixed(1)),
+        (totals.totalOtHours.toStringAsFixed(1)),
         '₹${totals.totalOtAmount.toStringAsFixed(2)}',
         '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
         '₹${totals.totalBusAmount.toStringAsFixed(2)}',
@@ -2400,13 +2403,13 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               r['category']?.toString() ?? '-',
               '1',
               r['attendanceType']?.toString() ?? 'Regular',
-              '${(r['salaryBasic'] as double).toStringAsFixed(2)}',
-              '${stdAmt.toStringAsFixed(2)}',
-              '${hrs.toStringAsFixed(1)}',
-              '${ot.toStringAsFixed(2)}',
-              '${meals.toStringAsFixed(2)}',
-              '${bus.toStringAsFixed(2)}',
-              '${total.toStringAsFixed(2)}',
+              ((r['salaryBasic'] as double).toStringAsFixed(2)),
+              (stdAmt.toStringAsFixed(2)),
+              (hrs.toStringAsFixed(1)),
+              (ot.toStringAsFixed(2)),
+              (meals.toStringAsFixed(2)),
+              (bus.toStringAsFixed(2)),
+              (total.toStringAsFixed(2)),
             ];
           });
 
@@ -2414,15 +2417,15 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           detailData.add([
             'Total',
             '',
-            '${sumNo.toStringAsFixed(0)}',
+            (sumNo.toStringAsFixed(0)),
             '',
             '',
-            '${sumAmt.toStringAsFixed(2)}',
-            '${sumHrs.toStringAsFixed(1)}',
-            '${sumOT.toStringAsFixed(2)}',
-            '${sumFood.toStringAsFixed(2)}',
-            '${sumBus.toStringAsFixed(2)}',
-            '${sumTotal.toStringAsFixed(2)}',
+            (sumAmt.toStringAsFixed(2)),
+            (sumHrs.toStringAsFixed(1)),
+            (sumOT.toStringAsFixed(2)),
+            (sumFood.toStringAsFixed(2)),
+            (sumBus.toStringAsFixed(2)),
+            (sumTotal.toStringAsFixed(2)),
           ]);
 
           return [
@@ -3169,7 +3172,7 @@ class _ExportPreviewDialogContentState extends State<_ExportPreviewDialogContent
             defaultColumnWidth: const IntrinsicColumnWidth(),
             children: [
               TableRow(
-                decoration: BoxDecoration(color: widget.primaryColor.withOpacity(0.08)),
+                decoration: BoxDecoration(color: widget.primaryColor.withValues(alpha: 0.08)),
                 children: headers.map((h) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Text(

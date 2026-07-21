@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/worker.dart';
 import '../models/worker_attendance.dart';
@@ -64,8 +63,8 @@ class _WorkerDetailsScreenState extends State<WorkerDetailsScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              primaryColor.withOpacity(0.85),
-              primaryColor.withOpacity(0.55),
+              primaryColor.withValues(alpha: 0.85),
+              primaryColor.withValues(alpha: 0.55),
             ],
           ),
         ),
@@ -113,7 +112,7 @@ class _OverviewTab extends StatelessWidget {
               Center(
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundColor: const Color(0xFF0b3470).withOpacity(0.1),
+                  backgroundColor: const Color(0xFF0b3470).withValues(alpha: 0.1),
                   child: worker.photoUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(50),
@@ -184,7 +183,7 @@ class _OverviewTab extends StatelessWidget {
                 children: worker.assignedSiteIds.map((siteId) {
                   return Chip(
                     label: Text(siteId),
-                    backgroundColor: const Color(0xFF0b3470).withOpacity(0.1),
+                    backgroundColor: const Color(0xFF0b3470).withValues(alpha: 0.1),
                   );
                 }).toList(),
               ),
@@ -403,7 +402,7 @@ class _AttendanceTabState extends State<_AttendanceTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _getStatusColor(record.status).withOpacity(0.1),
+                color: _getStatusColor(record.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: _getStatusColor(record.status)),
               ),

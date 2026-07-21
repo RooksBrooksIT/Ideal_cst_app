@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
 
 class AddLabourEntryModal extends StatefulWidget {
   final String siteId;
@@ -957,7 +956,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                 padding: EdgeInsets.only(left: 20, right: 20, bottom: MediaQuery.of(context).padding.bottom + 16, top: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), offset: const Offset(0, -4), blurRadius: 10)],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), offset: const Offset(0, -4), blurRadius: 10)],
                 ),
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : addWorkerEntry,
@@ -989,7 +988,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, 2),
             blurRadius: 10,
           )
@@ -1055,7 +1054,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           color: isActive ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           boxShadow: isActive
-              ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))]
               : [],
         ),
         child: Center(
@@ -1107,14 +1106,14 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text('WORKERS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey.shade600)),
                       ),
-                      ...filteredWorkers.map((doc) => _buildWorkerTile(doc, isWorker: true)).toList(),
+                      ...filteredWorkers.map((doc) => _buildWorkerTile(doc, isWorker: true)),
                     ],
                     if (filteredContractors.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
                         child: Text('SUB CONTRACTORS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey.shade600)),
                       ),
-                      ...filteredContractors.map((doc) => _buildWorkerTile(doc, isWorker: false)).toList(),
+                      ...filteredContractors.map((doc) => _buildWorkerTile(doc, isWorker: false)),
                     ],
                   ],
                 ),
@@ -1144,7 +1143,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSelected ? primaryColor.withOpacity(0.05) : Colors.white,
+        color: isSelected ? primaryColor.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade200, width: isSelected ? 1.5 : 1),
       ),
@@ -1311,7 +1310,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       items: items.toSet().map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14)))).toList(),
       onChanged: onChanged,
       icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),

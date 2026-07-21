@@ -311,7 +311,7 @@ class _ProjectStageExpensesReportPageState
               "$label:",
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: textColor.withOpacity(0.7),
+                color: textColor.withValues(alpha: 0.7),
                 fontSize: 14,
               ),
             ),
@@ -352,7 +352,7 @@ class _ProjectStageExpensesReportPageState
         leading: Container(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: primaryColor, size: 20),
@@ -379,7 +379,7 @@ class _ProjectStageExpensesReportPageState
               padding: EdgeInsets.all(16),
               child: Text(
                 "No records found",
-                style: TextStyle(color: textColor.withOpacity(0.6)),
+                style: TextStyle(color: textColor.withValues(alpha: 0.6)),
               ),
             )
           else
@@ -392,7 +392,7 @@ class _ProjectStageExpensesReportPageState
                   Container(
                     padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -474,7 +474,7 @@ class _ProjectStageExpensesReportPageState
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 letterSpacing: 0.5,
               ),
               textAlign: TextAlign.center,
@@ -494,7 +494,7 @@ class _ProjectStageExpensesReportPageState
               "Project Stage: ${widget.projectStage}",
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
               ),
               textAlign: TextAlign.center,
             ),

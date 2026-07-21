@@ -676,7 +676,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: const Color(0xFF003768).withOpacity(0.7),
+                    color: const Color(0xFF003768).withValues(alpha: 0.7),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -738,10 +738,10 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF003768).withOpacity(0.1),
+              color: const Color(0xFF003768).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: const Color(0xFF003768).withOpacity(0.3),
+                color: const Color(0xFF003768).withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -786,7 +786,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             decoration: BoxDecoration(
               color: Colors.orange[50],
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -830,7 +830,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: const Color(0xFF003768).withOpacity(0.7),
+                    color: const Color(0xFF003768).withValues(alpha: 0.7),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -888,7 +888,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
               child: Container(
                 decoration: BoxDecoration(
                   color: _addToExisting
-                      ? const Color(0xFF003768).withOpacity(0.1)
+                      ? const Color(0xFF003768).withValues(alpha: 0.1)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
@@ -919,7 +919,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
               child: Container(
                 decoration: BoxDecoration(
                   color: _updateExisting
-                      ? const Color(0xFF003768).withOpacity(0.1)
+                      ? const Color(0xFF003768).withValues(alpha: 0.1)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
@@ -981,7 +981,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             border: Border.all(color: Colors.grey.shade300),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -989,7 +989,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButtonFormField<String>(
-              value: _selectedMaterial,
+              initialValue: _selectedMaterial,
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
@@ -1060,7 +1060,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             border: Border.all(color: Colors.grey.shade300),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -1068,7 +1068,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButtonFormField<String>(
-              value: _selectedMaterialToUpdate,
+              initialValue: _selectedMaterialToUpdate,
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
@@ -1129,7 +1129,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             border: Border.all(color: Colors.grey.shade300),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -1175,7 +1175,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           elevation: 2,
-          shadowColor: const Color(0xFF003768).withOpacity(0.3),
+          shadowColor: const Color(0xFF003768).withValues(alpha: 0.3),
         ),
         child: _isLoading
             ? const SizedBox(
@@ -1212,7 +1212,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           elevation: 2,
-          shadowColor: const Color(0xFF003768).withOpacity(0.3),
+          shadowColor: const Color(0xFF003768).withValues(alpha: 0.3),
         ),
         child: _isLoading
             ? const SizedBox(

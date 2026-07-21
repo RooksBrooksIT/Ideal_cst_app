@@ -160,7 +160,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
         ),
-        shadowColor: primaryColor.withOpacity(0.6),
+        shadowColor: primaryColor.withValues(alpha: 0.6),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
@@ -169,7 +169,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
           children: [
             Card(
               elevation: 4,
-              shadowColor: primaryColor.withOpacity(0.25),
+              shadowColor: primaryColor.withValues(alpha: 0.25),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
@@ -190,7 +190,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
                         allSites = snapshot.data!;
                         final sites = allSites.map((site) => site['site']!).toList();
                         return DropdownButtonFormField<String>(
-                          value: selectedSiteId,
+                          initialValue: selectedSiteId,
                           decoration: InputDecoration(
                             labelText: 'Site ID',
                             labelStyle:
@@ -253,7 +253,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
             const SizedBox(height: 30),
             Card(
               elevation: 4,
-              shadowColor: primaryColor.withOpacity(0.25),
+              shadowColor: primaryColor.withValues(alpha: 0.25),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
@@ -301,7 +301,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               elevation: 5,
-                              shadowColor: primaryColor.withOpacity(0.7),
+                              shadowColor: primaryColor.withValues(alpha: 0.7),
                             ),
                           ),
                         ),
@@ -319,7 +319,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               elevation: 5,
-                              shadowColor: accentColor.withOpacity(0.7),
+                              shadowColor: accentColor.withValues(alpha: 0.7),
                             ),
                             child: const Text('Add'),
                           ),
@@ -345,7 +345,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
             const SizedBox(height: 30),
             Card(
               elevation: 4,
-              shadowColor: primaryColor.withOpacity(0.25),
+              shadowColor: primaryColor.withValues(alpha: 0.25),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
@@ -366,7 +366,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
                       child: DataTable(
                         columnSpacing: 24,
                         headingRowColor:
-                            WidgetStateProperty.all(primaryColor.withOpacity(0.12)),
+                            WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
                         headingTextStyle: TextStyle(
                           color: primaryColor,
                           fontWeight: FontWeight.w700,
@@ -475,7 +475,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 6,
-                  shadowColor: primaryColor.withOpacity(0.8),
+                  shadowColor: primaryColor.withValues(alpha: 0.8),
                 ),
                 child: const Text('Save', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
               ),
@@ -538,7 +538,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: primaryColor.withOpacity(0.6)),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.6)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -575,7 +575,7 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
