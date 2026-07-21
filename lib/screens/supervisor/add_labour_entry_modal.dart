@@ -28,7 +28,7 @@ class AddLabourEntryModal extends StatefulWidget {
 }
 
 class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
-  final Color primaryColor = const Color(0xFF0b3470);
+  final Color primaryColor = const Color(0xFF4527A0);
   bool _isSaving = false;
   final TextEditingController searchController = TextEditingController();
   final TextEditingController workerNameController = TextEditingController();
@@ -772,7 +772,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     try {
       final docId = '${widget.siteId}_${widget.date}';
       final attendanceDocRef = FirebaseFirestore.instance
-          .collection('attendance')
+          .collection('daily_labour_entries')
           .doc(docId);
 
       final batch = FirebaseFirestore.instance.batch();
@@ -786,16 +786,6 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           'assignedSiteIds': [widget.siteId],
         });
       }
-
-      // 2. Save flat doc to daily_labour_entries
-      final flatDocId = '${widget.siteId}_${widget.date}_$workerId';
-      batch.set(
-        FirebaseFirestore.instance
-            .collection('daily_labour_entries')
-            .doc(flatDocId),
-        entry,
-        SetOptions(merge: true),
-      );
 
       // 3. Compute updated summary and touch parent attendance doc
       // Filter out existing entry for this worker if it was already added to prevent duplicates in count

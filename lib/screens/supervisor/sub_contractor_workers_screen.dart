@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/sub_contractor.dart';
-import '../models/worker.dart';
-import '../models/worker_transfer.dart';
-import '../services/workforce_service.dart';
+import 'package:ideal_cst/models/sub_contractor.dart';
+import 'package:ideal_cst/models/worker.dart';
+import 'package:ideal_cst/models/worker_transfer.dart';
+import 'package:ideal_cst/services/workforce_service.dart';
 import 'worker_details_screen.dart';
-import 'daily_attendance_screen.dart';
+
 
 final WorkforceService _workforceService = WorkforceService();
 
@@ -28,7 +28,7 @@ class SubContractorWorkersScreen extends StatefulWidget {
 
 class _SubContractorWorkersScreenState
     extends State<SubContractorWorkersScreen> {
-  final Color primaryColor = const Color(0xFF0b3470);
+  final Color primaryColor = const Color(0xFF4527A0);
   final TextEditingController _searchController = TextEditingController();
   bool isLoading = true;
   List<Map<String, dynamic>> sites = [];
@@ -129,347 +129,367 @@ class _SubContractorWorkersScreenState
     return site['siteName'] ?? site['Site Name'] ?? siteId;
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Row(
+          children: [
+            InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Icon(Icons.arrow_back_ios_new, color: primaryColor, size: 20),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Workers for', style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(
+                  widget.subContractor.name,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E1E2D), letterSpacing: -0.5),
+                ),
+              ],
+            ),
+          ],
+        ),
+        InkWell(
+          onTap: () => _showAddEditWorkerDialog(),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.add, color: Colors.white, size: 24),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text(
-          "Worker Management",
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        actions: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
-            child: IconButton(
-              icon: Icon(Icons.calendar_today, color: Colors.blue.shade700),
-              tooltip: 'Daily Attendance',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DailyAttendanceScreen(
-                      supervisorId: widget.supervisorId,
-                      supervisorName: widget.supervisorName,
-                      sites: sites,
+      backgroundColor: const Color.fromARGB(255, 213, 207, 232),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    const SizedBox(height: 24),
+                    // Metrics Row
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildTopMetricChip(Icons.category, widget.subContractor.category, Colors.orange),
+                          const SizedBox(width: 12),
+                          StreamBuilder<List<Worker>>(
+                            stream: _workforceService.getWorkersBySubContractor(widget.subContractor.id!),
+                            builder: (context, snapshot) {
+                              final count = snapshot.hasData ? snapshot.data!.length : 0;
+                              return _buildTopMetricChip(Icons.people, '$count Workers', Colors.blue);
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          _buildTopMetricChip(Icons.location_on, '${widget.subContractor.assignedSiteIds.length} Sites', Colors.teal),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                    const SizedBox(height: 16),
+                    // Search Bar
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search workers by name or ID...',
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: primaryColor, width: 2)),
+                      ),
+                      onChanged: (value) => setState(() => searchQuery = value.toLowerCase()),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Worker List
+                    Expanded(
+                      child: StreamBuilder<List<Worker>>(
+                        stream: _workforceService.getWorkersBySubContractor(widget.subContractor.id!),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return Center(child: Text("Error loading workers: ${snapshot.error}", style: TextStyle(color: Colors.red.shade700)));
+                          }
+                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.group_off_outlined, size: 80, color: Colors.grey.shade400),
+                                  const SizedBox(height: 16),
+                                  Text('No workers yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                                ],
+                              ),
+                            );
+                          }
+                          
+                          final workers = snapshot.data!.where((worker) {
+                            final matchesSearch = searchQuery.isEmpty ||
+                                worker.name.toLowerCase().contains(searchQuery) ||
+                                worker.workerId.toLowerCase().contains(searchQuery) ||
+                                worker.mobileNumber.contains(searchQuery) ||
+                                worker.workerType.toLowerCase().contains(searchQuery);
+
+                            return matchesSearch;
+                          }).toList();
+
+                          if (workers.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.search_off, size: 80, color: Colors.grey.shade400),
+                                  const SizedBox(height: 16),
+                                  Text('No matching workers found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 80), // Padding for FAB
+                            itemCount: workers.length,
+                            itemBuilder: (context, index) {
+                              final worker = workers[index];
+                              return _buildModernWorkerCard(worker);
+                            },
+                          );
+                        }
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 16, left: 4, top: 8, bottom: 8),
-            decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-            child: IconButton(
-              icon: Icon(Icons.filter_list, color: Colors.grey.shade700),
-              tooltip: 'Filter',
-              onPressed: _showFilters,
-            ),
+    );
+  }
+
+  Widget _buildModernWorkerCard(Worker worker) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryColor))
-          : Column(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => WorkerDetailsScreen(
+                  worker: worker,
+                  supervisorId: widget.supervisorId,
+                  supervisorName: widget.supervisorName,
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Sub Contractor Detail Header Card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: primaryColor.withValues(alpha: 0.1),
+                      backgroundImage: worker.photoUrl != null ? NetworkImage(worker.photoUrl!) : null,
+                      child: worker.photoUrl == null ? Icon(Icons.person, color: primaryColor, size: 28) : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.1), shape: BoxShape.circle),
-                            child: Icon(Icons.engineering, color: primaryColor, size: 24),
+                          Text(
+                            worker.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1E1E2D)),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.subContractor.name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87),
+                          const SizedBox(height: 4),
+                          Text('ID: ${worker.workerId}', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                                child: Text(worker.workerType, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange)),
+                              ),
+                              const SizedBox(width: 8),
+                              if (worker.labourType.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                                  child: Text(worker.labourType, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.purple)),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'ID: ${widget.subContractor.contractorId}',
-                                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                                ),
-                              ],
-                            ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildTopMetricChip(Icons.category, widget.subContractor.category, Colors.orange),
-                            const SizedBox(width: 12),
-                            StreamBuilder<List<Worker>>(
-                              stream: _workforceService.getWorkersBySubContractor(widget.subContractor.id!),
-                              builder: (context, snapshot) {
-                                final count = snapshot.hasData ? snapshot.data!.length : 0;
-                                return _buildTopMetricChip(Icons.people, '$count Workers', Colors.blue);
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            _buildTopMetricChip(Icons.location_on, '${widget.subContractor.assignedSiteIds.length} Sites', Colors.teal),
-                          ],
+                    ),
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert, color: Colors.grey.shade400),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'view':
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => WorkerDetailsScreen(
+                                  worker: worker,
+                                  supervisorId: widget.supervisorId,
+                                  supervisorName: widget.supervisorName,
+                                ),
+                              ),
+                            );
+                            break;
+                          case 'edit':
+                            _showAddEditWorkerDialog(worker);
+                            break;
+                          case 'delete':
+                            _showDeleteConfirmationDialog(worker.id!);
+                            break;
+                          case 'toggle_status':
+                            _toggleWorkerStatus(worker);
+                            break;
+                          case 'transfer':
+                            _showTransferWorkerDialog(worker);
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'view', child: Text('View Details')),
+                        const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        const PopupMenuItem(value: 'transfer', child: Text('Transfer')),
+                        PopupMenuItem(
+                          value: 'toggle_status',
+                          child: Text(worker.isActive ? 'Deactivate' : 'Activate'),
                         ),
+                        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildInfoChip(Icons.phone, worker.mobileNumber),
+                      _buildInfoChip(Icons.business_center, worker.workerType),
+                      _buildInfoChip(
+                        Icons.circle,
+                        worker.isActive ? 'Active' : 'Inactive',
+                        color: worker.isActive ? Colors.green : Colors.red,
                       ),
                     ],
                   ),
                 ),
-                // Search Bar
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search workers by name or ID...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: primaryColor, width: 2)),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value.toLowerCase();
-                      });
-                    },
-                  ),
-                ),
-                // Filter Tags
-                if (selectedSiteId != null || selectedCategory != null || selectedStatus != null || selectedLabourType != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          const Text('Filters: ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
-                          if (selectedSiteId != null)
-                            _buildFilterChip(getSiteName(selectedSiteId!), () { setState(() { selectedSiteId = null; }); }),
-                          if (selectedCategory != null)
-                            _buildFilterChip(selectedCategory!, () { setState(() { selectedCategory = null; }); }),
-                          if (selectedStatus != null)
-                            _buildFilterChip(selectedStatus!, () { setState(() { selectedStatus = null; }); }),
-                          if (selectedLabourType != null)
-                            _buildFilterChip(selectedLabourType!, () { setState(() { selectedLabourType = null; }); }),
-                        ],
-                      ),
-                    ),
-                  ),
-                // Worker List
-                Expanded(
-                  child: StreamBuilder<List<Worker>>(
-                    stream: _workforceService.getWorkersBySubContractor(widget.subContractor.id!),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(child: Text("Error loading workers: ${snapshot.error}", style: TextStyle(color: Colors.red.shade700)));
-                      }
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.group_off_outlined, size: 80, color: Colors.grey.shade300),
-                              const SizedBox(height: 16),
-                              Text('No workers yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
-                            ],
-                          ),
-                        );
-                      }
-                      
-                      final workers = snapshot.data!.where((worker) {
-                        final matchesSearch = searchQuery.isEmpty ||
-                            worker.name.toLowerCase().contains(searchQuery) ||
-                            worker.workerId.toLowerCase().contains(searchQuery) ||
-                            worker.mobileNumber.contains(searchQuery) ||
-                            worker.workerType.toLowerCase().contains(searchQuery);
-
-                        final matchesCategory = selectedCategory == null || worker.workerType == selectedCategory;
-                        final matchesStatus = selectedStatus == null || (selectedStatus == 'Active' ? worker.isActive : !worker.isActive);
-                        final matchesSite = selectedSiteId == null || worker.assignedSiteIds.contains(selectedSiteId);
-                        final matchesLabourType = selectedLabourType == null || worker.labourType == selectedLabourType;
-
-                        return matchesSearch && matchesCategory && matchesStatus && matchesSite && matchesLabourType;
-                      }).toList();
-
-                      if (workers.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_off, size: 80, color: Colors.grey.shade300),
-                              const SizedBox(height: 16),
-                              Text('No matching workers found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(20),
-                        itemCount: workers.length,
-                        itemBuilder: (context, index) {
-                          final worker = workers[index];
-                          return Card(
-                            elevation: 0,
-                            margin: const EdgeInsets.only(bottom: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(color: Colors.grey.shade200),
-                            ),
-                            color: Colors.white,
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.blue.shade50,
-                                backgroundImage: worker.photoUrl != null ? NetworkImage(worker.photoUrl!) : null,
-                                child: worker.photoUrl == null ? Icon(Icons.person, color: Colors.blue.shade700) : null,
-                              ),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      worker.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
-                                    ),
-                                  ),
-                                  if (worker.labourType.isNotEmpty)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(6)),
-                                      child: Text(worker.labourType, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purple.shade700)),
-                                    ),
-                                ],
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('ID: ${worker.workerId}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.category, size: 12, color: Colors.grey.shade400),
-                                        const SizedBox(width: 4),
-                                        Text(worker.workerType, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                        const SizedBox(width: 12),
-                                        Icon(Icons.circle, size: 10, color: worker.isActive ? Colors.green : Colors.red),
-                                        const SizedBox(width: 4),
-                                        Text(worker.isActive ? 'Active' : 'Inactive', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              trailing: PopupMenuButton<String>(
-                                icon: Icon(Icons.more_vert, color: Colors.grey.shade400),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                onSelected: (value) {
-                                  switch (value) {
-                                    case 'view':
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => WorkerDetailsScreen(
-                                            worker: worker,
-                                            supervisorId: widget.supervisorId,
-                                            supervisorName: widget.supervisorName,
-                                          ),
-                                        ),
-                                      );
-                                      break;
-                                    case 'edit':
-                                      _showAddEditWorkerDialog(worker);
-                                      break;
-                                    case 'delete':
-                                      _showDeleteConfirmationDialog(worker.id!);
-                                      break;
-                                    case 'toggle_status':
-                                      _toggleWorkerStatus(worker);
-                                      break;
-                                    case 'transfer':
-                                      _showTransferWorkerDialog(worker);
-                                      break;
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(value: 'view', child: Text('View Details')),
-                                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                  const PopupMenuItem(value: 'transfer', child: Text('Transfer')),
-                                  PopupMenuItem(
-                                    value: 'toggle_status',
-                                    child: Text(worker.isActive ? 'Deactivate' : 'Activate'),
-                                  ),
-                                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    }
-                  ),
-                ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditWorkerDialog(),
-        backgroundColor: primaryColor,
-        elevation: 4,
-        child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label, {Color? color}) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color ?? Colors.grey.shade500),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: color ?? Colors.grey.shade700,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildTopMetricChip(IconData icon, String label, MaterialColor color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.shade50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color.shade700),
-          const SizedBox(width: 6),
+          Icon(icon, size: 18, color: color.shade600),
+          const SizedBox(width: 8),
           Text(
             label,
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: color.shade700,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade800,
             ),
           ),
         ],
@@ -477,27 +497,7 @@ class _SubContractorWorkersScreenState
     );
   }
 
-  Widget _buildFilterChip(String label, VoidCallback onDeleted) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: primaryColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label, style: TextStyle(fontSize: 12, color: primaryColor)),
-          const SizedBox(width: 4),
-          InkWell(
-            onTap: onDeleted,
-            child: Icon(Icons.close, size: 14, color: primaryColor),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Future<void> _toggleWorkerStatus(Worker worker) async {
     final updated = Worker(
@@ -590,12 +590,12 @@ class _WorkerFormDialog extends StatefulWidget {
 }
 
 class __WorkerFormDialogState extends State<_WorkerFormDialog> {
+  final Color primaryColor = const Color(0xFF4527A0);
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _emergencyContactController =
       TextEditingController();
-  final TextEditingController _aadharController = TextEditingController();
   final TextEditingController _basicSalaryController = TextEditingController();
   final TextEditingController _overtimeRateController = TextEditingController();
   final TextEditingController _defaultHoursController = TextEditingController();
@@ -616,7 +616,6 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       _nameController.text = w.name;
       _mobileController.text = w.mobileNumber;
       _emergencyContactController.text = w.emergencyContact ?? '';
-      _aadharController.text = w.aadharNumber ?? '';
       _basicSalaryController.text = w.basicSalary.toString();
       _overtimeRateController.text = w.overtimeRate.toString();
       _defaultHoursController.text = w.defaultHours.toString() ?? '8.0';
@@ -699,189 +698,239 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
     }
   }
 
+  InputDecoration _buildInputDecoration(String label, {String? suffixText}) {
+    return InputDecoration(
+      labelText: label,
+      suffixText: suffixText,
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: primaryColor, width: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.worker == null ? 'Add Worker' : 'Edit Worker'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Worker Name *'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              _isLoadingLabours
-                  ? const Center(child: CircularProgressIndicator())
-                  : DropdownButtonFormField<String>(
-                      initialValue: _selectedCategory,
-                      items: _labours.map<DropdownMenuItem<String>>((labour) {
-                        return DropdownMenuItem(
-                          value: labour['designation'],
-                          child: Text(labour['designation']),
-                        );
-                      }).toList(),
-                      onChanged: _onCategoryChanged,
-                      decoration: const InputDecoration(
-                        labelText: 'Category *',
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.all(16),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.worker == null ? 'Add Worker' : 'Edit Worker',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E1E2D),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: _buildInputDecoration('Worker Name *'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                _isLoadingLabours
+                    ? const Center(child: CircularProgressIndicator())
+                    : DropdownButtonFormField<String>(
+                        initialValue: _selectedCategory,
+                        items: _labours.map<DropdownMenuItem<String>>((labour) {
+                          return DropdownMenuItem(
+                            value: labour['designation'],
+                            child: Text(labour['designation']),
+                          );
+                        }).toList(),
+                        onChanged: _onCategoryChanged,
+                        decoration: _buildInputDecoration('Category *'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select a category';
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please select a category';
-                        }
-                        return null;
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _mobileController,
+                  keyboardType: TextInputType.phone,
+                  decoration: _buildInputDecoration('Mobile Number *'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a mobile number';
+                    }
+                    if (!RegExp(r'^\d{10}$').hasMatch(value.trim())) {
+                      return 'Please enter a valid 10-digit mobile number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _emergencyContactController,
+                  keyboardType: TextInputType.phone,
+                  decoration: _buildInputDecoration('Emergency Contact'),
+                  validator: (value) {
+                    if (value != null && value.trim().isNotEmpty) {
+                      if (!RegExp(r'^\d{10}$').hasMatch(value.trim())) {
+                        return 'Please enter a valid 10-digit number';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedLabourType,
+                  items: const ['Daily Wage', 'Sub contract']
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(() {
+                    _selectedLabourType = value!;
+                  }),
+                  decoration: _buildInputDecoration('Labour Type *'),
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Please select a labour type'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _basicSalaryController,
+                  readOnly: true,
+                  decoration: _buildInputDecoration('Basic Salary (Auto-filled)', suffixText: 'Auto'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _defaultHoursController,
+                  readOnly: true,
+                  decoration: _buildInputDecoration('Default Working Hours (Auto-filled)', suffixText: 'hrs'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _overtimeRateController,
+                  keyboardType: TextInputType.number,
+                  decoration: _buildInputDecoration('Overtime Rate'),
+                ),
+                const SizedBox(height: 16),
+                const Text('Assigned Sites', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: widget.sites.map((site) {
+                    final isSelected = _selectedSiteIds.contains(site['id']);
+                    final siteName =
+                        site['siteName'] ?? site['Site Name'] ?? site['id'];
+                    return FilterChip(
+                      label: Text(siteName),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedSiteIds.add(site['id']);
+                          } else {
+                            _selectedSiteIds.remove(site['id']);
+                          }
+                        });
                       },
-                    ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _mobileController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Mobile Number *'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a mobile number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _emergencyContactController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Emergency Contact',
+                      selectedColor: primaryColor.withValues(alpha: 0.15),
+                      checkmarkColor: primaryColor,
+                    );
+                  }).toList(),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _aadharController,
-                decoration: const InputDecoration(labelText: 'Aadhar Number'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedLabourType,
-                items: const ['Daily Wage', 'Sub contract']
-                    .map(
-                      (type) =>
-                          DropdownMenuItem(value: type, child: Text(type)),
-                    )
-                    .toList(),
-                onChanged: (value) => setState(() {
-                  _selectedLabourType = value!;
-                }),
-                decoration: const InputDecoration(labelText: 'Labour Type *'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Please select a labour type'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _basicSalaryController,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Basic Salary (Auto-filled)',
-                  suffixText: 'Auto',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _defaultHoursController,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Default Working Hours (Auto-filled)',
-                  suffixText: 'hrs',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _overtimeRateController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Overtime Rate'),
-              ),
-              const SizedBox(height: 12),
-              const Text('Assigned Sites'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: widget.sites.map((site) {
-                  final isSelected = _selectedSiteIds.contains(site['id']);
-                  final siteName =
-                      site['siteName'] ?? site['Site Name'] ?? site['id'];
-                  return FilterChip(
-                    label: Text(siteName),
-                    selected: isSelected,
-                    onSelected: (selected) {
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Joining Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                    '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                  ),
+                  trailing: const Icon(Icons.calendar_today, size: 20),
+                  onTap: () async {
+                    final DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
                       setState(() {
-                        if (selected) {
-                          _selectedSiteIds.add(site['id']);
-                        } else {
-                          _selectedSiteIds.remove(site['id']);
-                        }
+                        _selectedDate = picked;
                       });
-                    },
-                    selectedColor: const Color(0xFF0b3470).withValues(alpha: 0.2),
-                    checkmarkColor: const Color(0xFF0b3470),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                title: const Text('Joining Date'),
-                subtitle: Text(
-                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                    }
+                  },
                 ),
-                onTap: () async {
-                  final DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
+                const Divider(),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Active Worker', style: TextStyle(fontWeight: FontWeight.bold)),
+                  value: _isActive,
+                  onChanged: (value) {
                     setState(() {
-                      _selectedDate = picked;
+                      _isActive = value;
                     });
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                title: const Text('Active'),
-                value: _isActive,
-                onChanged: (value) {
-                  setState(() {
-                    _isActive = value;
-                  });
-                },
-                activeThumbColor: const Color(0xFF0b3470),
-              ),
-            ],
+                  },
+                  activeColor: primaryColor,
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Cancel', style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: _saveWorker,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () => _saveWorker(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF0b3470),
-          ),
-          child: const Text('Save'),
-        ),
-      ],
     );
   }
 
@@ -896,6 +945,59 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       );
       return;
     }
+
+    final mobileNumber = _mobileController.text.trim();
+    final duplicateQuery = await FirebaseFirestore.instance
+        .collection('workers')
+        .where('mobileNumber', isEqualTo: mobileNumber)
+        .get();
+        
+    bool isDuplicate = false;
+    for (var doc in duplicateQuery.docs) {
+      if (widget.worker == null || doc.id != widget.worker!.id) {
+        final data = doc.data();
+        if (data['isDeleted'] != true) {
+           isDuplicate = true;
+           break;
+        }
+      }
+    }
+
+    if (isDuplicate) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('A worker with this mobile number already exists!')),
+        );
+      }
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Worker Creation', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(widget.worker == null 
+            ? 'Are you sure you want to add this worker?' 
+            : 'Are you sure you want to update this worker?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
 
     final workerId = widget.worker != null
         ? widget.worker!.workerId
@@ -914,9 +1016,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       emergencyContact: _emergencyContactController.text.trim().isEmpty
           ? null
           : _emergencyContactController.text.trim(),
-      aadharNumber: _aadharController.text.trim().isEmpty
-          ? null
-          : _aadharController.text.trim(),
+      aadharNumber: null,
       bankAccountDetails: null,
       joiningDate: _selectedDate,
       isActive: _isActive,
@@ -948,7 +1048,6 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
     _nameController.dispose();
     _mobileController.dispose();
     _emergencyContactController.dispose();
-    _aadharController.dispose();
     _basicSalaryController.dispose();
     _overtimeRateController.dispose();
     super.dispose();

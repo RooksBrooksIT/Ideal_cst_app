@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ideal_cst/screens/site_selection_screen.dart';
+import 'package:ideal_cst/screens/supervisor/site_selection_screen.dart';
+import 'package:ideal_cst/screens/supervisor/workers_management.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -17,11 +19,11 @@ class SupervisorDashboard extends StatefulWidget {
   });
 
   @override
-  _SupervisorDashboardState createState() => _SupervisorDashboardState();
+  State<SupervisorDashboard> createState() => _SupervisorDashboardState();
 }
 
 class _SupervisorDashboardState extends State<SupervisorDashboard> {
-  final Color primaryColor = const Color(0xFF0b3470);
+  final Color primaryColor = const Color(0xFF4527A0);
   List<DocumentSnapshot> assignedSites = [];
   List<DocumentSnapshot> assignedContractors = [];
   String? coordinatorName;
@@ -36,10 +38,29 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     'materialRequests': 0,
   };
 
+  late PageController _pageController;
+  Timer? _carouselTimer;
+
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 1000, viewportFraction: 0.85);
+    _carouselTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
+      if (_pageController.hasClients) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
     loadData();
+  }
+
+  @override
+  void dispose() {
+    _carouselTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> loadData() async {
@@ -216,6 +237,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
+              if (!context.mounted) return;
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/dashboard',
@@ -370,6 +392,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                 });
 
                             fetchCoordinatorName();
+                            
+                            if (!context.mounted) return;
 
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -380,6 +404,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                               ),
                             );
                           } catch (e) {
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error: $e')),
                             );
@@ -406,325 +431,376 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        _showLogoutDialog(context);
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _showLogoutDialog(context);
+        }
       },
       child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                primaryColor.withValues(alpha: 0.85),
-                primaryColor.withValues(alpha: 0.55),
-              ],
-              stops: const [0.0, 0.7],
-            ),
-          ),
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            appBar: AppBar(
-              title: const Text(
-                "Supervisor Dashboard",
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                  color: Colors.white,
-                ),
-              ),
-              backgroundColor: primaryColor,
-              centerTitle: true,
-              elevation: 6,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(20),
-                ),
-              ),
-              automaticallyImplyLeading: false,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  tooltip: "Logout",
-                  onPressed: () => _showLogoutDialog(context),
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
-            body: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  )
-                : RefreshIndicator(
-                    onRefresh: loadData,
-                    child: ListView(
-                      padding: const EdgeInsets.all(16.0),
-                      children: [
-                        // Profile Card
-                        Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          elevation: 8,
-                          color: Colors.white,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 24,
-                              horizontal: 16,
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor: primaryColor,
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 40,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        widget.supervisorName,
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF222222),
-                                        ),
-                                      ),
-                                      if (coordinatorName != null &&
-                                          coordinatorName!.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Co-ordinator: $coordinatorName',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.grey[700],
-                                          ),
-                                        ),
-                                        if (coordinatorDate != null)
-                                          Text(
-                                            'Assigned On: ${coordinatorDate!.toLocal().toString().split(' ')[0]}',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                      ],
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Assigned Sites: ${assignedSites.length}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Today's Stats Section
-                        const Text(
-                          "Today's Overview",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Stats Grid
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 1.0,
-                          children: [
-                            _buildStatCard(
-                              'Total Workers',
-                              todayStats['totalWorkers'].toString(),
-                              Icons.people,
-                              Colors.blue,
-                            ),
-                            _buildStatCard(
-                              'Present',
-                              todayStats['present'].toString(),
-                              Icons.check_circle,
-                              Colors.green,
-                            ),
-                            _buildStatCard(
-                              'Half Day',
-                              todayStats['halfDay'].toString(),
-                              Icons.access_time_filled,
-                              Colors.orange,
-                            ),
-                            _buildStatCard(
-                              'Early Out',
-                              todayStats['earlyOut'].toString(),
-                              Icons.logout,
-                              Colors.purple,
-                            ),
-                            _buildStatCard(
-                              'Overtime',
-                              todayStats['overtime'].toString(),
-                              Icons.timer,
-                              Colors.red,
-                            ),
-                            _buildStatCard(
-                              'Pending Requests',
-                              todayStats['materialRequests'].toString(),
-                              Icons.inventory,
-                              Colors.teal,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Select Site Button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SiteSelectionScreen(
-                                    supervisorId: widget.supervisorId,
-                                    supervisorName: widget.supervisorName,
-                                    assignedSites: assignedSites,
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.location_on,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              'Select Site',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
+        backgroundColor: const Color.fromARGB(255, 213, 207, 232), // Light primary color background
+        body: SafeArea(
+                child: RefreshIndicator(
+                  onRefresh: loadData,
+                  color: primaryColor,
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                    children: [
+                      _buildHeader(context),
+                      const SizedBox(height: 24),
+                      _buildStatsCarousel(),
+                      const SizedBox(height: 32),
+                      _buildQuickActionsHeader(),
+                      const SizedBox(height: 16),
+                      _buildActionCard(
+                        title: 'Workers Management',
+                        subtitle: 'Manage workers & attendance',
+                        icon: Icons.manage_accounts,
+                        color: Colors.teal,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => WorkersManagementScreen(
+                                supervisorId: widget.supervisorId,
+                                supervisorName: widget.supervisorName,
                               ),
                             ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildActionCard(
+                        title: 'Select Site',
+                        subtitle: '${assignedSites.length} Sites Assigned',
+                        icon: Icons.location_on,
+                        color: Colors.blue,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SiteSelectionScreen(
+                                supervisorId: widget.supervisorId,
+                                supervisorName: widget.supervisorName,
+                                assignedSites: assignedSites,
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Select Project Coordinator Button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () =>
-                                _showAssignCoordinatorDialog(context),
-                            icon: const Icon(
-                              Icons.person_add,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              'Select Project Coordinator',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      ],
-                    ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildActionCard(
+                        title: 'Project Coordinator',
+                        subtitle: coordinatorName != null && coordinatorName!.isNotEmpty 
+                            ? 'Current: $coordinatorName' 
+                            : 'Unassigned',
+                        icon: Icons.person_add,
+                        color: Colors.orange,
+                        onTap: () => _showAssignCoordinatorDialog(context),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
                   ),
-          ),
-        ),
+                ),
+              ),
       ),
     );
   }
 
-  Widget _buildStatCard(
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Hello',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  widget.supervisorName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E1E2D),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  '👋',
+                  style: TextStyle(fontSize: 22),
+                ),
+              ],
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.logout, color: Colors.grey[700]),
+              tooltip: "Logout",
+              onPressed: () => _showLogoutDialog(context),
+            ),
+            Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: primaryColor.withValues(alpha: 0.1),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.2), width: 2),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.person,
+                  color: primaryColor,
+                  size: 28,
+                ),
+              ),
+            ),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildStatsCarousel() {
+    final List<Map<String, dynamic>> items = [
+      {
+        'title': 'Total Workers',
+        'value': todayStats['totalWorkers'].toString(),
+        'icon': Icons.people_alt,
+        'color': const Color(0xFF7E57C2), // Purple
+        'trend': '+12%',
+        'isPositive': true,
+      },
+      {
+        'title': 'Present Today',
+        'value': todayStats['present'].toString(),
+        'icon': Icons.verified,
+        'color': const Color(0xFF26A69A), // Teal
+        'trend': '+5%',
+        'isPositive': true,
+      },
+      {
+        'title': 'Overtime',
+        'value': todayStats['overtime'].toString(),
+        'icon': Icons.more_time,
+        'color': const Color(0xFFEF5350), // Red
+        'trend': '+8%',
+        'isPositive': true,
+      },
+      {
+        'title': 'Material Reqs',
+        'value': todayStats['materialRequests'].toString(),
+        'icon': Icons.inventory_2,
+        'color': const Color(0xFF8D6E63), // Brown
+        'trend': '0%',
+        'isPositive': true,
+      },
+    ];
+
+    return SizedBox(
+      height: 160,
+      child: PageView.builder(
+        controller: _pageController,
+        itemBuilder: (context, index) {
+          final item = items[index % items.length];
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: _buildModernStatCard(
+              item['title'],
+              item['value'],
+              item['icon'],
+              item['color'],
+              item['trend'],
+              isPositive: item['isPositive'],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildModernStatCard(
     String title,
     String value,
     IconData icon,
     Color color,
-  ) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Flexible(
-              flex: 2,
-              child: Container(
+    String trend, {
+    bool isPositive = true,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color, // Solid dark color
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -1,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(
+                  isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 10,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Flexible(
-              flex: 2,
-              child: Text(
-                value,
-                maxLines: 1,
+              const SizedBox(width: 4),
+              Text(
+                trend,
                 style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF222222),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsHeader() {
+    return const Text(
+      'Quick Actions',
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF1E1E2D),
+        letterSpacing: -0.5,
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            const SizedBox(height: 2),
-            Flexible(
-              flex: 2,
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(icon, color: color, size: 24),
               ),
             ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E1E2D),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.more_vert, color: Colors.grey[400]),
           ],
         ),
       ),

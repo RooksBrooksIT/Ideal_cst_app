@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // ignore: depend_on_referenced_packages
-import 'package:ideal_cst/screens/supervisor_dashboard.dart';
+import 'package:ideal_cst/screens/supervisor/supervisor_dashboard.dart';
 import 'package:ideal_cst/services/expense_service.dart';
 import 'package:intl/intl.dart';
 
