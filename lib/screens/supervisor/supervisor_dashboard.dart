@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/screens/supervisor/site_selection_screen.dart';
 import 'package:ideal_cst/screens/supervisor/workers_management.dart';
+import 'package:ideal_cst/screens/supervisor/site_progress_screen.dart';
+import 'package:ideal_cst/screens/supervisor/material_request_form.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -165,35 +167,53 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
       // Fetch attendance for today across all assigned sites
       for (final site in assignedSites) {
         final siteId = site.id;
-        final attendanceDocId = '${siteId}_$today';
-        final attendanceDoc = await FirebaseFirestore.instance
-            .collection('attendance')
-            .doc(attendanceDocId)
+        final docId = '${siteId}_$today';
+        
+        // Try daily_labour_entries first
+        var workersSnapshot = await FirebaseFirestore.instance
+            .collection('daily_labour_entries')
+            .doc(docId)
+            .collection('workers')
             .get();
-
-        if (attendanceDoc.exists) {
-          final data = attendanceDoc.data()!;
-          totalWorkers += (data['totalWorkers'] as num?)?.toInt() ?? 0;
-
-          // Fetch workers subcollection
-          final workersSnapshot = await attendanceDoc.reference
+            
+        // Fallback to attendance collection for older entries
+        if (workersSnapshot.docs.isEmpty) {
+          workersSnapshot = await FirebaseFirestore.instance
+              .collection('attendance')
+              .doc(docId)
               .collection('workers')
               .get();
-          for (final workerDoc in workersSnapshot.docs) {
-            final workerData = workerDoc.data();
-            final type = workerData['attendanceType'];
-            if (type == 'Full Day' || type == 'Night Shift') {
-              present++;
-            } else if (type == 'Half Day') {
-              halfDay++;
-              present++;
-            } else if (type == 'Early Out') {
-              earlyOut++;
-              present++;
-            } else if (type == 'Overtime') {
-              overtime++;
-              present++;
-            }
+        }
+
+        totalWorkers += workersSnapshot.docs.length;
+
+        for (final workerDoc in workersSnapshot.docs) {
+          final workerData = workerDoc.data();
+          final type = workerData['attendanceType'];
+          
+          if (type == 'Full Day' || type == 'Night Shift') {
+            present++;
+          } else if (type == 'Half Day') {
+            halfDay++;
+            present++;
+          } else if (type == 'Early Out') {
+            earlyOut++;
+            present++;
+          } else if (type == 'Overtime') {
+            overtime++;
+            present++;
+          }
+
+          // Check for overtime hours
+          final otHoursRaw = workerData['otHours'];
+          double otHours = 0.0;
+          if (otHoursRaw is num) {
+            otHours = otHoursRaw.toDouble();
+          } else if (otHoursRaw is String) {
+            otHours = double.tryParse(otHoursRaw.split(' ').first) ?? 0.0;
+          }
+          if (otHours > 0 && type != 'Overtime') {
+            overtime++;
           }
         }
       }
@@ -491,13 +511,39 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                       ),
                       const SizedBox(height: 12),
                       _buildActionCard(
-                        title: 'Project Coordinator',
-                        subtitle: coordinatorName != null && coordinatorName!.isNotEmpty 
-                            ? 'Current: $coordinatorName' 
-                            : 'Unassigned',
-                        icon: Icons.person_add,
-                        color: Colors.orange,
-                        onTap: () => _showAssignCoordinatorDialog(context),
+                        title: 'Site Progress',
+                        subtitle: 'Update site progress',
+                        icon: Icons.bar_chart,
+                        color: Colors.indigo,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SiteProgressScreen(
+                                supervisorId: widget.supervisorId,
+                                supervisorName: widget.supervisorName,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildActionCard(
+                        title: 'Material Request',
+                        subtitle: 'Request materials',
+                        icon: Icons.shopping_cart,
+                        color: Colors.purple,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MaterialRequestForm(
+                                supervisorId: widget.supervisorId,
+                                supervisorName: widget.supervisorName,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -640,20 +686,11 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     String trend, {
     bool isPositive = true,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color, // Solid dark color
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return AnimatedGradientCard(
+      baseColor: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -724,6 +761,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -804,6 +842,87 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class AnimatedGradientCard extends StatefulWidget {
+  final Widget child;
+  final Color baseColor;
+
+  const AnimatedGradientCard({
+    Key? key,
+    required this.child,
+    required this.baseColor,
+  }) : super(key: key);
+
+  @override
+  _AnimatedGradientCardState createState() => _AnimatedGradientCardState();
+}
+
+class _AnimatedGradientCardState extends State<AnimatedGradientCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Alignment> _topAlignmentAnimation;
+  late Animation<Alignment> _bottomAlignmentAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+
+    _topAlignmentAnimation = TweenSequence<Alignment>([
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.topLeft, end: Alignment.topRight), weight: 1),
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.topRight, end: Alignment.bottomRight), weight: 1),
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.bottomRight, end: Alignment.bottomLeft), weight: 1),
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.bottomLeft, end: Alignment.topLeft), weight: 1),
+    ]).animate(_controller);
+
+    _bottomAlignmentAnimation = TweenSequence<Alignment>([
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.bottomRight, end: Alignment.bottomLeft), weight: 1),
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.bottomLeft, end: Alignment.topLeft), weight: 1),
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.topLeft, end: Alignment.topRight), weight: 1),
+      TweenSequenceItem(tween: Tween<Alignment>(begin: Alignment.topRight, end: Alignment.bottomRight), weight: 1),
+    ]).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                widget.baseColor,
+                widget.baseColor.withValues(alpha: 0.6),
+                widget.baseColor,
+              ],
+              begin: _topAlignmentAnimation.value,
+              end: _bottomAlignmentAnimation.value,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.baseColor.withValues(alpha: 0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: widget.child,
+        );
+      },
     );
   }
 }
