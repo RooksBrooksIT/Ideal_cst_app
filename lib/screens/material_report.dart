@@ -203,7 +203,7 @@ class _MaterialReportPageState extends State<MaterialReportPage> {
                       )
                     else
                       DropdownButtonFormField<String>(
-                        value: selectedMaterial,
+                        initialValue: selectedMaterial,
                         iconEnabledColor: primaryColor,
                         decoration: InputDecoration(
                           labelText: 'Choose Material',
@@ -317,9 +317,9 @@ class _MaterialReportPageState extends State<MaterialReportPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.12),
+                color: primaryColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: primaryColor.withOpacity(0.3)),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -355,7 +355,7 @@ class _MaterialReportPageState extends State<MaterialReportPage> {
                   columnSpacing: 30,
                   horizontalMargin: 20,
                   headingRowColor: WidgetStateProperty.resolveWith(
-                    (states) => primaryColor.withOpacity(0.1),
+                    (states) => primaryColor.withValues(alpha: 0.1),
                   ),
                   columns: [
                     DataColumn(

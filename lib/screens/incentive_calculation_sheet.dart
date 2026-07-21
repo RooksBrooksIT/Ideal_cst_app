@@ -331,7 +331,7 @@ class _IncentiveCalculationSheetState extends State<IncentiveCalculationSheet> {
           headingRowHeight: 50,
           dataRowHeight: 40,
           headingRowColor: WidgetStateProperty.all(
-            _primaryColor.withOpacity(0.9),
+            _primaryColor.withValues(alpha: 0.9),
           ),
           headingTextStyle: const TextStyle(
             color: Colors.white,
@@ -373,7 +373,7 @@ class _IncentiveCalculationSheetState extends State<IncentiveCalculationSheet> {
               color: WidgetStateProperty.resolveWith<Color>((
                 Set<WidgetState> states,
               ) {
-                return _primaryColor.withOpacity(0.05);
+                return _primaryColor.withValues(alpha: 0.05);
               }),
               cells: [
                 const DataCell(
@@ -431,7 +431,7 @@ class _IncentiveCalculationSheetState extends State<IncentiveCalculationSheet> {
               divisions: 20,
               label: '${_incentivePercentage.round()}%',
               activeColor: _primaryColor,
-              inactiveColor: _primaryColor.withOpacity(0.3),
+              inactiveColor: _primaryColor.withValues(alpha: 0.3),
               onChanged: (value) {
                 if (value > 20) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -526,7 +526,7 @@ class _IncentiveCalculationSheetState extends State<IncentiveCalculationSheet> {
       color: _cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: color.withOpacity(0.2), width: 1),
+        side: BorderSide(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -654,7 +654,7 @@ class _IncentiveCalculationSheetState extends State<IncentiveCalculationSheet> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 24),
@@ -672,7 +672,7 @@ class _IncentiveCalculationSheetState extends State<IncentiveCalculationSheet> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(

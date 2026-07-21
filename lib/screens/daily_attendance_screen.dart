@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/worker_attendance.dart';
 import '../models/worker.dart';
-import '../models/sub_contractor.dart';
 import '../services/attendance_service.dart';
 import '../services/workforce_service.dart';
 
@@ -125,7 +123,7 @@ class _DailyAttendanceScreenState extends State<DailyAttendanceScreen> {
           children: [
             // Site Dropdown
             DropdownButtonFormField<String>(
-              value: _selectedSite,
+              initialValue: _selectedSite,
               decoration: const InputDecoration(
                 labelText: 'Select Site *',
                 border: OutlineInputBorder(),
@@ -376,7 +374,7 @@ class _AttendanceFormDialogState extends State<AttendanceFormDialog> {
               const SizedBox(height: 16),
               // Status Dropdown
               DropdownButtonFormField<AttendanceStatus>(
-                value: _status,
+                initialValue: _status,
                 decoration: const InputDecoration(
                   labelText: 'Status *',
                   border: OutlineInputBorder(),

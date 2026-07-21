@@ -121,7 +121,7 @@ class _IncentiveCalculationState extends State<IncentiveCalculation> {
                               'Select site details to calculate incentives',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: textColor.withOpacity(0.7),
+                                color: textColor.withValues(alpha: 0.7),
                               ),
                             ),
                             SizedBox(height: 30),
@@ -155,7 +155,7 @@ class _IncentiveCalculationState extends State<IncentiveCalculation> {
                                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               ),
                               dropdownColor: cardColor,
-                              value: _selectedSiteId,
+                              initialValue: _selectedSiteId,
                               items: _siteIds.map((String value) {
                                 return DropdownMenuItem<String>(
                                   value: value,
@@ -231,7 +231,7 @@ class _IncentiveCalculationState extends State<IncentiveCalculation> {
                                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               ),
                               dropdownColor: cardColor,
-                              value: _selectedProjectStage,
+                              initialValue: _selectedProjectStage,
                               items: _filteredProjectStages.map((String value) {
                                 return DropdownMenuItem<String>(
                                   value: value,
@@ -329,9 +329,9 @@ class _IncentiveCalculationState extends State<IncentiveCalculation> {
                   Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.05),
+                      color: primaryColor.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: primaryColor.withOpacity(0.2)),
+                      border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
@@ -342,7 +342,7 @@ class _IncentiveCalculationState extends State<IncentiveCalculation> {
                             'Select a site to view available project stages and calculate incentives',
                             style: TextStyle(
                               fontSize: 14,
-                              color: textColor.withOpacity(0.8),
+                              color: textColor.withValues(alpha: 0.8),
                             ),
                           ),
                         ),

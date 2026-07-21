@@ -452,7 +452,7 @@ class _MatlsScreenState extends State<MatlsScreen> {
           label: const Text('Cancel'),
           style: OutlinedButton.styleFrom(
             foregroundColor: dangerColor,
-            side: BorderSide(color: dangerColor.withOpacity(0.5)),
+            side: BorderSide(color: dangerColor.withValues(alpha: 0.5)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(borderRadius),
             ),

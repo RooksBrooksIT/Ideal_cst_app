@@ -817,7 +817,7 @@ class _MaterialInfoScreenState extends State<supervisorMaterialInfoScreen> {
               ...materialsToTransfer
                   .map((material) => Text(
                       '- ${material['displayName']}: ${material['neededCount']} units'))
-                  .toList(),
+                  ,
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -872,7 +872,7 @@ class _MaterialInfoScreenState extends State<supervisorMaterialInfoScreen> {
               ...materialsToTransfer
                   .map((material) => Text(
                       '- ${material['displayName']}: ${material['neededCount']} units'))
-                  .toList(),
+                  ,
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -1684,7 +1684,7 @@ class _MaterialInfoScreenState extends State<supervisorMaterialInfoScreen> {
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey.shade400),
             borderRadius: BorderRadius.circular(8.0),
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
           ),
           child: Row(
             children: [
@@ -1747,7 +1747,7 @@ class _MaterialInfoScreenState extends State<supervisorMaterialInfoScreen> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),

@@ -661,7 +661,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
@@ -771,10 +771,10 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
   Widget _buildSummarySection() {
     return Card(
       elevation: 0,
-      color: primaryColor.withOpacity(0.04),
+      color: primaryColor.withValues(alpha: 0.04),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: primaryColor.withOpacity(0.1)),
+        side: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -830,7 +830,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -913,7 +913,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -922,7 +922,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 28),
@@ -1055,8 +1055,11 @@ class __MealsEntryInlineSectionState extends State<_MealsEntryInlineSection> {
           : (worker['contractorName'] ?? worker['contractor'] ?? 'General');
 
       if (contractorName == _selectedSubContractorName) {
-        if (isContractor) contractors.add(worker);
-        else workers.add(worker);
+        if (isContractor) {
+          contractors.add(worker);
+        } else {
+          workers.add(worker);
+        }
       }
     }
     return [...contractors, ...workers];
@@ -1108,14 +1111,14 @@ class __MealsEntryInlineSectionState extends State<_MealsEntryInlineSection> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedSubContractorName,
+            initialValue: _selectedSubContractorName,
             decoration: InputDecoration(
               labelText: 'Select Sub Contractor',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -1134,7 +1137,7 @@ class __MealsEntryInlineSectionState extends State<_MealsEntryInlineSection> {
           const SizedBox(height: 16),
           if (_selectedSubContractorName != null)
             DropdownButtonFormField<String>(
-              value: _selectedWorkerId,
+              initialValue: _selectedWorkerId,
               decoration: InputDecoration(
                 labelText: 'Select Worker',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

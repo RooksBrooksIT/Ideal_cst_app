@@ -414,7 +414,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedContractor,
+                          initialValue: _selectedContractor,
                           decoration: InputDecoration(
                             labelText: 'Sub-Contractor *',
                             border: InputBorder.none,
@@ -480,7 +480,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
                       child: DropdownButtonFormField<String>(
-                        value: _selectedDesignation,
+                        initialValue: _selectedDesignation,
                         decoration: InputDecoration(
                           labelText: 'Designation *',
                           border: InputBorder.none,
@@ -704,7 +704,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
           itemCount: workers.length,
           itemBuilder: (context, index) {
             final doc = workers[index];
-            final data = doc.data() as Map<String, dynamic>;
+            final data = doc.data();
             final docId = doc.id;
             final workerId = data['workerId'] ?? docId;
             final isEditing = _isEditing[docId] ?? false;
@@ -804,7 +804,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
       icon: Icon(icon, size: 18),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        backgroundColor: color.withOpacity(0.1),
+        backgroundColor: color.withValues(alpha: 0.1),
         foregroundColor: color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

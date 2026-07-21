@@ -116,7 +116,7 @@ class _ConstructionDocumentsState extends State<ConstructionDocuments> {
                             .toList();
 
                         return DropdownButtonFormField<String>(
-                          value: selectedSiteId,
+                          initialValue: selectedSiteId,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(

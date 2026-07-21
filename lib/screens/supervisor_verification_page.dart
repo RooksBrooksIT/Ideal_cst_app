@@ -403,7 +403,7 @@ class _SupervisorVerificationPageState extends State<SupervisorVerificationPage>
                 children: [
                   if (_assignedSites.isNotEmpty)
                     DropdownButtonFormField<Map<String, dynamic>>(
-                      value: _selectedSite,
+                      initialValue: _selectedSite,
                       items: _assignedSites.map((site) {
                         return DropdownMenuItem<Map<String, dynamic>>(
                           value: site,

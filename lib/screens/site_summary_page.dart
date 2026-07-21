@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'dart:typed_data';
 import 'package:flutter/services.dart'; // Added for rootBundle
 
 class SiteSummaryPage extends StatefulWidget {
@@ -304,7 +303,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
                       'No project found for site ID: ${widget.siteId}',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: textColor.withOpacity(0.7),
+                        color: textColor.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -490,10 +489,10 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
                           Container(
                             padding: EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: primaryColor.withOpacity(0.3),
+                                color: primaryColor.withValues(alpha: 0.3),
                                 width: 1,
                               ),
                             ),
@@ -528,7 +527,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
                                 Text(
                                   '${(grandTotal / budget * 100).toStringAsFixed(1)}% of total budget',
                                   style: TextStyle(
-                                    color: textColor.withOpacity(0.7),
+                                    color: textColor.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -605,7 +604,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
             title,
             style: TextStyle(
               fontWeight: FontWeight.w500,
-              color: textColor.withOpacity(0.7),
+              color: textColor.withValues(alpha: 0.7),
             ),
           ),
           Text(
@@ -657,7 +656,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
                 child: Text(
                   'No expenses recorded',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.6),
+                    color: textColor.withValues(alpha: 0.6),
                   ),
                 ),
               )
@@ -808,7 +807,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
                 style: pw.TextStyle(
                   fontSize: 22,
                   fontWeight: pw.FontWeight.bold,
-                  color: PdfColor.fromInt(primaryColor.value),
+                  color: PdfColor.fromInt(primaryColor.toARGB32()),
                 ),
               ),
               if (logo != null)
@@ -918,7 +917,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
             style: pw.TextStyle(
               fontSize: 18,
               fontWeight: pw.FontWeight.bold,
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
             ),
           ),
           pw.SizedBox(height: 12),
@@ -1112,8 +1111,8 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
           pw.Container(
             padding: pw.EdgeInsets.all(16),
             decoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(primaryColor.value),
-              border: pw.Border.all(color: PdfColor.fromInt(primaryColor.value)),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
+              border: pw.Border.all(color: PdfColor.fromInt(primaryColor.toARGB32())),
               borderRadius: pw.BorderRadius.circular(8),
             ),
             child: pw.Row(
@@ -1124,7 +1123,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
                   style: pw.TextStyle(
                     fontSize: 16,
                     fontWeight: pw.FontWeight.bold,
-                    color: PdfColor.fromInt(primaryColor.value),
+                    color: PdfColor.fromInt(primaryColor.toARGB32()),
                   ),
                 ),
                 pw.Text(
@@ -1132,7 +1131,7 @@ class _SiteSummaryPageState extends State<SiteSummaryPage> {
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
-                    color: PdfColor.fromInt(primaryColor.value),
+                    color: PdfColor.fromInt(primaryColor.toARGB32()),
                   ),
                 ),
               ],

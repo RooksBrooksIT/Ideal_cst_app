@@ -290,7 +290,7 @@ class _OrganizationInsightsScreenState
                   'Select a site and report type to generate insights',
                   style: TextStyle(
                     fontSize: 14,
-                    color: textColor.withOpacity(0.7),
+                    color: textColor.withValues(alpha: 0.7),
                   ),
                 ),
                 SizedBox(height: 24),
@@ -311,7 +311,7 @@ class _OrganizationInsightsScreenState
                       ),
                       SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: selectedSupervisorEntry?.siteId,
+                        initialValue: selectedSupervisorEntry?.siteId,
                         items: uniqueSiteIds.map((siteId) {
                           return DropdownMenuItem<String>(
                             value: siteId,
@@ -451,7 +451,7 @@ class _OrganizationInsightsScreenState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -486,7 +486,7 @@ class _OrganizationInsightsScreenState
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: selectedReportType == type
-                    ? primaryColor.withOpacity(0.1)
+                    ? primaryColor.withValues(alpha: 0.1)
                     : Colors.grey[50],
                 shape: BoxShape.circle,
               ),
@@ -515,7 +515,7 @@ class _OrganizationInsightsScreenState
                     style: TextStyle(
                       fontSize: 14,
                       color: selectedReportType == type
-                          ? primaryColor.withOpacity(0.7)
+                          ? primaryColor.withValues(alpha: 0.7)
                           : Colors.grey[600],
                     ),
                   ),

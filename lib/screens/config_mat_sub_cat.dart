@@ -254,7 +254,7 @@ class _MatlsSubCatState extends State<MatlsSubCat> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<DocumentSnapshot>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         decoration: InputDecoration(
                           hintText: 'Select category',
                           border: OutlineInputBorder(
@@ -292,7 +292,7 @@ class _MatlsSubCatState extends State<MatlsSubCat> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<DocumentSnapshot>(
-                        value: _selectedUnit,
+                        initialValue: _selectedUnit,
                         decoration: InputDecoration(
                           hintText: 'Select unit',
                           border: OutlineInputBorder(

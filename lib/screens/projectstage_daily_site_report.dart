@@ -543,7 +543,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryColor.withOpacity(0.3),
+                        color: primaryColor.withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: Offset(0, 4),
                       ),
@@ -583,7 +583,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                                             style: TextStyle(
                                                 fontWeight: FontWeight.w600,
                                                 color: Colors.white
-                                                    .withOpacity(0.8)))),
+                                                    .withValues(alpha: 0.8)))),
                                     SizedBox(width: 8),
                                     SizedBox(
                                         width: 16,
@@ -610,7 +610,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                   _buildSectionHeader('Site Supervisor Expenses', Icons.engineering),
                   SizedBox(height: 12),
                   _buildDataTable(
-                    headerColor: primaryLightColor.withOpacity(0.2),
+                    headerColor: primaryLightColor.withValues(alpha: 0.2),
                     columns: const [
                       DataColumn(
                           label: Text('Type',
@@ -639,7 +639,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                   _buildSectionHeader('Manager Expenses', Icons.manage_accounts),
                   SizedBox(height: 12),
                   _buildDataTable(
-                    headerColor: primaryLightColor.withOpacity(0.2),
+                    headerColor: primaryLightColor.withValues(alpha: 0.2),
                     columns: const [
                       DataColumn(
                           label: Text('Bill No',
@@ -665,7 +665,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                   _buildSectionHeader('Organization Expenses', Icons.business),
                   SizedBox(height: 12),
                   _buildDataTable(
-                    headerColor: primaryLightColor.withOpacity(0.2),
+                    headerColor: primaryLightColor.withValues(alpha: 0.2),
                     columns: const [
                       DataColumn(
                           label: Text('Bill No',
@@ -691,7 +691,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                   _buildSectionHeader('Contract Expenses', Icons.handshake),
                   SizedBox(height: 12),
                   _buildDataTable(
-                    headerColor: primaryLightColor.withOpacity(0.2),
+                    headerColor: primaryLightColor.withValues(alpha: 0.2),
                     columns: const [
                       DataColumn(
                           label: Text('Type',
@@ -729,7 +729,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: primaryColor.withOpacity(0.4),
+                        color: primaryColor.withValues(alpha: 0.4),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -761,7 +761,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                             fontWeight: FontWeight.bold,
                             shadows: [
                               Shadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 8,
                                 offset: Offset(0, 2),
                               ),
@@ -789,7 +789,7 @@ class _ProjectStageDailySiteExpensesReportPageState
                         borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 4,
-                      shadowColor: primaryColor.withOpacity(0.4),
+                      shadowColor: primaryColor.withValues(alpha: 0.4),
                     ),
                     onPressed: () async {
                       String? projectStage = widget.projectStage;
@@ -988,7 +988,7 @@ class _ProjectStageDailySiteExpensesReportPageState
               '$label:',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
               ),
             ),
           ),
@@ -1008,9 +1008,9 @@ class _ProjectStageDailySiteExpensesReportPageState
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: primaryColor.withOpacity(0.2)),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -1050,7 +1050,7 @@ class _ProjectStageDailySiteExpensesReportPageState
           horizontalMargin: 16,
           columnSpacing: 24,
           headingRowColor: WidgetStateProperty.all(
-              headerColor ?? primaryLightColor.withOpacity(0.2)),
+              headerColor ?? primaryLightColor.withValues(alpha: 0.2)),
           columns: columns,
           rows: rows,
         ),
@@ -1063,9 +1063,9 @@ class _ProjectStageDailySiteExpensesReportPageState
       alignment: Alignment.centerRight,
       child: Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

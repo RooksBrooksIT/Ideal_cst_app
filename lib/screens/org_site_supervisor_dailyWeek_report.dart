@@ -413,7 +413,7 @@ class _DailySitePaymentReportScreenState
                                 horizontal: fontSizeBase,
                               ),
                             ),
-                            value: selectedSiteId,
+                            initialValue: selectedSiteId,
                             items: siteIds
                                 .map(
                                   (id) => DropdownMenuItem(
@@ -512,7 +512,7 @@ class _DailySitePaymentReportScreenState
                                       horizontal: fontSizeBase * 0.7,
                                     ),
                                   ),
-                                  value: selectedMonth,
+                                  initialValue: selectedMonth,
                                   items: List.generate(12, (i) => i + 1)
                                       .map(
                                         (m) => DropdownMenuItem(
@@ -562,7 +562,7 @@ class _DailySitePaymentReportScreenState
                                       horizontal: fontSizeBase * 0.7,
                                     ),
                                   ),
-                                  value: selectedYear,
+                                  initialValue: selectedYear,
                                   items: years
                                       .map(
                                         (y) => DropdownMenuItem(
@@ -643,14 +643,14 @@ class _DailySitePaymentReportScreenState
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: primaryColor.withOpacity(0.3),
+                                      color: primaryColor.withValues(alpha: 0.3),
                                     ),
                                     color: Color(0xFFF9EDED),
                                   ),
                                   child: Table(
                                     border: TableBorder.symmetric(
                                       inside: BorderSide(
-                                        color: primaryColor.withOpacity(0.15),
+                                        color: primaryColor.withValues(alpha: 0.15),
                                       ),
                                     ),
                                     columnWidths: {
@@ -660,7 +660,7 @@ class _DailySitePaymentReportScreenState
                                     children: [
                                       TableRow(
                                         decoration: BoxDecoration(
-                                          color: primaryColor.withOpacity(0.9),
+                                          color: primaryColor.withValues(alpha: 0.9),
                                         ),
                                         children: [
                                           Padding(

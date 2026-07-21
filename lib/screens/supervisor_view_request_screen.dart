@@ -47,7 +47,7 @@ class _ViewApprovalScreenState extends State<ViewApprovalScreen>
           controller: _tabController,
           indicatorColor: accentColor,
           labelColor: secondaryColor,
-          unselectedLabelColor: secondaryColor.withOpacity(0.7),
+          unselectedLabelColor: secondaryColor.withValues(alpha: 0.7),
           tabs: [
             Tab(text: 'Pending'),
             Tab(text: 'Approved'),
@@ -105,7 +105,7 @@ class _ApprovalListState extends State<ApprovalList> {
               prefixIcon: Icon(Icons.search, color: widget.primaryColor),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: widget.primaryColor.withOpacity(0.2)),
+                borderSide: BorderSide(color: widget.primaryColor.withValues(alpha: 0.2)),
               ),
               filled: true,
               fillColor: Colors.grey[100],
@@ -277,8 +277,8 @@ class _ApprovalCardState extends State<ApprovalCard>
                               EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
                             color: widget.status == 'Pending'
-                                ? Colors.orange.withOpacity(0.2)
-                                : Colors.green.withOpacity(0.2),
+                                ? Colors.orange.withValues(alpha: 0.2)
+                                : Colors.green.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -400,7 +400,7 @@ class _ApprovalCardState extends State<ApprovalCard>
             '$label: ',
             style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: primaryColor.withOpacity(0.8)),
+                color: primaryColor.withValues(alpha: 0.8)),
           ),
           Text(value),
         ],
@@ -412,9 +412,9 @@ class _ApprovalCardState extends State<ApprovalCard>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: primaryColor.withOpacity(0.3)),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -422,7 +422,7 @@ class _ApprovalCardState extends State<ApprovalCard>
             label,
             style: TextStyle(
               fontSize: 12,
-              color: primaryColor.withOpacity(0.8),
+              color: primaryColor.withValues(alpha: 0.8),
             ),
           ),
           Text(
@@ -442,9 +442,9 @@ class _ApprovalCardState extends State<ApprovalCard>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.1),
+        color: accentColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: accentColor.withOpacity(0.3)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -452,7 +452,7 @@ class _ApprovalCardState extends State<ApprovalCard>
             label,
             style: TextStyle(
               fontSize: 12,
-              color: accentColor.withOpacity(0.8),
+              color: accentColor.withValues(alpha: 0.8),
             ),
           ),
           Text(
@@ -476,7 +476,7 @@ class _ApprovalCardState extends State<ApprovalCard>
           title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: primaryColor.withOpacity(0.7),
+            color: primaryColor.withValues(alpha: 0.7),
           ),
         ),
         SizedBox(height: 4),
@@ -494,7 +494,7 @@ class _ApprovalCardState extends State<ApprovalCard>
           children: [
             TableRow(
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withValues(alpha: 0.1),
               ),
               children: [
                 _buildTableHeaderCell('Designation'),

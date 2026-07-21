@@ -107,7 +107,7 @@ class _ProjectCategoryScreenState extends State<ProjectCategoryScreen> {
                         borderSide: BorderSide(color: primaryColor, width: 2),
                       ),
                       filled: true,
-                      fillColor: primaryColor.withOpacity(0.05),
+                      fillColor: primaryColor.withValues(alpha: 0.05),
                       suffixIcon: IconButton(
                         icon: Icon(Icons.close, color: primaryColor),
                         onPressed: () => _newCategoryController.clear(),
@@ -280,7 +280,7 @@ class _ProjectCategoryScreenState extends State<ProjectCategoryScreen> {
                 children: [
                   Card(
                     elevation: 5,
-                    shadowColor: primaryColor.withOpacity(0.2),
+                    shadowColor: primaryColor.withValues(alpha: 0.2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -378,12 +378,12 @@ class _ProjectCategoryScreenState extends State<ProjectCategoryScreen> {
                                               : null;
 
                                       return DropdownButtonFormField<String>(
-                                        value: safeSelectedCategory,
+                                        initialValue: safeSelectedCategory,
                                         isExpanded: true,
                                         decoration: InputDecoration(
                                           filled: true,
                                           fillColor:
-                                              primaryColor.withOpacity(0.05),
+                                              primaryColor.withValues(alpha: 0.05),
                                           border: OutlineInputBorder(
                                             borderRadius:
                                                 BorderRadius.circular(12),
@@ -519,7 +519,7 @@ class _ProjectCategoryScreenState extends State<ProjectCategoryScreen> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 6,
                 offset: const Offset(0, 3),
               ),

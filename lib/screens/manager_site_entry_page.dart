@@ -432,7 +432,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
               borderRadius: BorderRadius.circular(16.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -712,7 +712,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: selectedDocId,
+                    initialValue: selectedDocId,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Date',
@@ -1308,7 +1308,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [primaryColor.withOpacity(0.8), primaryColor],
+                            colors: [primaryColor.withValues(alpha: 0.8), primaryColor],
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1336,7 +1336,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                                             child: Padding(
                                               padding: const EdgeInsets.symmetric(horizontal: 8.0),
                                               child: DropdownButtonFormField<String>(
-                                                value: selectedSiteId,
+                                                initialValue: selectedSiteId,
                                                 isExpanded: true,
                                                 decoration: InputDecoration(
                                                   labelText: 'Site ID',
@@ -1593,7 +1593,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                                                     const SizedBox(height: 8),
                                                     DropdownButtonFormField<
                                                         String>(
-                                                      value: selectedMaterial,
+                                                      initialValue: selectedMaterial,
                                                       isExpanded: true,
                                                       decoration:
                                                           InputDecoration(
@@ -1707,7 +1707,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                                 });
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor.withOpacity(0.1),
+                                backgroundColor: primaryColor.withValues(alpha: 0.1),
                                 foregroundColor: primaryColor,
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 12),
@@ -1905,7 +1905,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                                                     ),
                                                     const SizedBox(height: 8),
                                                     DropdownButtonFormField<String>(
-                                                      value: selectedLabour,
+                                                      initialValue: selectedLabour,
                                                       isExpanded: true,
                                                       decoration: InputDecoration(
                                                         labelText: 'Labour',
@@ -2000,7 +2000,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                                 });
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor.withOpacity(0.1),
+                                backgroundColor: primaryColor.withValues(alpha: 0.1),
                                 foregroundColor: primaryColor,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 shape: RoundedRectangleBorder(
@@ -2155,7 +2155,7 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: primaryColor.withOpacity(0.1),
+                                    color: primaryColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(

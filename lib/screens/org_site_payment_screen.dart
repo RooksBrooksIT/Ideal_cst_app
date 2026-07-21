@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'dart:async';
 
 class SitePaymentScreen extends StatefulWidget {
@@ -334,14 +333,14 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
             margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8.0 : 0.0),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [mainColor.withOpacity(0.10), Colors.white],
+                colors: [mainColor.withValues(alpha: 0.10), Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: mainColor.withOpacity(0.10),
+                  color: mainColor.withValues(alpha: 0.10),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -383,7 +382,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
                 SizedBox(height: 8),
                 _buildDropdownContainer(
                   child: DropdownButtonFormField<String>(
-                    value: selectedSiteId,
+                    initialValue: selectedSiteId,
                     isExpanded: true,
                     decoration: _inputDecoration(),
                     items: siteList.map((site) {
@@ -472,7 +471,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
                 SizedBox(height: 8),
                 _buildDropdownContainer(
                   child: DropdownButtonFormField<String>(
-                    value: selectedProjectStage,
+                    initialValue: selectedProjectStage,
                     isExpanded: true,
                     decoration: _inputDecoration(),
                     items: projectStages.map((stage) {
@@ -553,7 +552,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: mainColor.withOpacity(0.07),
+            color: mainColor.withValues(alpha: 0.07),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -570,7 +569,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: mainColor.withOpacity(0.07),
+            color: mainColor.withValues(alpha: 0.07),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -591,7 +590,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: mainColor.withOpacity(0.1)),
+        borderSide: BorderSide(color: mainColor.withValues(alpha: 0.1)),
       ),
     );
   }
@@ -602,7 +601,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
         Expanded(
           child: _buildDropdownContainer(
             child: DropdownButtonFormField<int>(
-              value: selectedPaymentYear,
+              initialValue: selectedPaymentYear,
               isExpanded: true,
               decoration: _inputDecoration(),
               items: paymentYears.map((y) {
@@ -627,7 +626,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
         Expanded(
           child: _buildDropdownContainer(
             child: DropdownButtonFormField<int>(
-              value: selectedPaymentMonth,
+              initialValue: selectedPaymentMonth,
               isExpanded: true,
               decoration: _inputDecoration(),
               items: List.generate(12, (i) => i + 1).map((m) {
@@ -657,7 +656,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
       children: [
         _buildDropdownContainer(
           child: DropdownButtonFormField<int>(
-            value: selectedPaymentYear,
+            initialValue: selectedPaymentYear,
             isExpanded: true,
             decoration: _inputDecoration(),
             items: paymentYears.map((y) {
@@ -680,7 +679,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
         SizedBox(height: 12),
         _buildDropdownContainer(
           child: DropdownButtonFormField<int>(
-            value: selectedPaymentMonth,
+            initialValue: selectedPaymentMonth,
             isExpanded: true,
             decoration: _inputDecoration(),
             items: List.generate(12, (i) => i + 1).map((m) {
@@ -813,11 +812,11 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: mainColor.withOpacity(0.2)),
+              border: Border.all(color: mainColor.withValues(alpha: 0.2)),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: mainColor.withOpacity(0.07),
+                  color: mainColor.withValues(alpha: 0.07),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -885,7 +884,7 @@ class _SitePaymentScreenState extends State<SitePaymentScreen> {
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 4,
-        shadowColor: mainColor.withOpacity(0.2),
+        shadowColor: mainColor.withValues(alpha: 0.2),
       ),
       onPressed: _submitPayment,
       child: Text(

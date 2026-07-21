@@ -10,7 +10,7 @@ import 'package:ideal_cst/screens/organization_site_entry.dart';
 import 'package:ideal_cst/screens/site_weekly_financial_report.dart';
 import 'package:ideal_cst/screens/tools_inventory_report.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'organisation_loginPage.dart';
+import 'package:ideal_cst/screens/auth/organisation_login_page.dart';
 import 'config_account_dashboard.dart';
 import 'site_entry_page.dart';
 import 'org_site_payment_screen.dart';
@@ -200,7 +200,7 @@ class OrganizationDashboard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFFFF4B2B).withOpacity(0.3),
+              color: Color(0xFFFF4B2B).withValues(alpha: 0.3),
               blurRadius: 10,
               offset: Offset(0, 5),
             ),
@@ -428,7 +428,7 @@ class OrganizationDashboard extends StatelessWidget {
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.only(bottom: 12),
-      color: Colors.white.withOpacity(0.9),
+      color: Colors.white.withValues(alpha: 0.9),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
@@ -439,7 +439,7 @@ class OrganizationDashboard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: iconColor, size: 28),
@@ -581,7 +581,7 @@ class DrawerMenuItem extends StatelessWidget {
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF2A5C8A).withOpacity(0.2)
+              ? const Color(0xFF2A5C8A).withValues(alpha: 0.2)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),

@@ -51,7 +51,7 @@ class _ManagerMaterialApprovalScreenState
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Color(0xFF0b3470).withOpacity(0.5)),
+            borderSide: BorderSide(color: Color(0xFF0b3470).withValues(alpha: 0.5)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -299,7 +299,7 @@ class _ManagerMaterialApprovalScreenState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: Offset(0, 3))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: Offset(0, 3))],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -310,7 +310,7 @@ class _ManagerMaterialApprovalScreenState
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Color(0xFF0b3470).withOpacity(0.1),
+                color: Color(0xFF0b3470).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.inventory, color: Color(0xFF0b3470), size: 20),

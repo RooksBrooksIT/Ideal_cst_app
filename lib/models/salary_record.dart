@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum SalaryStatus { generated, approved, paid, cancelled }
 

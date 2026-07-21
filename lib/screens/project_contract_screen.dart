@@ -429,7 +429,7 @@ class _ProjectContractScreenState extends State<ProjectContractScreen> {
                                   fillColor: const Color.fromARGB(
                                       255, 245, 245, 245),
                                 ),
-                                value: (_selectedContractType != null &&
+                                initialValue: (_selectedContractType != null &&
                                         _contractTypes.contains(_selectedContractType))
                                     ? _selectedContractType
                                     : null,

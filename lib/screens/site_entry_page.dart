@@ -976,7 +976,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
-                                    value: selectedSiteId,
+                                    initialValue: selectedSiteId,
                                     isExpanded: true,
                                     decoration: InputDecoration(
                                       labelText: 'Site Id (Supervisor Only)',
@@ -1285,7 +1285,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
                                                 ),
                                                 const SizedBox(height: 8),
                                                 DropdownButtonFormField<String>(
-                                                  value: selectedMaterial,
+                                                  initialValue: selectedMaterial,
                                                   isExpanded: true,
                                                   decoration: InputDecoration(
                                                     labelText: 'Material',
@@ -1605,7 +1605,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
                                                 ),
                                                 const SizedBox(height: 8),
                                                 DropdownButtonFormField<String>(
-                                                  value: selectedLabour,
+                                                  initialValue: selectedLabour,
                                                   isExpanded: true,
                                                   decoration: InputDecoration(
                                                     labelText: 'Labour',

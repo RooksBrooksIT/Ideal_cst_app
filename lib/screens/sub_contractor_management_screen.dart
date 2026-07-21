@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/sub_contractor.dart';
-import '../models/worker.dart';
 import '../services/workforce_service.dart';
 import 'sub_contractor_workers_screen.dart';
 
@@ -97,7 +96,7 @@ class _SubContractorManagementScreenState
           Container(
             margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
@@ -482,7 +481,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
               _isLoadingLabours
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       items: _labours.map<DropdownMenuItem<String>>((labour) {
                         return DropdownMenuItem(
                           value: labour['designation'],
@@ -520,7 +519,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedSalaryType,
+                initialValue: _selectedSalaryType,
                 items: const ['Daily Wages', 'Sub Contract']
                     .map(
                       (type) =>
@@ -580,7 +579,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
                         }
                       });
                     },
-                    selectedColor: const Color(0xFF0b3470).withOpacity(0.2),
+                    selectedColor: const Color(0xFF0b3470).withValues(alpha: 0.2),
                     checkmarkColor: const Color(0xFF0b3470),
                   );
                 }).toList(),

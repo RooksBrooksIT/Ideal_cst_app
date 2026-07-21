@@ -182,7 +182,7 @@
         );
       }
       return DropdownButtonFormField<DateTime>(
-        value: availableUpdateDates.contains(selectedDate) ? selectedDate : null,
+        initialValue: availableUpdateDates.contains(selectedDate) ? selectedDate : null,
         items: availableUpdateDates.map((date) {
           return DropdownMenuItem(
             value: date,
@@ -532,7 +532,7 @@
           ),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
-            value: selectedSiteId,
+            initialValue: selectedSiteId,
             items: assignedSiteIds
                 .map(
                   (siteId) => DropdownMenuItem(
@@ -795,7 +795,7 @@
           ),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
-            value: selectedMaterial,
+            initialValue: selectedMaterial,
             items: materialOptions
                 .map(
                   (mat) => DropdownMenuItem(
@@ -849,7 +849,7 @@
           ),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
-            value: selectedUnit,
+            initialValue: selectedUnit,
             items: unitOptions
                 .map(
                   (unit) => DropdownMenuItem(
@@ -1056,9 +1056,9 @@
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: errorColor.withOpacity(0.1),
+                  color: errorColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: errorColor.withOpacity(0.3)),
+                  border: Border.all(color: errorColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(updateErrorMsg!, style: TextStyle(color: errorColor)),
               )

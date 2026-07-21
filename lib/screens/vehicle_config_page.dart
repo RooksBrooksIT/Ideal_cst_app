@@ -469,7 +469,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                       const SizedBox(height: 16),
                       // Vehicle Dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedVehicle,
+                        initialValue: _selectedVehicle,
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(),
                           labelText: 'Select Vehicle',
@@ -620,12 +620,12 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF003768),
+                          color: Color(0xFF003768),
                         ),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _movementType,
+                        initialValue: _movementType,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           labelText: 'Select Movement Type',
@@ -676,7 +676,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         Column(
                           children: [
                             DropdownButtonFormField<String>(
-                              value: _selectedFromSite,
+                              initialValue: _selectedFromSite,
                               decoration: InputDecoration(
                                 border: const OutlineInputBorder(),
                                 labelText: 'From Site',
@@ -715,7 +715,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                       // To Location
                       if (_movementType != 'Site → Company')
                         DropdownButtonFormField<String>(
-                          value: _selectedToSite,
+                          initialValue: _selectedToSite,
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             labelText: 'To Site',
@@ -772,7 +772,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                       const SizedBox(height: 12),
                       // Driver Dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedDriver,
+                        initialValue: _selectedDriver,
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(),
                           labelText: 'Select Driver',
@@ -806,7 +806,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                           Expanded(
                             flex: 2,
                             child: DropdownButtonFormField<String>(
-                              value: _selectedMaterial,
+                              initialValue: _selectedMaterial,
                               decoration: InputDecoration(
                                 border: const OutlineInputBorder(),
                                 labelText: 'Material Type',

@@ -543,7 +543,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         backgroundColor: primaryColor,
         centerTitle: true,
         elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.3),
+        shadowColor: Colors.black.withValues(alpha: 0.3),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
         ),
@@ -565,7 +565,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -718,7 +718,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
-                            value: _selectedSiteId,
+                            initialValue: _selectedSiteId,
                             items: _unassignedSiteIds.map((siteId) {
                               return DropdownMenuItem<String>(
                                 value: siteId,
@@ -871,7 +871,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                                               filled: true,
                                               fillColor: Colors.grey[50],
                                             ),
-                                            value: selectedProjectId,
+                                            initialValue: selectedProjectId,
                                             items: projects
                                                 .where((doc) {
                                                   final data =
@@ -1317,7 +1317,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                                         Expanded(
                                           child:
                                               DropdownButtonFormField<String>(
-                                                value: dropdownValue,
+                                                initialValue: dropdownValue,
                                                 items: names
                                                     .map(
                                                       (name) =>
@@ -1700,7 +1700,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
-          borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
@@ -1729,7 +1729,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
     bool enabled = true,
   }) {
     return DropdownButtonFormField<String>(
-      value: (value != null && items.contains(value)) ? value : null,
+      initialValue: (value != null && items.contains(value)) ? value : null,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: primaryColor),
@@ -1737,7 +1737,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
-          borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
@@ -1782,7 +1782,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(10)),
-            borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+            borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(10)),
@@ -1846,7 +1846,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: IconButton(
@@ -1883,7 +1883,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: successColor.withOpacity(0.2),
+                  color: successColor.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(24),

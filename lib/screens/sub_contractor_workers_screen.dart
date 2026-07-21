@@ -197,7 +197,7 @@ class _SubContractorWorkersScreenState
                         children: [
                           Container(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.1), shape: BoxShape.circle),
                             child: Icon(Icons.engineering, color: primaryColor, size: 24),
                           ),
                           const SizedBox(width: 16),
@@ -482,7 +482,7 @@ class _SubContractorWorkersScreenState
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -619,7 +619,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       _aadharController.text = w.aadharNumber ?? '';
       _basicSalaryController.text = w.basicSalary.toString();
       _overtimeRateController.text = w.overtimeRate.toString();
-      _defaultHoursController.text = w.defaultHours?.toString() ?? '8.0';
+      _defaultHoursController.text = w.defaultHours.toString() ?? '8.0';
       _selectedCategory = w.workerType;
       _selectedLabourType = w.labourType;
       _selectedSiteIds = List.from(w.assignedSiteIds);
@@ -724,7 +724,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
               _isLoadingLabours
                   ? const Center(child: CircularProgressIndicator())
                   : DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       items: _labours.map<DropdownMenuItem<String>>((labour) {
                         return DropdownMenuItem(
                           value: labour['designation'],
@@ -769,7 +769,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedLabourType,
+                initialValue: _selectedLabourType,
                 items: const ['Daily Wage', 'Sub contract']
                     .map(
                       (type) =>
@@ -829,7 +829,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                         }
                       });
                     },
-                    selectedColor: const Color(0xFF0b3470).withOpacity(0.2),
+                    selectedColor: const Color(0xFF0b3470).withValues(alpha: 0.2),
                     checkmarkColor: const Color(0xFF0b3470),
                   );
                 }).toList(),
@@ -863,7 +863,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                     _isActive = value;
                   });
                 },
-                activeColor: const Color(0xFF0b3470),
+                activeThumbColor: const Color(0xFF0b3470),
               ),
             ],
           ),
@@ -1012,7 +1012,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             items: const [
               DropdownMenuItem(value: null, child: Text('All Categories')),
               DropdownMenuItem(value: 'Mason', child: Text('Mason')),
@@ -1035,7 +1035,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _selectedStatus,
+            initialValue: _selectedStatus,
             items: const [
               DropdownMenuItem(value: null, child: Text('All Statuses')),
               DropdownMenuItem(value: 'Active', child: Text('Active')),
@@ -1048,7 +1048,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _selectedSiteId,
+            initialValue: _selectedSiteId,
             items: [
               const DropdownMenuItem(value: null, child: Text('All Sites')),
               ...widget.sites.map((site) {
@@ -1067,7 +1067,7 @@ class __FiltersBottomSheetState extends State<_FiltersBottomSheet> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _selectedLabourType,
+            initialValue: _selectedLabourType,
             items: const [
               DropdownMenuItem(value: null, child: Text('All Labour Types')),
               DropdownMenuItem(value: 'Daily Wage', child: Text('Daily Wage')),
@@ -1204,7 +1204,7 @@ class __TransferWorkerDialogState extends State<_TransferWorkerDialog> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      value: _selectedSubContractorId,
+                      initialValue: _selectedSubContractorId,
                       items: [
                         const DropdownMenuItem(
                           value: null,
@@ -1231,7 +1231,7 @@ class __TransferWorkerDialogState extends State<_TransferWorkerDialog> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      value: _selectedSiteId,
+                      initialValue: _selectedSiteId,
                       items: [
                         const DropdownMenuItem(
                           value: null,

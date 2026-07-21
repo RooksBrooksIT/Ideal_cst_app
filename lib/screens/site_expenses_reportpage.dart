@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'dart:typed_data';
 
 class SiteExpensesReportPage extends StatefulWidget {
   final String siteId;
@@ -315,7 +314,7 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
           pw.Container(
             padding: const pw.EdgeInsets.all(12),
             decoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(primaryColor.value),
+              color: PdfColor.fromInt(primaryColor.toARGB32()),
               borderRadius: pw.BorderRadius.circular(8),
             ),
             child: pw.Center(
@@ -447,7 +446,7 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
+                              color: Colors.grey.withValues(alpha: 0.1),
                               blurRadius: 8,
                               offset: Offset(0, 4),
                             ),
@@ -522,7 +521,7 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20.0),
                       child: Card(
-                        color: primaryColor.withOpacity(0.1),
+                        color: primaryColor.withValues(alpha: 0.1),
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -577,7 +576,7 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
                   );
                   return ListView.separated(
                     itemCount: cards.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 12),
+                    separatorBuilder: (_, _) => SizedBox(height: 12),
                     itemBuilder: (context, index) => cards[index],
                   );
                 },
@@ -597,7 +596,7 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 6,
             offset: Offset(0, 2),
           ),
@@ -645,7 +644,7 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
               '$label:',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: textColor.withOpacity(0.7),
+                color: textColor.withValues(alpha: 0.7),
                 fontSize: 14,
               ),
             ),
@@ -721,7 +720,7 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
             scrollDirection: Axis.horizontal,
             child: DataTable(
               headingRowColor:
-                  WidgetStateProperty.all(primaryColor.withOpacity(0.1)),
+                  WidgetStateProperty.all(primaryColor.withValues(alpha: 0.1)),
               columns: [
                 DataColumn(
                   label: Text(
