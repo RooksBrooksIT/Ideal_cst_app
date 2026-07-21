@@ -132,368 +132,369 @@ class _SubContractorWorkersScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text(
           "Worker Management",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-        ),
-        backgroundColor: primaryColor,
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DailyAttendanceScreen(
-                    supervisorId: widget.supervisorId,
-                    supervisorName: widget.supervisorName,
-                    sites: sites,
-                  ),
-                ),
-              );
-            },
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: _showFilters,
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: const IconThemeData(color: Colors.black87),
+        actions: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
+            child: IconButton(
+              icon: Icon(Icons.calendar_today, color: Colors.blue.shade700),
+              tooltip: 'Daily Attendance',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DailyAttendanceScreen(
+                      supervisorId: widget.supervisorId,
+                      supervisorName: widget.supervisorName,
+                      sites: sites,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(right: 16, left: 4, top: 8, bottom: 8),
+            decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
+            child: IconButton(
+              icon: Icon(Icons.filter_list, color: Colors.grey.shade700),
+              tooltip: 'Filter',
+              onPressed: _showFilters,
+            ),
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              primaryColor.withOpacity(0.85),
-              primaryColor.withOpacity(0.55),
-            ],
-          ),
-        ),
-        child: isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              )
-            : Column(
-                children: [
-                  // Sub Contractor Details Card
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : Column(
+              children: [
+                // Sub Contractor Detail Header Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                            child: Icon(Icons.engineering, color: primaryColor, size: 24),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.subContractor.name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'ID: ${widget.subContractor.contractorId}',
+                                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      elevation: 6,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 16),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(Icons.engineering, color: primaryColor),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '${widget.subContractor.name} (${widget.subContractor.contractorId})',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            _buildTopMetricChip(Icons.category, widget.subContractor.category, Colors.orange),
+                            const SizedBox(width: 12),
+                            StreamBuilder<List<Worker>>(
+                              stream: _workforceService.getWorkersBySubContractor(widget.subContractor.id!),
+                              builder: (context, snapshot) {
+                                final count = snapshot.hasData ? snapshot.data!.length : 0;
+                                return _buildTopMetricChip(Icons.people, '$count Workers', Colors.blue);
+                              },
                             ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 16,
-                              runSpacing: 8,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.category, size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(widget.subContractor.category),
-                                  ],
-                                ),
-                                StreamBuilder<List<Worker>>(
-                                  stream: _workforceService
-                                      .getWorkersBySubContractor(
-                                        widget.subContractor.id!,
-                                      ),
-                                  builder: (context, snapshot) {
-                                    final count = snapshot.hasData
-                                        ? snapshot.data!.length
-                                        : 0;
-                                    return Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.people, size: 18),
-                                        const SizedBox(width: 4),
-                                        Text('Workers: $count'),
-                                      ],
-                                    );
-                                  },
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.location_on, size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Sites: ${widget.subContractor.assignedSiteIds.length}',
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                            const SizedBox(width: 12),
+                            _buildTopMetricChip(Icons.location_on, '${widget.subContractor.assignedSiteIds.length} Sites', Colors.teal),
                           ],
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  // Search Bar
+                ),
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search workers by name or ID...',
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: primaryColor, width: 2)),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        searchQuery = value.toLowerCase();
+                      });
+                    },
+                  ),
+                ),
+                // Filter Tags
+                if (selectedSiteId != null || selectedCategory != null || selectedStatus != null || selectedLabourType != null)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search workers...',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          const Text('Filters: ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+                          if (selectedSiteId != null)
+                            _buildFilterChip(getSiteName(selectedSiteId!), () { setState(() { selectedSiteId = null; }); }),
+                          if (selectedCategory != null)
+                            _buildFilterChip(selectedCategory!, () { setState(() { selectedCategory = null; }); }),
+                          if (selectedStatus != null)
+                            _buildFilterChip(selectedStatus!, () { setState(() { selectedStatus = null; }); }),
+                          if (selectedLabourType != null)
+                            _buildFilterChip(selectedLabourType!, () { setState(() { selectedLabourType = null; }); }),
+                        ],
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value.toLowerCase();
-                        });
-                      },
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Workers List
-                  Expanded(
-                    child: StreamBuilder<List<Worker>>(
-                      stream: _workforceService.getWorkersBySubContractor(
-                        widget.subContractor.id!,
-                      ),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Text(
-                              "Error loading workers: ${snapshot.error}",
-                              style: const TextStyle(color: Colors.white),
+                // Worker List
+                Expanded(
+                  child: StreamBuilder<List<Worker>>(
+                    stream: _workforceService.getWorkersBySubContractor(widget.subContractor.id!),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Center(child: Text("Error loading workers: ${snapshot.error}", style: TextStyle(color: Colors.red.shade700)));
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.group_off_outlined, size: 80, color: Colors.grey.shade300),
+                              const SizedBox(height: 16),
+                              Text('No workers yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      final workers = snapshot.data!.where((worker) {
+                        final matchesSearch = searchQuery.isEmpty ||
+                            worker.name.toLowerCase().contains(searchQuery) ||
+                            worker.workerId.toLowerCase().contains(searchQuery) ||
+                            worker.mobileNumber.contains(searchQuery) ||
+                            worker.workerType.toLowerCase().contains(searchQuery);
+
+                        final matchesCategory = selectedCategory == null || worker.workerType == selectedCategory;
+                        final matchesStatus = selectedStatus == null || (selectedStatus == 'Active' ? worker.isActive : !worker.isActive);
+                        final matchesSite = selectedSiteId == null || worker.assignedSiteIds.contains(selectedSiteId);
+                        final matchesLabourType = selectedLabourType == null || worker.labourType == selectedLabourType;
+
+                        return matchesSearch && matchesCategory && matchesStatus && matchesSite && matchesLabourType;
+                      }).toList();
+
+                      if (workers.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search_off, size: 80, color: Colors.grey.shade300),
+                              const SizedBox(height: 16),
+                              Text('No matching workers found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: workers.length,
+                        itemBuilder: (context, index) {
+                          final worker = workers[index];
+                          return Card(
+                            elevation: 0,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: Colors.grey.shade200),
                             ),
-                          );
-                        }
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'No workers yet',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          );
-                        }
-                        final workers = snapshot.data!.where((worker) {
-                          final matchesSearch =
-                              searchQuery.isEmpty ||
-                              worker.name.toLowerCase().contains(searchQuery) ||
-                              worker.workerId.toLowerCase().contains(
-                                searchQuery,
-                              ) ||
-                              worker.mobileNumber.contains(searchQuery) ||
-                              worker.workerType.toLowerCase().contains(
-                                searchQuery,
-                              );
-
-                          final matchesCategory =
-                              selectedCategory == null ||
-                              worker.workerType == selectedCategory;
-
-                          final matchesStatus =
-                              selectedStatus == null ||
-                              (selectedStatus == 'Active'
-                                  ? worker.isActive
-                                  : !worker.isActive);
-
-                          final matchesSite =
-                              selectedSiteId == null ||
-                              worker.assignedSiteIds.contains(selectedSiteId);
-
-                          final matchesLabourType =
-                              selectedLabourType == null ||
-                              worker.labourType == selectedLabourType;
-
-                          return matchesSearch &&
-                              matchesCategory &&
-                              matchesStatus &&
-                              matchesSite &&
-                              matchesLabourType;
-                        }).toList();
-
-                        if (workers.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'No workers match the filters',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: workers.length,
-                          itemBuilder: (context, index) {
-                            final worker = workers[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                            color: Colors.white,
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.blue.shade50,
+                                backgroundImage: worker.photoUrl != null ? NetworkImage(worker.photoUrl!) : null,
+                                child: worker.photoUrl == null ? Icon(Icons.person, color: Colors.blue.shade700) : null,
                               ),
-                              elevation: 6,
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: primaryColor.withOpacity(
-                                    0.1,
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      worker.name,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                                    ),
                                   ),
-                                  child: worker.photoUrl != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            50,
-                                          ),
-                                          child: Image.network(
-                                            worker.photoUrl!,
-                                          ),
-                                        )
-                                      : Icon(Icons.person, color: primaryColor),
-                                ),
-                                title: Text(
-                                  '${worker.name} (${worker.workerId})',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Column(
+                                  if (worker.labourType.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(6)),
+                                      child: Text(worker.labourType, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purple.shade700)),
+                                    ),
+                                ],
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(worker.workerType),
-                                    Text(
-                                      '${worker.labourType}: ₹${worker.basicSalary}',
-                                    ),
-                                    Text(
-                                      'Sites: ${worker.assignedSiteIds.map((id) => getSiteName(id)).join(', ')}',
-                                    ),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: worker.isActive
-                                            ? Colors.green.withOpacity(0.2)
-                                            : Colors.red.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        worker.isActive ? 'Active' : 'Inactive',
-                                        style: TextStyle(
-                                          color: worker.isActive
-                                              ? Colors.green
-                                              : Colors.red,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    PopupMenuButton<String>(
-                                      onSelected: (value) {
-                                        switch (value) {
-                                          case 'view':
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    WorkerDetailsScreen(
-                                                      worker: worker,
-                                                      supervisorId:
-                                                          widget.supervisorId,
-                                                      supervisorName:
-                                                          widget.supervisorName,
-                                                    ),
-                                              ),
-                                            );
-                                            break;
-                                          case 'edit':
-                                            _showAddEditWorkerDialog(worker);
-                                            break;
-                                          case 'transfer':
-                                            _showTransferWorkerDialog(worker);
-                                            break;
-                                          case 'toggle_status':
-                                            _toggleWorkerStatus(worker);
-                                            break;
-                                          case 'delete':
-                                            _showDeleteConfirmationDialog(
-                                              worker.id!,
-                                            );
-                                            break;
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'view',
-                                          child: Text('View Details'),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'edit',
-                                          child: Text('Edit'),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'transfer',
-                                          child: Text('Transfer'),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'toggle_status',
-                                          child: Text(
-                                            worker.isActive
-                                                ? 'Deactivate'
-                                                : 'Activate',
-                                          ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'delete',
-                                          child: Text('Delete'),
-                                        ),
+                                    Text('ID: ${worker.workerId}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.category, size: 12, color: Colors.grey.shade400),
+                                        const SizedBox(width: 4),
+                                        Text(worker.workerType, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                        const SizedBox(width: 12),
+                                        Icon(Icons.circle, size: 10, color: worker.isActive ? Colors.green : Colors.red),
+                                        const SizedBox(width: 4),
+                                        Text(worker.isActive ? 'Active' : 'Inactive', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                                       ],
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          },
-                        );
-                      },
-                    ),
+                              trailing: PopupMenuButton<String>(
+                                icon: Icon(Icons.more_vert, color: Colors.grey.shade400),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                onSelected: (value) {
+                                  switch (value) {
+                                    case 'view':
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => WorkerDetailsScreen(
+                                            worker: worker,
+                                            supervisorId: widget.supervisorId,
+                                            supervisorName: widget.supervisorName,
+                                          ),
+                                        ),
+                                      );
+                                      break;
+                                    case 'edit':
+                                      _showAddEditWorkerDialog(worker);
+                                      break;
+                                    case 'delete':
+                                      _showDeleteConfirmationDialog(worker.id!);
+                                      break;
+                                    case 'toggle_status':
+                                      _toggleWorkerStatus(worker);
+                                      break;
+                                    case 'transfer':
+                                      _showTransferWorkerDialog(worker);
+                                      break;
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(value: 'view', child: Text('View Details')),
+                                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                  const PopupMenuItem(value: 'transfer', child: Text('Transfer')),
+                                  PopupMenuItem(
+                                    value: 'toggle_status',
+                                    child: Text(worker.isActive ? 'Deactivate' : 'Activate'),
+                                  ),
+                                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
                   ),
-                ],
-              ),
-      ),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditWorkerDialog(),
         backgroundColor: primaryColor,
+        elevation: 4,
         child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildTopMetricChip(IconData icon, String label, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.shade100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color.shade700),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, VoidCallback onDeleted) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: TextStyle(fontSize: 12, color: primaryColor)),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onDeleted,
+            child: Icon(Icons.close, size: 14, color: primaryColor),
+          ),
+        ],
       ),
     );
   }

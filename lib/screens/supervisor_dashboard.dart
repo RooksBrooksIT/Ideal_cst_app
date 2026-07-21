@@ -237,7 +237,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
 
   void _showAssignCoordinatorDialog(BuildContext context) {
     String? selectedSite;
-    final TextEditingController _coordinatorController = TextEditingController();
+    final TextEditingController _coordinatorController =
+        TextEditingController();
     DateTime? _selectedDate = DateTime.now();
     bool _isSaving = false;
 
@@ -262,7 +263,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                       ),
                       items: assignedSites.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;
-                        final siteName = data['site'] ?? data['siteId'] ?? doc.id;
+                        final siteName =
+                            data['site'] ?? data['siteId'] ?? doc.id;
                         return DropdownMenuItem<String>(
                           value: siteName.toString(),
                           child: Text(siteName.toString()),
@@ -337,7 +339,10 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                               _selectedDate == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Please fill all fields and select a date.')),
+                                content: Text(
+                                  'Please fill all fields and select a date.',
+                                ),
+                              ),
                             );
                             return;
                           }
@@ -348,29 +353,37 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                             await FirebaseFirestore.instance
                                 .collection('Site_Co-ordinator')
                                 .add({
-                              'siteName': selectedSite,
-                              'supervisorName': widget.supervisorName,
-                              'coordinatorName':
-                                  _coordinatorController.text.trim(),
-                              'coordinatorDate': Timestamp.fromDate(_selectedDate!),
-                              'createdAt': FieldValue.serverTimestamp(),
-                            });
-                            
+                                  'siteName': selectedSite,
+                                  'supervisorName': widget.supervisorName,
+                                  'coordinatorName': _coordinatorController.text
+                                      .trim(),
+                                  'coordinatorDate': Timestamp.fromDate(
+                                    _selectedDate!,
+                                  ),
+                                  'createdAt': FieldValue.serverTimestamp(),
+                                });
+
                             // Also update the supervisor document so it reflects on the dashboard
                             await FirebaseFirestore.instance
                                 .collection('supervisor')
                                 .doc(widget.supervisorId)
                                 .update({
-                              'CoordinatorName': _coordinatorController.text.trim(),
-                              'CoordinatorDate': Timestamp.fromDate(_selectedDate!),
-                            });
+                                  'CoordinatorName': _coordinatorController.text
+                                      .trim(),
+                                  'CoordinatorDate': Timestamp.fromDate(
+                                    _selectedDate!,
+                                  ),
+                                });
 
                             fetchCoordinatorName();
-                            
+
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Coordinator assigned successfully!')),
+                                content: Text(
+                                  'Coordinator assigned successfully!',
+                                ),
+                              ),
                             );
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -385,7 +398,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Save'),
                 ),
               ],
@@ -632,7 +646,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () => _showAssignCoordinatorDialog(context),
+                            onPressed: () =>
+                                _showAssignCoordinatorDialog(context),
                             icon: const Icon(
                               Icons.person_add,
                               color: Colors.white,
