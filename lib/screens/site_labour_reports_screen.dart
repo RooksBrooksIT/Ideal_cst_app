@@ -659,8 +659,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       child: Scaffold(
         backgroundColor: bgColor,
         appBar: _buildAppBar(),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -687,12 +688,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 const SizedBox(height: 12),
               ],
 
-
-
               // Result Rendering Area
-              Expanded(
-                child: _buildResultArea(),
-              ),
+              _buildResultArea(),
             ],
           ),
         ),
@@ -999,10 +996,16 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // ── Result Area Routing ──────────────────────────────────────────────────
   Widget _buildResultArea() {
     if (isLoading) {
-      return Center(child: CircularProgressIndicator(color: primaryColor));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator(color: primaryColor)),
+      );
     }
     if (reportGenerated && reportData.isEmpty && siteGroups.isEmpty) {
-      return _buildEmptyState();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: _buildEmptyState(),
+      );
     }
 
     // Client-side search filters
@@ -1047,7 +1050,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       children: [
         if (filteredRows.isNotEmpty || siteGroups.isNotEmpty)
           _buildSummaryKpiBanner(filteredRows),
-        Expanded(child: reportWidget),
+        reportWidget,
       ],
     );
   }
@@ -1236,19 +1239,16 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 12,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sl', 'Site Code', 'Site Name', 'Sub Contractor', 'Worker Name', 'Group',
-              'Category', 'Basic Wage', 'Total Earned', 'Hours', 'OT Basic', 'OT Amount',
-              'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 12,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sl', 'Site Code', 'Site Name', 'Sub Contractor', 'Worker Name', 'Group',
+            'Category', 'Basic Wage', 'Total Earned', 'Hours', 'OT Basic', 'OT Amount',
+            'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1257,6 +1257,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // ── 2. Attendance List Layout (Grouped Site/Supervisor) ──────────────────
   Widget _buildAttendanceList() {
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: siteGroups.length,
       itemBuilder: (context, index) {
         final site = siteGroups[index];
@@ -1381,18 +1383,15 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 12,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sl', 'Date', 'Site Name', 'Worker Name', 'Category', 'Basic Rate',
-              'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Wages', 'Supervisor', 'Remarks'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 12,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sl', 'Date', 'Site Name', 'Worker Name', 'Category', 'Basic Rate',
+            'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Wages', 'Supervisor', 'Remarks'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1452,18 +1451,15 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 12,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category', 'Basic Rate',
-              'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Amount', 'Supervisor', 'Remarks'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 12,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category', 'Basic Rate',
+            'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Amount', 'Supervisor', 'Remarks'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1501,17 +1497,14 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return Container(
       decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
       child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 36,
-            headingRowColor: WidgetStateProperty.all(primaryColor),
-            columns: _headersToColumns([
-              'Sub Contractor Name', 'Site Code', 'Labour Type'
-            ]),
-            rows: dataRows,
-          ),
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 36,
+          headingRowColor: WidgetStateProperty.all(primaryColor),
+          columns: _headersToColumns([
+            'Sub Contractor Name', 'Site Code', 'Labour Type'
+          ]),
+          rows: dataRows,
         ),
       ),
     );
@@ -1609,49 +1602,47 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Detailed entries
-          Text('Detailed Billing Entries', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
-          const SizedBox(height: 6),
-          Container(
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 12,
-                headingRowColor: WidgetStateProperty.all(primaryColor),
-                columns: _headersToColumns([
-                  'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category',
-                  'Std Hours', 'OT Hours', 'Basic Rate', 'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Total Bill'
-                ]),
-                rows: detailRows,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Detailed entries
+        Text('Detailed Billing Entries', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 12,
+              headingRowColor: WidgetStateProperty.all(primaryColor),
+              columns: _headersToColumns([
+                'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category',
+                'Std Hours', 'OT Hours', 'Basic Rate', 'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Total Bill'
+              ]),
+              rows: detailRows,
             ),
           ),
-          const SizedBox(height: 18),
-          // Grouped summaries
-          Text('Sub Contractor Summary', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
-          const SizedBox(height: 6),
-          Container(
-            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 12,
-                headingRowColor: WidgetStateProperty.all(primaryLight),
-                columns: _headersToColumns([
-                  'Sub Contractor', 'Man-Days', 'Std Hours', 'OT Hours',
-                  'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Net Bill'
-                ]),
-                rows: summaryRows,
-              ),
+        ),
+        const SizedBox(height: 18),
+        // Grouped summaries
+        Text('Sub Contractor Summary', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 12,
+              headingRowColor: WidgetStateProperty.all(primaryLight),
+              columns: _headersToColumns([
+                'Sub Contractor', 'Man-Days', 'Std Hours', 'OT Hours',
+                'Std Amount', 'OT Amount', 'Meals', 'Bus', 'Net Bill'
+              ]),
+              rows: summaryRows,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

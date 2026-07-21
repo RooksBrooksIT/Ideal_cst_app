@@ -183,62 +183,6 @@ class _SiteLabourDetailsReportScreenState
 
       final snap = await query.get();
 
-      // SC attendance entries may not carry a salary because the contractor
-      // master stores it as `salaryRate`. Load that master data once so the
-      // report can display and total the subcontractor's labour cost.
-      final results = await Future.wait([
-        FirebaseFirestore.instance.collection('sub_contractors').get(),
-        FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
-        FirebaseFirestore.instance.collection('supervisor').get(),
-      ]);
-      final subContractorsSnap = results[0];
-      final siteSupervisorMapSnap = results[1];
-      final supervisorCollectionSnap = results[2];
-
-      final subContractorSalaryById = <String, double>{};
-      final subContractorSalaryByName = <String, double>{};
-      for (final doc in subContractorsSnap.docs) {
-        final data = doc.data();
-        final salary =
-            data['salaryRate'] ?? data['basicSalary'] ?? data['salary'];
-        final salaryValue = salary is num
-            ? salary.toDouble()
-            : double.tryParse(salary?.toString() ?? '') ?? 0.0;
-        final name = (data['name'] ?? data['contractorName'])
-            ?.toString()
-            .trim();
-        final contractorId = data['contractorId']?.toString().trim();
-        subContractorSalaryById[doc.id] = salaryValue;
-        if (contractorId != null && contractorId.isNotEmpty) {
-          subContractorSalaryById[contractorId] = salaryValue;
-        }
-        if (name != null && name.isNotEmpty) {
-          subContractorSalaryByName[name.toLowerCase()] = salaryValue;
-        }
-      }
-
-      // Build siteId → supervisorName lookup from siteSupervisorMap
-      final siteIdToSupervisorName = <String, String>{};
-      for (final doc in siteSupervisorMapSnap.docs) {
-        final data = doc.data();
-        final sId = (data['siteId'] ?? doc.id)?.toString().trim();
-        final supName = data['supervisor']?.toString().trim();
-        if (sId != null && sId.isNotEmpty && supName != null && supName.isNotEmpty) {
-          siteIdToSupervisorName[sId] = supName;
-        }
-      }
-
-      // Build supervisorUserName → coordinatorName lookup from supervisor collection
-      final supervisorNameToCoordinator = <String, String>{};
-      for (final doc in supervisorCollectionSnap.docs) {
-        final data = doc.data();
-        final userName = data['UserName']?.toString().trim();
-        final coordName = data['CoordinatorName']?.toString().trim();
-        if (userName != null && userName.isNotEmpty && coordName != null && coordName.isNotEmpty) {
-          supervisorNameToCoordinator[userName.toLowerCase()] = coordName;
-        }
-      }
-
       List<Map<String, dynamic>> entries = snap.docs.map((d) {
         final data = Map<String, dynamic>.from(d.data());
         data['_docId'] = d.id;
@@ -252,30 +196,33 @@ class _SiteLabourDetailsReportScreenState
       double busAmountTotal = 0;
       int busCountTotal = 0;
 
-      // Keep one report row for every source entry.
+      // Keep one report row for every source entry from daily_labour_entries.
       final List<Map<String, dynamic>> reportRows = [];
 
       for (final e in entries) {
-        final siteId = e['siteId']?.toString() ?? '-';
+        final siteId = e['siteId']?.toString() ?? e['siteCode']?.toString() ?? '-';
         final siteName = e['siteName']?.toString() ?? '-';
         final subContractor =
             (e['contractorName']?.toString() ??
             e['subContractorName']?.toString() ??
+            e['subContractor']?.toString() ??
+            e['contractor']?.toString() ??
             '-');
-        final category = e['category']?.toString() ?? '-';
+        final category = e['category']?.toString() ?? e['categoryType']?.toString() ?? '-';
         final workerName = (e['workerName'] ?? e['name'] ?? '-').toString();
 
-        // ── Basic Salary: always use the entry's own field directly.
-        // Do NOT override with the sub_contractors master salaryRate — the
-        // entry already stores the correct agreed rate for that worker.
+        // ── Basic Salary: use entry's own field directly from daily_labour_entries
         final basicSalaryDirect =
-            (e['basicSalary'] as num?)?.toDouble() ?? 0.0;
+            (e['basicSalary'] as num?)?.toDouble() ??
+            (e['salaryBasic'] as num?)?.toDouble() ??
+            (e['rate'] as num?)?.toDouble() ??
+            0.0;
 
         // ── Attendance
-        final attendanceType = e['attendanceType']?.toString() ?? '-';
+        final attendanceType = e['attendanceType']?.toString() ?? e['attendance']?.toString() ?? '-';
 
         // ── Hours worked
-        final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? 0.0;
+        final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? (e['hours'] as num?)?.toDouble() ?? 0.0;
 
         // ── OT Hours (can be stored as num or string like "0.5 Hours")
         final otHoursRaw = e['otHours'] ?? e['overtimeHours'];
@@ -289,36 +236,33 @@ class _SiteLabourDetailsReportScreenState
         final overtimeAmt =
             (e['overtimeAmount'] as num?)?.toDouble() ??
             (e['otAmount'] as num?)?.toDouble() ??
+            (e['otTotalAmount'] as num?)?.toDouble() ??
             0.0;
 
         // ── Meals
         final mealsCount = (e['mealsCount'] as num?)?.toInt() ?? 0;
         final mealsAmount = (e['mealsAmount'] as num?)?.toDouble() ?? 0.0;
-        final mealsTotal = mealsCount * mealsAmount;
+        final storedMealsTotal = (e['totalMealsAmount'] as num?)?.toDouble() ?? (e['mealsTotal'] as num?)?.toDouble();
+        final mealsTotal = storedMealsTotal ?? (mealsCount * mealsAmount);
 
         // ── Bus
         final busCount = (e['busCount'] as num?)?.toInt() ?? 0;
         final busAmount = (e['busAmount'] as num?)?.toDouble() ?? 0.0;
-        final busTotal = busCount * busAmount;
+        final storedBusTotal = (e['totalBusAmount'] as num?)?.toDouble() ?? (e['busTotal'] as num?)?.toDouble();
+        final busTotal = storedBusTotal ?? (busCount * busAmount);
 
-        // ── Total Amount: prefer Firestore's stored totalSalary; fall back
-        // to computing from component parts if missing or zero.
-        final storedTotal = (e['totalSalary'] as num?)?.toDouble() ?? 0.0;
+        // ── Total Amount: prefer Firestore's stored total; fall back to component computation
+        final storedTotal = (e['totalSalary'] as num?)?.toDouble() ?? (e['totalAmount'] as num?)?.toDouble() ?? 0.0;
         final totalAmount = storedTotal > 0
             ? storedTotal
             : (basicSalaryDirect + overtimeAmt + mealsTotal + busTotal);
 
-        // ── Supervisor
-        final supervisorName = e['supervisorName']?.toString() ?? '-';
+        // ── Supervisor & Coordinator directly from daily_labour_entries
+        final supervisorName = e['supervisorName']?.toString() ?? e['supervisor']?.toString() ?? '-';
+        final coordinatorName = e['coordinatorName']?.toString() ?? e['coordinator']?.toString() ?? '-';
 
         // ── Remarks
         final remarks = e['remarks']?.toString() ?? '';
-
-        // ── Coordinator (siteId → supervisorUserName → coordinatorName)
-        final supervisorUserName = siteIdToSupervisorName[siteId] ?? '';
-        final coordinatorName =
-            supervisorNameToCoordinator[supervisorUserName.toLowerCase()] ??
-            '-';
 
         reportRows.add({
           'siteId': siteId,
