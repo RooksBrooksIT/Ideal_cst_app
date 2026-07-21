@@ -604,8 +604,6 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                               _buildMealsEntrySection(),
                               const SizedBox(height: 24),
                               _buildSummarySection(),
-                              const SizedBox(height: 24),
-                              _buildQuickActions(),
                               const SizedBox(height: 40),
                             ]),
                           ),
