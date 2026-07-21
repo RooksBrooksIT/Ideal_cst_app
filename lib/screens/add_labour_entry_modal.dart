@@ -513,32 +513,38 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     required double otHours,
     double? overtimeRate,
   }) {
-    final double hourlyRate = basicSalary / defaultHours;
+    final double defaultHrsToUse = defaultHours > 0 ? defaultHours : 8.0;
+    final double hourlyRate = basicSalary / defaultHrsToUse;
     final double overtimeRateToUse = (overtimeRate != null && overtimeRate > 0)
         ? overtimeRate
-        : hourlyRate * 1.5;
+        : (hourlyRate > 0 ? hourlyRate * 1.5 : 0.0);
 
-    double regularHours = hoursWorked > defaultHours
-        ? defaultHours
+    double regularHours = hoursWorked > defaultHrsToUse
+        ? defaultHrsToUse
         : hoursWorked;
-    final automaticOvertimeHours = hoursWorked > defaultHours
-        ? hoursWorked - defaultHours
+    final automaticOvertimeHours = hoursWorked > defaultHrsToUse
+        ? hoursWorked - defaultHrsToUse
         : 0.0;
-    // OT is populated from the time fields. Keep manually entered OT working
-    // for entries without times, without double-counting calculated OT.
     final overtimeHours = automaticOvertimeHours > otHours
         ? automaticOvertimeHours
         : otHours;
 
-    double regularSalary = regularHours * hourlyRate;
+    double regularSalary;
+    if (hoursWorked == 0 || hoursWorked >= defaultHrsToUse) {
+      regularSalary = basicSalary;
+    } else {
+      regularSalary = regularHours * hourlyRate;
+    }
+
     double overtimeSalary = overtimeHours * overtimeRateToUse;
     double totalSalary = regularSalary + overtimeSalary;
 
     return {
       'basicSalary': basicSalary,
-      'defaultHours': defaultHours,
+      'defaultHours': defaultHrsToUse,
       'hoursWorked': hoursWorked,
       'overtimeHours': overtimeHours,
+      'overtimeRate': overtimeRateToUse,
       'overtimeAmount': overtimeSalary,
       'totalSalary': totalSalary,
     };
@@ -667,7 +673,11 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           'labourType': 'Sub Contractor',
           'isContractor': true,
         };
-        basicSalary = (data['basicSalary'] as num?)?.toDouble() ?? 0.0;
+        basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
+            (data['salaryRate'] as num?)?.toDouble() ??
+            (data['rate'] as num?)?.toDouble() ??
+            (data['salary'] as num?)?.toDouble() ??
+            0.0;
         defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
         overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
       } else {
@@ -687,7 +697,11 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           'labourType': data['labourType'] ?? 'Daily Wage',
           'isContractor': false,
         };
-        basicSalary = (data['basicSalary'] as num?)?.toDouble() ?? 0.0;
+        basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
+            (data['salaryRate'] as num?)?.toDouble() ??
+            (data['rate'] as num?)?.toDouble() ??
+            (data['salary'] as num?)?.toDouble() ??
+            0.0;
         defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
         overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
       }
@@ -710,23 +724,48 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       hoursWorked = calculateHoursWorked(inTime, outTime);
     }
 
-    // Fetch subcontractor overtime rate if worker is under a subcontractor
-    final subContractorId = workerData['contractorId']?.toString() ?? '';
-    final isSubContractorLabour = workerData['labourType'] == 'Sub Contractor';
-    if (isSubContractorLabour && subContractorId.isNotEmpty) {
+    // Fetch subcontractor overtime rate & basic salary rate if missing
+    final subContractorId = workerData['contractorId']?.toString() ?? selectedContractorDoc?.id ?? '';
+    if (subContractorId.isNotEmpty) {
       try {
-        final subContractorDoc = await FirebaseFirestore.instance
-            .collection('sub_contractors')
-            .doc(subContractorId)
-            .get();
-        if (subContractorDoc.exists) {
-          final scData = subContractorDoc.data();
-          if (scData != null && scData['overtimeRate'] != null) {
-            overtimeRate = (scData['overtimeRate'] as num).toDouble();
+        DocumentSnapshot? subContractorDoc;
+        if (selectedContractorDoc != null && selectedContractorDoc!.id == subContractorId) {
+          subContractorDoc = selectedContractorDoc;
+        } else {
+          final doc = await FirebaseFirestore.instance
+              .collection('sub_contractors')
+              .doc(subContractorId)
+              .get();
+          if (doc.exists) {
+            subContractorDoc = doc;
+          } else {
+            final cDoc = await FirebaseFirestore.instance
+                .collection('contractors')
+                .doc(subContractorId)
+                .get();
+            if (cDoc.exists) subContractorDoc = cDoc;
+          }
+        }
+
+        if (subContractorDoc != null && subContractorDoc.exists) {
+          final scData = subContractorDoc.data() as Map<String, dynamic>?;
+          if (scData != null) {
+            final otR = (scData['overtimeRate'] as num?)?.toDouble();
+            if (otR != null && otR > 0) {
+              overtimeRate = otR;
+            }
+            if (basicSalary == 0.0) {
+              final rate = scData['salaryRate'] ?? scData['basicSalary'] ?? scData['rate'] ?? scData['salary'];
+              if (rate is num) {
+                basicSalary = rate.toDouble();
+              } else if (rate is String) {
+                basicSalary = double.tryParse(rate) ?? 0.0;
+              }
+            }
           }
         }
       } catch (e) {
-        debugPrint('Error fetching subcontractor overtime rate: $e');
+        debugPrint('Error fetching subcontractor details: $e');
       }
     }
 
@@ -763,6 +802,7 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       'defaultHours': salaryData['defaultHours'],
       'hoursWorked': salaryData['hoursWorked'],
       'overtimeHours': salaryData['overtimeHours'],
+      'overtimeRate': salaryData['overtimeRate'],
       'overtimeAmount': salaryData['overtimeAmount'],
       'totalSalary': salaryData['totalSalary'],
     };

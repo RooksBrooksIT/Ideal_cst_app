@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/screens/site_selection_screen.dart';
+import 'package:ideal_cst/screens/sub_contractor_management_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -648,6 +649,44 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                             ),
                             label: const Text(
                               'Select Project Coordinator',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Sub Contractor Management Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SubContractorManagementScreen(
+                                    supervisorId: widget.supervisorId,
+                                    supervisorName: widget.supervisorName,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.engineering,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Sub Contractor Management',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,

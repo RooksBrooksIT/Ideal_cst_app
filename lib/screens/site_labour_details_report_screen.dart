@@ -189,6 +189,25 @@ class _SiteLabourDetailsReportScreenState
         return data;
       }).toList();
 
+      // Fetch subcontractors salary mappings for fallback
+      final subContractorsSnap = await FirebaseFirestore.instance.collection('sub_contractors').get();
+      final subContractorSalaryById = <String, double>{};
+      final subContractorSalaryByName = <String, double>{};
+      for (final doc in subContractorsSnap.docs) {
+        final data = doc.data();
+        final salary = data['salaryRate'] ?? data['basicSalary'] ?? data['salary'];
+        final salaryValue = salary is num ? salary.toDouble() : double.tryParse(salary?.toString() ?? '') ?? 0.0;
+        final name = (data['name'] ?? data['contractorName'])?.toString().trim();
+        final contractorId = data['contractorId']?.toString().trim();
+        subContractorSalaryById[doc.id] = salaryValue;
+        if (contractorId != null && contractorId.isNotEmpty) {
+          subContractorSalaryById[contractorId] = salaryValue;
+        }
+        if (name != null && name.isNotEmpty) {
+          subContractorSalaryByName[name.toLowerCase()] = salaryValue;
+        }
+      }
+
       // Calculate overall totals
       double costTotal = 0;
       double mealsAmountTotal = 0;
@@ -217,6 +236,10 @@ class _SiteLabourDetailsReportScreenState
             (e['salaryBasic'] as num?)?.toDouble() ??
             (e['rate'] as num?)?.toDouble() ??
             0.0;
+        final subContractorSalary = (subContractorSalaryById[e['contractorId']?.toString()] ??
+            subContractorSalaryByName[subContractor.toLowerCase()] ??
+            0.0);
+        final salaryBasic = basicSalaryDirect > 0 ? basicSalaryDirect : subContractorSalary;
 
         // ── Attendance
         final attendanceType = e['attendanceType']?.toString() ?? e['attendance']?.toString() ?? '-';
@@ -231,6 +254,21 @@ class _SiteLabourDetailsReportScreenState
             : double.tryParse(
                     otHoursRaw?.toString().split(' ').first ?? '') ??
                 0.0;
+        final defaultHrs = (e['defaultHours'] as num?)?.toDouble() ?? 8.0;
+        double basicHours;
+        if (hoursWorked > otHoursValue) {
+          basicHours = hoursWorked - otHoursValue;
+        } else if (hoursWorked > 0) {
+          basicHours = hoursWorked;
+        } else {
+          if (attendanceType == 'Full Day' || attendanceType == 'Night Shift') {
+            basicHours = defaultHrs;
+          } else if (attendanceType == 'Half Day') {
+            basicHours = defaultHrs / 2;
+          } else {
+            basicHours = 0.0;
+          }
+        }
 
         // ── OT Amount
         final overtimeAmt =
@@ -251,11 +289,24 @@ class _SiteLabourDetailsReportScreenState
         final storedBusTotal = (e['totalBusAmount'] as num?)?.toDouble() ?? (e['busTotal'] as num?)?.toDouble();
         final busTotal = storedBusTotal ?? (busCount * busAmount);
 
-        // ── Total Amount: prefer Firestore's stored total; fall back to component computation
+        // ── Total Amount: prefer stored total if valid (>= salaryBasic + overtimeAmt); fall back to component computation
         final storedTotal = (e['totalSalary'] as num?)?.toDouble() ?? (e['totalAmount'] as num?)?.toDouble() ?? 0.0;
-        final totalAmount = storedTotal > 0
+        final totalAmount = (storedTotal >= (salaryBasic + overtimeAmt) && storedTotal > 0)
             ? storedTotal
-            : (basicSalaryDirect + overtimeAmt + mealsTotal + busTotal);
+            : (salaryBasic + overtimeAmt + mealsTotal + busTotal);
+
+        // ── OT Rate
+        double otRate = (e['overtimeRate'] as num?)?.toDouble() ??
+            (e['otRate'] as num?)?.toDouble() ??
+            (e['otSalaryBasic'] as num?)?.toDouble() ??
+            0.0;
+        if (otRate == 0.0) {
+          if (otHoursValue > 0 && overtimeAmt > 0) {
+            otRate = overtimeAmt / otHoursValue;
+          } else if (salaryBasic > 0 && defaultHrs > 0) {
+            otRate = (salaryBasic / defaultHrs) * 1.5;
+          }
+        }
 
         // ── Supervisor & Coordinator directly from daily_labour_entries
         final supervisorName = e['supervisorName']?.toString() ?? e['supervisor']?.toString() ?? '-';
@@ -274,7 +325,8 @@ class _SiteLabourDetailsReportScreenState
           'category': category,
           'basicSalary': basicSalaryDirect,
           'attendanceType': attendanceType,
-          'hoursWorked': hoursWorked,
+          'hoursWorked': basicHours,
+          'otRate': otRate,
           'otHours': otHoursValue,
           'otAmount': overtimeAmt,
           'mealsTotal': mealsTotal,

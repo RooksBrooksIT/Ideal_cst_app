@@ -424,14 +424,36 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 0.0)
           : 0.0;
 
-      final entrySalaryBasic = (e['basicSalary'] as num?)?.toDouble() ?? 0.0;
-      final salaryBasic = group == 'SC' && subContractorSalary > 0 ? subContractorSalary : entrySalaryBasic;
-      final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? 0.0;
-      final recordedTotalSalary = (e['totalSalary'] as num?)?.toDouble() ?? 0.0;
-      final totalSalary = group == 'SC' && recordedTotalSalary == 0 && subContractorSalary > 0 ? subContractorSalary : recordedTotalSalary;
-      final overtimeAmt = (e['overtimeAmount'] as num?)?.toDouble() ?? 0.0;
-      final otRate = (e['overtimeRate'] as num?)?.toDouble() ?? 0.0;
+      final entrySalaryBasic = (e['basicSalary'] as num?)?.toDouble() ??
+          (e['salaryBasic'] as num?)?.toDouble() ??
+          (e['rate'] as num?)?.toDouble() ??
+          0.0;
+      final salaryBasic = entrySalaryBasic > 0
+          ? entrySalaryBasic
+          : (group == 'SC' && subContractorSalary > 0 ? subContractorSalary : 0.0);
+      final hoursWorked = (e['hoursWorked'] as num?)?.toDouble() ?? (e['hours'] as num?)?.toDouble() ?? 0.0;
+      final otHours = e['otHours'] ?? e['overtimeHours'];
+      final doubleOtHours = otHours is num ? otHours.toDouble() : double.tryParse(otHours?.toString().split(' ').first ?? '0.0') ?? 0.0;
+      final defaultHrs = (e['defaultHours'] as num?)?.toDouble() ?? 8.0;
 
+      double basicHours;
+      if (hoursWorked > doubleOtHours) {
+        basicHours = hoursWorked - doubleOtHours;
+      } else if (hoursWorked > 0) {
+        basicHours = hoursWorked;
+      } else {
+        final att = e['attendanceType']?.toString() ?? 'Full Day';
+        if (att == 'Full Day' || att == 'Night Shift') {
+          basicHours = defaultHrs;
+        } else if (att == 'Half Day') {
+          basicHours = defaultHrs / 2;
+        } else {
+          basicHours = 0.0;
+        }
+      }
+
+      final recordedTotalSalary = (e['totalSalary'] as num?)?.toDouble() ?? (e['totalAmount'] as num?)?.toDouble() ?? 0.0;
+      final overtimeAmt = (e['overtimeAmount'] as num?)?.toDouble() ?? (e['otAmount'] as num?)?.toDouble() ?? 0.0;
       final mealsCount = (e['mealsCount'] as num?)?.toInt() ?? 0;
       final mealsAmount = (e['mealsAmount'] as num?)?.toDouble() ?? 0.0;
       final totalMealsAmt = mealsCount * mealsAmount;
@@ -439,8 +461,21 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final busCount = (e['busCount'] as num?)?.toInt() ?? 0;
       final busAmount = (e['busAmount'] as num?)?.toDouble() ?? 0.0;
       final totalBusAmt = busCount * busAmount;
-      final otHours = e['otHours'] ?? e['overtimeHours'];
-      final doubleOtHours = otHours is num ? otHours.toDouble() : double.tryParse(otHours?.toString().split(' ').first ?? '0.0') ?? 0.0;
+
+      final totalSalary = (recordedTotalSalary >= (salaryBasic + overtimeAmt) && recordedTotalSalary > 0)
+          ? recordedTotalSalary
+          : (salaryBasic + overtimeAmt + totalMealsAmt + totalBusAmt);
+      double otRate = (e['overtimeRate'] as num?)?.toDouble() ??
+          (e['otRate'] as num?)?.toDouble() ??
+          (e['otSalaryBasic'] as num?)?.toDouble() ??
+          0.0;
+      if (otRate == 0.0) {
+        if (doubleOtHours > 0 && overtimeAmt > 0) {
+          otRate = overtimeAmt / doubleOtHours;
+        } else if (salaryBasic > 0 && defaultHrs > 0) {
+          otRate = (salaryBasic / defaultHrs) * 1.5;
+        }
+      }
 
       rows.add({
         'siteId': siteId,
@@ -452,7 +487,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         'labourCount': 1,
         'salaryBasic': salaryBasic,
         'totalSalary': totalSalary,
-        'hours': hoursWorked,
+        'hours': basicHours,
         'otSalaryBasic': otRate,
         'otTotalAmount': overtimeAmt,
         'mealsExpense': mealsAmount,
@@ -1117,7 +1152,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               children: [
                 _buildKpiBadge('Total Subs', '${totals.totalSubContractors}', Icons.badge_outlined, Colors.indigo),
                 _buildKpiBadge('Total Workers', '${totals.totalWorkers}', Icons.people_outline, Colors.blue),
-                _buildKpiBadge('Total Hours', '${totals.totalHours.toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
+                _buildKpiBadge('Total Hours', '${(totals.totalHours + totals.totalOtHours).toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
                 _buildKpiBadge('OT Amount', '₹${totals.totalOtAmount.toStringAsFixed(2)}', Icons.more_time, Colors.deepOrange),
                 _buildKpiBadge('Meals & Bus', '₹${(totals.totalMealsAmount + totals.totalBusAmount).toStringAsFixed(2)}', Icons.directions_bus_outlined, Colors.teal),
                 _buildKpiBadge('Grand Total', '₹${totals.totalEarnedSalary.toStringAsFixed(2)}', Icons.account_balance_wallet_outlined, Colors.green, isBold: true),
@@ -1195,9 +1230,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text(r['group']?.toString() ?? '-')),
         DataCell(Text(r['category']?.toString() ?? '-')),
         DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
         DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}')),
+        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
         DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
         DataCell(Text('₹${(r['mealsExpense'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['mealsCount']}')),
@@ -1205,6 +1240,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         DataCell(Text('₹${(r['busFare'] as double).toStringAsFixed(2)}')),
         DataCell(Text('${r['busCount']}')),
         DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
+        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
       ]);
     });
 
@@ -1221,9 +1257,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             DataCell(const Text('-')),
             DataCell(const Text('-')),
             DataCell(Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
             DataCell(Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataCell(Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalMealsExpense.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalMealsCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
@@ -1231,6 +1267,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             DataCell(Text('₹${totals.totalBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('${totals.totalBusCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
           ],
         ),
       );
@@ -1244,9 +1281,10 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           columnSpacing: 12,
           headingRowColor: WidgetStateProperty.all(primaryColor),
           columns: _headersToColumns([
-            'Sl', 'Site Code', 'Site Name', 'Sub Contractor', 'Worker Name', 'Group',
-            'Category', 'Basic Wage', 'Total Earned', 'Hours', 'OT Basic', 'OT Amount',
-            'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total'
+            'Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group',
+            'Category', 'Basic Wage', 'Hrs', 'OT Rate', 'OT Hrs', 'OT Amount',
+            'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total',
+            'Total Earned Amount'
           ]),
           rows: dataRows,
         ),
@@ -2130,7 +2168,12 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // 1. Details PDF
   Future<pw.Document> _buildDetailsPDFDocument() {
     final totals = _ReportTotals.fromRows(reportData);
-    final headers = ['Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group', 'Category', 'Wage', 'Earned', 'Hrs', 'OT Rate', 'OT Amt', 'Meals', 'Bus'];
+    final headers = [
+      'Sl', 'Site Code', 'Site Name', 'Contractor', 'Worker Name', 'Group',
+      'Category', 'Basic Wage', 'Hrs', 'OT Rate', 'OT Hrs', 'OT Amount',
+      'Meals Exp', 'Meals Count', 'Meals Total', 'Bus Fare', 'Bus Count', 'Bus Total',
+      'Total Earned Amount'
+    ];
     final data = List<List<String>>.generate(reportData.length, (index) {
       final r = reportData[index];
       return [
@@ -2142,12 +2185,17 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         r['group']?.toString() ?? '-',
         r['category']?.toString() ?? '-',
         '₹${(r['salaryBasic'] as double).toStringAsFixed(2)}',
-        '₹${(r['totalSalary'] as double).toStringAsFixed(2)}',
-        ((r['hours'] as double).toStringAsFixed(1)),
+        (r['hours'] as double).toStringAsFixed(1),
         '₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}',
+        (r['otHours'] as double).toStringAsFixed(1),
         '₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}',
+        '₹${(r['mealsExpense'] as double).toStringAsFixed(2)}',
+        '${r['mealsCount']}',
         '₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}',
+        '₹${(r['busFare'] as double).toStringAsFixed(2)}',
+        '${r['busCount']}',
         '₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}',
+        '₹${(r['totalSalary'] as double).toStringAsFixed(2)}',
       ];
     });
 
@@ -2161,12 +2209,17 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         '-',
         '-',
         '₹${totals.totalBasicSalary.toStringAsFixed(2)}',
-        '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
-        (totals.totalHours.toStringAsFixed(1)),
+        totals.totalHours.toStringAsFixed(1),
         '₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}',
+        totals.totalOtHours.toStringAsFixed(1),
         '₹${totals.totalOtAmount.toStringAsFixed(2)}',
+        '₹${totals.totalMealsExpense.toStringAsFixed(2)}',
+        '${totals.totalMealsCount}',
         '₹${totals.totalMealsAmount.toStringAsFixed(2)}',
+        '₹${totals.totalBusFare.toStringAsFixed(2)}',
+        '${totals.totalBusCount}',
         '₹${totals.totalBusAmount.toStringAsFixed(2)}',
+        '₹${totals.totalEarnedSalary.toStringAsFixed(2)}',
       ]);
     }
     return _buildPdfBase('SITE LABOUR DETAILS REPORT', headers, data);

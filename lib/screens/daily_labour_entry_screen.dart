@@ -705,6 +705,26 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
+                              color: (worker['labourType'] == 'Sub Contractor' || isContractor)
+                                  ? Colors.orange.shade50
+                                  : Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              worker['labourType']?.toString() ?? (isContractor ? 'Sub Contractor' : 'Daily Wage'),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: (worker['labourType'] == 'Sub Contractor' || isContractor)
+                                    ? Colors.orange.shade800
+                                    : Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
                               color: worker['attendanceType'] == 'Full Day' ? Colors.green.shade50 : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -722,8 +742,8 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                       const SizedBox(height: 4),
                       Text(
                         isContractor
-                            ? '${worker['category'] ?? worker['workerType'] ?? ''} • Self'
-                            : '${worker['category'] ?? worker['workerType'] ?? ''} • Sub: ${worker['contractorName'] ?? worker['contractor'] ?? 'None'}',
+                            ? '${worker['category'] ?? worker['workerType'] ?? ''} • ${worker['labourType'] ?? 'Sub Contractor'} • Self'
+                            : '${worker['category'] ?? worker['workerType'] ?? ''} • ${worker['labourType'] ?? 'Daily Wage'} • Sub: ${worker['contractorName'] ?? worker['contractor'] ?? 'None'}',
                         style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
