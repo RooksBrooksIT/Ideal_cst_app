@@ -13,6 +13,7 @@ import 'package:ideal_cst/screens/organization/tools_inventory_report.dart';
 import 'package:ideal_cst/screens/config_account_dashboard.dart';
 import 'package:ideal_cst/screens/organization/org_site_payment_screen.dart';
 import 'package:ideal_cst/screens/organization/manager_approval_screen.dart';
+import 'package:ideal_cst/screens/organization/manage_admin_users.dart';
 
 class OrganizationDashboard extends StatelessWidget {
   const OrganizationDashboard({super.key});
@@ -92,6 +93,18 @@ class OrganizationDashboard extends StatelessWidget {
                 icon: Icons.settings,
                 color: Colors.blue[800]!,
                 onTap: () => _navigateToConfiguration(context),
+              ),
+              _buildActionCard(
+                title: "Manage Users",
+                subtitle: "Manage & create admin user accounts",
+                icon: Icons.admin_panel_settings,
+                color: const Color(0xFF003768),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageAdminUsersScreen(),
+                  ),
+                ),
               ),
 
               // Weekly Financial Balance Sheet Section
