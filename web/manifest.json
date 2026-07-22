@@ -1,6 +1,6 @@
 {
-    "name": "ideal_cst",
-    "short_name": "ideal_cst",
+    "name": "Ideal",
+    "short_name": "Ideal",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
