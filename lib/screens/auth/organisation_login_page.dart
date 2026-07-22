@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ideal_cst/screens/auth/auth_layout.dart';
 import 'package:ideal_cst/screens/onboarding/main_dashboard.dart';
-import 'package:ideal_cst/screens/Organization_Dashboard.dart';
+import 'package:ideal_cst/screens/organization/Organization_Dashboard.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

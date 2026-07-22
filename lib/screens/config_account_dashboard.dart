@@ -18,7 +18,7 @@ import 'package:ideal_cst/screens/project_stage_config.dart';
 import 'package:ideal_cst/screens/project_sub_category_screen.dart';
 import 'package:ideal_cst/screens/site_screen.dart';
 import 'package:ideal_cst/screens/site_supervisor_map_screen.dart';
-import 'package:ideal_cst/screens/tools_inventory_report.dart';
+import 'package:ideal_cst/screens/organization/tools_inventory_report.dart';
 import 'package:ideal_cst/screens/tools_master_page.dart';
 import 'package:ideal_cst/screens/tools_movement_page.dart';
 import 'package:ideal_cst/screens/vehicle_config_page.dart';
