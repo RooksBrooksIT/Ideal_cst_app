@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ideal_cst/screens/manager_expenses.dart';
+import 'package:ideal_cst/screens/organization/manager_expenses.dart';
 import 'package:ideal_cst/screens/manager_site_entry_page.dart';
 
 
