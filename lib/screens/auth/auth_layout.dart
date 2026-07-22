@@ -56,7 +56,7 @@ class AuthLayout extends StatelessWidget {
                   topLeft: Radius.circular(80),
                 ),
               ),
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

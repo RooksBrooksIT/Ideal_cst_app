@@ -248,7 +248,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: const Color(0xFF4527A0).withValues(alpha: 0.85),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -593,25 +593,22 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
         ),
         Row(
           children: [
-            IconButton(
-              icon: Icon(Icons.logout, color: Colors.grey[700]),
-              tooltip: "Logout",
-              onPressed: () => _showLogoutDialog(context),
-            ),
-            Container(
-              height: 48,
-              width: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: primaryColor.withValues(alpha: 0.1),
-                border: Border.all(color: primaryColor.withValues(alpha: 0.2), width: 2),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.person,
-                  color: primaryColor,
-                  size: 28,
+            GestureDetector(
+              onTap: () => _showLogoutDialog(context),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4527A0).withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(50),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
+                child: const Icon(Icons.logout, color: Colors.white, size: 26),
               ),
             ),
           ],

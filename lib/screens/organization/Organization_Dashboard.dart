@@ -41,7 +41,7 @@ class OrganizationDashboard extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: const Color(0xFF160068),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -229,7 +229,7 @@ class OrganizationDashboard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Organization',
+                  'Super Admin',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -237,42 +237,27 @@ class OrganizationDashboard extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                 ),
-                SizedBox(width: 8),
-                Text(
-                  '🏢',
-                  style: TextStyle(fontSize: 22),
-                ),
               ],
             ),
           ],
         ),
-        Row(
-          children: [
-            IconButton(
-              icon: Icon(Icons.logout, color: Colors.grey[700]),
-              tooltip: "Logout",
-              onPressed: () => _showLogoutConfirmation(context),
-            ),
-            Container(
-              height: 48,
-              width: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF003768).withValues(alpha: 0.1),
-                border: Border.all(
-                  color: const Color(0xFF003768).withValues(alpha: 0.2),
-                  width: 2,
+        GestureDetector(
+          onTap: () => _showLogoutConfirmation(context),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(163, 25, 1, 112).withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(50),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.business,
-                  color: Color(0xFF003768),
-                  size: 26,
-                ),
-              ),
+              ],
             ),
-          ],
+            child: const Icon(Icons.logout, color: Colors.white, size: 26),
+          ),
         ),
       ],
     );
