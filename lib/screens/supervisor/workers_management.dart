@@ -392,6 +392,7 @@ class _WorkersManagementScreenState extends State<WorkersManagementScreen> {
       category: contractor.category,
       mobileNumber: contractor.mobileNumber,
       address: contractor.address,
+      labourType: contractor.labourType,
       salaryType: contractor.salaryType,
       salaryRate: contractor.salaryRate,
       overtimeRate: contractor.overtimeRate,
@@ -866,6 +867,7 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
       address: _addressController.text.trim().isEmpty
           ? null
           : _addressController.text.trim(),
+      labourType: SubContractor.normaliseLabourType(_selectedSalaryType),
       salaryType: _selectedSalaryType,
       salaryRate: double.tryParse(_salaryRateController.text) ?? 0.0,
       overtimeRate: double.tryParse(_overtimeRateController.text) ?? 0.0,
