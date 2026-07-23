@@ -1,11 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Worker {
   final String? id;
   final String name;
   final String workerId;
   final String workerType;
-  final String salaryType;
+  final String labourType;
   final double basicSalary;
   final double overtimeRate;
   final double defaultHours;
@@ -33,7 +32,7 @@ class Worker {
     required this.name,
     required this.workerId,
     required this.workerType,
-    required this.salaryType,
+    required this.labourType,
     required this.basicSalary,
     required this.overtimeRate,
     this.defaultHours = 8.0,
@@ -62,7 +61,7 @@ class Worker {
       'name': name,
       'workerId': workerId,
       'workerType': workerType,
-      'salaryType': salaryType,
+      'labourType': labourType,
       'basicSalary': basicSalary,
       'overtimeRate': overtimeRate,
       'defaultHours': defaultHours,
@@ -93,7 +92,8 @@ class Worker {
       name: json['name'] ?? '',
       workerId: json['workerId'] ?? '',
       workerType: json['workerType'] ?? '',
-      salaryType: json['salaryType'] ?? 'Daily Wage',
+      // Read the legacy field so existing worker records continue to work.
+      labourType: json['labourType'] ?? json['salaryType'] ?? 'Daily Wage',
       basicSalary: (json['basicSalary'] as num?)?.toDouble() ?? 0.0,
       overtimeRate: (json['overtimeRate'] as num?)?.toDouble() ?? 0.0,
       defaultHours: (json['defaultHours'] as num?)?.toDouble() ?? 8.0,

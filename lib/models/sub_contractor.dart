@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SubContractor {
   final String? id;
@@ -10,6 +9,7 @@ class SubContractor {
   final String labourType;
   final String salaryType;
   final double salaryRate;
+  final double overtimeRate;
   final List<String> assignedSiteIds;
   final bool isActive;
   final DateTime joiningDate;
@@ -29,6 +29,7 @@ class SubContractor {
     required this.labourType,
     required this.salaryType,
     required this.salaryRate,
+    this.overtimeRate = 0.0,
     required this.assignedSiteIds,
     this.isActive = true,
     required this.joiningDate,
@@ -62,6 +63,7 @@ class SubContractor {
       'labourType': labourType,
       'salaryType': salaryType,
       'salaryRate': salaryRate,
+      'overtimeRate': overtimeRate,
       'assignedSiteIds': assignedSiteIds,
       'isActive': isActive,
       'joiningDate': joiningDate.toIso8601String(),
@@ -84,6 +86,7 @@ class SubContractor {
       labourType: normaliseLabourType(json['labourType'] ?? json['salaryType']),
       salaryType: json['salaryType'] ?? 'Daily Wage',
       salaryRate: (json['salaryRate'] as num?)?.toDouble() ?? 0.0,
+      overtimeRate: (json['overtimeRate'] as num?)?.toDouble() ?? 0.0,
       assignedSiteIds: List<String>.from(json['assignedSiteIds'] ?? []),
       isActive: json['isActive'] ?? true,
       joiningDate: json['joiningDate'] != null

@@ -46,28 +46,37 @@ dependencies:
   geocoding: ^4.0.0
   image_picker: ^1.1.2
   firebase_storage: ^13.0.4
-  file_picker: ^10.2.1
+  file_picker: ^10.3.10
   webview_flutter: ^4.13.0
   webview_flutter_android: ^4.3.0  # Updated version
   webview_flutter_wkwebview: ^3.0.0
   table_calendar: ^3.0.9
   shared_preferences: ^2.5.3
   path_provider: ^2.1.1
-  open_file: ^3.3.3
+  open_file: ^4.0.0
   share_plus: ^10.1.4
-  excel_community: ^1.0.7
+  excel_community: ^1.0.10
   
  
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/ideal logo-03.jpg"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/images/ideal logo-03.jpg"
+  windows:
+    generate: true
+    image_path: "assets/images/ideal logo-03.jpg"
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -84,6 +93,7 @@ flutter:
   assets:
     - assets/images/splash_screen_logo.png
     - assets/images/construction_illustration.png
+    - assets/images/ideal logo-03.jpg
     - assets/animation/config-login.json
     - assets/animation/success.json
     - assets/animation/empty_box.json

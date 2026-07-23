@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // ignore: depend_on_referenced_packages
-import 'package:ideal_cst/screens/supervisor_dashboard.dart';
+import 'package:ideal_cst/screens/supervisor/supervisor_dashboard.dart';
 import 'package:ideal_cst/services/expense_service.dart';
 import 'package:intl/intl.dart';
 
@@ -409,6 +409,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
       "siteLocation": siteLocation,
       "siteId": siteCode,
     };
+
     try {
       // Check for existing entry for this site and date
       final existing = await FirebaseFirestore.instance
@@ -436,10 +437,31 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
         });
         return;
       }
+
+      // Fetch coordinator name automatically
+      String? fetchedCoordinatorName;
+      try {
+        final coordDocs = await FirebaseFirestore.instance
+            .collection('Site_Co-ordinator')
+            .where('siteName', isEqualTo: siteCode)
+            .where('supervisorName', isEqualTo: widget.userName)
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
+        if (coordDocs.docs.isNotEmpty) {
+          fetchedCoordinatorName = coordDocs.docs.first.data()['coordinatorName'] as String?;
+        }
+      } catch (e) {
+        debugPrint('Error fetching coordinator: $e');
+      }
+
+      data["coordinatorName"] = fetchedCoordinatorName ?? '';
+
       await FirebaseFirestore.instance
           .collection('siteSupervisorEntries')
           .doc(docId)
           .set(data);
+
       // Update total site expense aggregation
       await ExpenseService.updateTotalSiteExpense(siteCode);
       // --- Update siteSupervisorProjectStageActual collection ---
@@ -954,7 +976,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
-                                    value: selectedSiteId,
+                                    initialValue: selectedSiteId,
                                     isExpanded: true,
                                     decoration: InputDecoration(
                                       labelText: 'Site Id (Supervisor Only)',
@@ -1263,7 +1285,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
                                                 ),
                                                 const SizedBox(height: 8),
                                                 DropdownButtonFormField<String>(
-                                                  value: selectedMaterial,
+                                                  initialValue: selectedMaterial,
                                                   isExpanded: true,
                                                   decoration: InputDecoration(
                                                     labelText: 'Material',
@@ -1583,7 +1605,7 @@ class _SiteEntryPageState extends State<SiteEntryPage> {
                                                 ),
                                                 const SizedBox(height: 8),
                                                 DropdownButtonFormField<String>(
-                                                  value: selectedLabour,
+                                                  initialValue: selectedLabour,
                                                   isExpanded: true,
                                                   decoration: InputDecoration(
                                                     labelText: 'Labour',

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-2 {
+        font-family: FranklinGothic-Demi, 'Franklin Gothic Demi';
+        font-size: 178.85px;
+        font-weight: 300;
+      }
+
+      .cls-2, .cls-3, .cls-4 {
+        fill: #162c3a;
+      }
+
+      .cls-4 {
+        font-family: ErasITC-Medium, 'Eras Medium ITC';
+        font-size: 124.92px;
+        font-weight: 500;
+      }
+    </style>
+  </defs>
+  <rect class="cls-1" width="1080" height="1080"/>
+  <g id="Layer_2" data-name="Layer 2">
+    <g>
+      <path class="cls-3" d="M198.83,404.97v28.7h-44.18v-28.7h44.18ZM198.83,462.53v119.8h-44.18v-119.8h44.18Z"/>
+      <text class="cls-2" transform="translate(220.5 580.48) scale(1.06 1)"><tspan x="0" y="0">D</tspan></text>
+      <path class="cls-3" d="M479.21,485.48h-68.73v24.99h54.03v22.94h-54.03v26.6h68.73v24.1h-103.09v-121.83h103.09v23.21Z"/>
+      <polygon class="cls-3" points="785.79 579.52 717.34 580.48 696.23 522.18 603.32 522.18 581.39 580.48 517.64 580.48 621.39 350.62 681.19 350.62 785.79 579.52"/>
+      <path class="cls-3" d="M862.74,556.14h62.6v23.17h-99.96v-117.11h37.36v93.95Z"/>
+      <polygon class="cls-3" points="544.77 404.97 529.49 433.67 229.71 433.67 229.71 404.97 544.77 404.97"/>
+      <polygon class="cls-3" points="713.1 320.82 599.45 320.82 546.9 419.53 539.36 433.67 529.49 433.67 544.77 404.97 589.57 320.82 594.22 312.09 708.44 312.09 713.1 320.82"/>
+      <polygon class="cls-3" points="925.35 404.97 925.35 433.67 763.3 433.67 750.27 409.19 703.21 320.82 713.1 320.82 757.91 404.97 925.35 404.97"/>
+      <text class="cls-4" transform="translate(217.19 736.69)"><tspan x="0" y="0">SINCE 1981</tspan></text>
+    </g>
+  </g>
+</svg>

@@ -103,7 +103,7 @@ class _ConstructionDocumentsState extends State<ConstructionDocuments> {
                             .toSet()
                             .toList(); // Ensure unique IDs
                         return DropdownButtonFormField<String>(
-                          value: selectedSiteId,
+                          initialValue: selectedSiteId,
                           decoration: InputDecoration(
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
@@ -197,7 +197,7 @@ class _ConstructionDocumentsState extends State<ConstructionDocuments> {
                                   children: [
                                     TableRow(
                                       decoration: BoxDecoration(
-                                          color: accentColor.withOpacity(0.2)),
+                                          color: accentColor.withValues(alpha: 0.2)),
                                       children: [
                                         Padding(
                                           padding: const EdgeInsets.all(8.0),
