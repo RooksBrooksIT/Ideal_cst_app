@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 class ProjectScreen extends StatefulWidget {
   final String? projectId;
@@ -54,7 +55,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
   String? selectedProjectId;
 
   // Color scheme
-  final Color primaryColor = const Color(0xFF003768);
+  final Color primaryColor = ManagerTheme.primaryColor;
   final Color secondaryColor = const Color(0xFFf5f7fa);
   final Color accentColor = const Color(0xFF4a8cff);
   final Color textColor = const Color(0xFF2c3e50);
@@ -532,28 +533,25 @@ class _ProjectScreenState extends State<ProjectScreen> {
     } catch (e) {}
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Project Management',
+      title: 'Project Configuration',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "Project Configuration",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: primaryColor,
-        centerTitle: true,
-        elevation: 4,
-        shadowColor: Colors.black.withValues(alpha: 0.3),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
-        ),
-      ),
-      body: Container(
-        color: secondaryColor,
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
           child: Column(
             children: [
+              _buildHeader(context),
+              const SizedBox(height: 20),
               // Toggle buttons for New/Update mode
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -767,40 +765,33 @@ class _ProjectScreenState extends State<ProjectScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8,
-                    ),
-                    child: CheckboxListTile(
-                      value: _isContractWork,
-                      onChanged: (val) {
-                        setState(() {
-                          _isContractWork = val ?? false;
-                          if (!_isContractWork) {
-                            // Clear contract dates when unchecked
-                            contractStartDate = null;
-                            contractEndDate = null;
-                          }
-                        });
-                      },
-                      title: Text(
-                        'Is Contract Work',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: primaryColor,
-                        ),
+                  child: CheckboxListTile(
+                    value: _isContractWork,
+                    onChanged: (val) {
+                      setState(() {
+                        _isContractWork = val ?? false;
+                        if (!_isContractWork) {
+                          // Clear contract dates when unchecked
+                          contractStartDate = null;
+                          contractEndDate = null;
+                        }
+                      });
+                    },
+                    title: Text(
+                      'Is Contract Work',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
                       ),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: primaryColor,
-                      tileColor: Colors.white,
                     ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: primaryColor,
                   ),
                 ),
               ),
@@ -1901,20 +1892,10 @@ class _ProjectScreenState extends State<ProjectScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
+            ManagerTheme.buildPrimaryButton(
+              label: 'Close',
               onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: successColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-              child: const Text('Close'),
+              color: successColor,
             ),
           ],
         ),

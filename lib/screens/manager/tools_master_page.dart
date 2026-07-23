@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class ToolMasterPage extends StatefulWidget {
   const ToolMasterPage({super.key});
@@ -98,46 +100,69 @@ class _ToolMasterPageState extends State<ToolMasterPage>
     });
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Tools Management',
+      title: 'Tool Master',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Color(0xFF0b3470),
-        title: const Text(
-          "Tool Master",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorWeight: 4,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: TextStyle(
-            fontSize: isSmallScreen ? 14 : 16,
-            fontWeight: FontWeight.bold,
-          ),
-          tabs: const [
-            Tab(icon: Icon(Icons.add_circle_outline), text: 'Add Tool'),
-            Tab(icon: Icon(Icons.edit_outlined), text: 'Update Tool'),
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: ManagerTheme.primaryColor,
+                labelColor: ManagerTheme.primaryColor,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                tabs: const [
+                  Tab(icon: Icon(Icons.add_circle_outline), text: 'Add Tool'),
+                  Tab(icon: Icon(Icons.edit_outlined), text: 'Update Tool'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildNewTab(theme, isSmallScreen),
+                  _buildUpdateTab(theme, isSmallScreen),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildNewTab(theme, isSmallScreen),
-          _buildUpdateTab(theme, isSmallScreen),
-        ],
       ),
     );
   }
@@ -164,7 +189,7 @@ class _ToolMasterPageState extends State<ToolMasterPage>
                       "Add New Tool",
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0b3470),
+                        color: ManagerTheme.primaryColor,
                       ),
                     ),
                   ),
@@ -244,7 +269,7 @@ class _ToolMasterPageState extends State<ToolMasterPage>
                       "Update Tool Count",
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0b3470),
+                        color: ManagerTheme.primaryColor,
                       ),
                     ),
                   ),
@@ -253,28 +278,16 @@ class _ToolMasterPageState extends State<ToolMasterPage>
                     label: "Select Tool",
                     child: _isLoadingTools
                         ? Center(child: CircularProgressIndicator())
-                        : DropdownButtonFormField<String>(
-                            initialValue: _selectedToolDocId,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF0b3470),
-                                ),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                            hint: Text("Select a tool"),
+                        : CustomDropdown<String>(
+                            value: _selectedToolDocId,
+                            hintText: "Select a tool",
+                            prefixIcon: Icons.build,
                             items: _toolsList
                                 .map(
                                   (doc) => DropdownMenuItem<String>(
                                     value: doc.id,
                                     child: Text(
                                       doc['toolCode'] ?? doc.id,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 )
@@ -327,7 +340,7 @@ class _ToolMasterPageState extends State<ToolMasterPage>
           label,
           style: theme?.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF0b3470),
+            color: ManagerTheme.primaryColor,
           ),
         ),
         SizedBox(height: 8),
@@ -340,11 +353,11 @@ class _ToolMasterPageState extends State<ToolMasterPage>
                 hintText: hint,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFF0b3470)),
+                  borderSide: BorderSide(color: ManagerTheme.primaryColor),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFF0b3470), width: 2),
+                  borderSide: BorderSide(color: ManagerTheme.primaryColor, width: 2),
                 ),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
@@ -363,26 +376,16 @@ class _ToolMasterPageState extends State<ToolMasterPage>
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Color(0xFF0b3470)),
+        border: Border.all(color: ManagerTheme.primaryColor),
       ),
       child: Text(value, style: theme.textTheme.bodyMedium),
     );
   }
 
   Widget _buildDropdown(ThemeData theme) {
-    return DropdownButtonFormField<String>(
-      initialValue: _toolOwner,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Color(0xFF0b3470)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Color(0xFF0b3470), width: 2),
-        ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
+    return CustomDropdown<String>(
+      value: _toolOwner,
+      prefixIcon: Icons.business,
       items: [
         'Org',
         'Rental',
@@ -408,7 +411,7 @@ class _ToolMasterPageState extends State<ToolMasterPage>
                 : Icon(Icons.save, size: 20),
             label: Text(_isSaving ? 'Saving...' : 'Save'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0b3470),
+              backgroundColor: ManagerTheme.primaryColor,
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -424,8 +427,8 @@ class _ToolMasterPageState extends State<ToolMasterPage>
             icon: Icon(Icons.clear, size: 20),
             label: Text('Clear'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Color(0xFF0b3470),
-              side: BorderSide(color: Color(0xFF0b3470)),
+              foregroundColor: ManagerTheme.primaryColor,
+              side: BorderSide(color: ManagerTheme.primaryColor),
               backgroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -454,7 +457,7 @@ class _ToolMasterPageState extends State<ToolMasterPage>
             icon: Icon(Icons.update, size: 20),
             label: Text('Update'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0b3470),
+              backgroundColor: ManagerTheme.primaryColor,
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -470,8 +473,8 @@ class _ToolMasterPageState extends State<ToolMasterPage>
             icon: Icon(Icons.clear, size: 20),
             label: Text('Cancel'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Color(0xFF0b3470),
-              side: BorderSide(color: Color(0xFF0b3470)),
+              foregroundColor: ManagerTheme.primaryColor,
+              side: BorderSide(color: ManagerTheme.primaryColor),
               backgroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(

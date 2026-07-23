@@ -10,7 +10,7 @@ import 'package:ideal_cst/screens/organization/organization_expenses.dart';
 import 'package:ideal_cst/screens/organization/organization_site_entry.dart';
 import 'package:ideal_cst/screens/organization/reports/org_site_weekly_financial_report.dart';
 import 'package:ideal_cst/screens/organization/tools_inventory_report.dart';
-import 'package:ideal_cst/screens/config_account_dashboard.dart';
+import 'package:ideal_cst/screens/manager/config_account_dashboard.dart';
 import 'package:ideal_cst/screens/organization/org_site_payment_screen.dart';
 import 'package:ideal_cst/screens/organization/manager_approval_screen.dart';
 import 'package:ideal_cst/screens/organization/manage_admin_users.dart';

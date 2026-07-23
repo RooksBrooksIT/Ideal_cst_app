@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ideal_cst/screens/auth/auth_layout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ideal_cst/screens/config_account_dashboard.dart';
+import 'package:ideal_cst/screens/manager/config_account_dashboard.dart';
 
 class AppColors {
   static const primaryColor = Color(0xFF003768);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class WorkersConfigPage extends StatefulWidget {
   final String? supervisorId;
@@ -327,42 +329,66 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
     }
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Worker Management',
+      title: 'Workers Configuration',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Workers Configuration'),
-        backgroundColor: const Color(0xFF0b3470),
-        foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          tabs: [
-            Tab(text: 'Create New Worker'),
-            Tab(text: 'Workers List'),
-          ],
-        ),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.grey.shade100],
-          ),
-        ),
-        child: TabBarView(
-          controller: _tabController,
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Column(
           children: [
-            // Create New Worker Tab
-            _buildCreateWorkerTab(),
-            // Workers List Tab
-            _buildWorkersListTab(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: ManagerTheme.primaryColor,
+                labelColor: ManagerTheme.primaryColor,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                tabs: const [
+                  Tab(text: 'Create New Worker'),
+                  Tab(text: 'Workers List'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Create New Worker Tab
+                  _buildCreateWorkerTab(),
+                  // Workers List Tab
+                  _buildWorkersListTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -388,7 +414,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0b3470),
+                      color: ManagerTheme.primaryColor,
                     ),
                   ),
                   SizedBox(height: 20),
@@ -413,35 +439,41 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                       ),
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _selectedContractor,
-                          decoration: InputDecoration(
-                            labelText: 'Sub-Contractor *',
-                            border: InputBorder.none,
-                            icon: Icon(
-                              Icons.person_outline,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
+                        child: CustomDropdown<String>(
+                          value: _selectedContractor,
+                          labelText: 'Sub-Contractor *',
+                          prefixIcon: Icons.person_outline,
                           items: _contractors.isNotEmpty
                               ? _contractors.map<DropdownMenuItem<String>>((
                                   contractor,
                                 ) {
                                   final contractorId =
-                                      contractor['contractorId'] as String?;
+                                      contractor['id']?.toString() ?? '';
                                   final contractorName =
-                                      contractor['contractorName'] as String?;
+                                      contractor['name']?.toString() ??
+                                      '';
+
                                   return DropdownMenuItem<String>(
-                                    value: contractorId,
+                                    value: contractorId.isEmpty
+                                        ? null
+                                        : contractorId,
                                     child: Text(
-                                      contractorName ?? contractorId ?? '',
+                                      contractorName.isEmpty
+                                          ? 'Unknown'
+                                          : '$contractorName ($contractorId)',
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   );
                                 }).toList()
-                              : [],
-                          onChanged: (String? value) {
+                              : [
+                                  const DropdownMenuItem(
+                                    value: null,
+                                    child: Text('No Contractors Available'),
+                                  ),
+                                ],
+                          onChanged: (val) {
                             setState(() {
-                              _selectedContractor = value;
+                              _selectedContractor = val;
                             });
                           },
                         ),
@@ -449,7 +481,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                     ),
                   if (widget.contractorId != null)
                     Container(
-                      padding: EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
@@ -461,63 +493,50 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                             Icons.person_outline,
                             color: Colors.grey.shade600,
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Contractor: ${widget.contractorName ?? widget.contractorId}',
-                              style: TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedDesignation,
-                        decoration: InputDecoration(
-                          labelText: 'Designation *',
-                          border: InputBorder.none,
-                          icon: Icon(Icons.work, color: Colors.grey.shade600),
-                        ),
-                        items: _designations.isNotEmpty
-                            ? _designations.map<DropdownMenuItem<String>>((
-                                designation,
-                              ) {
-                                final designationValue =
-                                    designation['designation']?.toString() ??
-                                    '';
-                                final salaryValue =
-                                    designation['salary']?.toString() ?? '';
+                  const SizedBox(height: 16),
+                  CustomDropdown<String>(
+                    value: _selectedDesignation,
+                    labelText: 'Designation *',
+                    prefixIcon: Icons.work,
+                    items: _designations.isNotEmpty
+                        ? _designations.map<DropdownMenuItem<String>>((
+                            designation,
+                          ) {
+                            final designationValue =
+                                designation['designation']?.toString() ??
+                                '';
+                            final salaryValue =
+                                designation['salary']?.toString() ?? '';
 
-                                return DropdownMenuItem<String>(
-                                  value: designationValue.isEmpty
-                                      ? null
-                                      : designationValue,
-                                  child: Text(designationValue),
-                                  onTap: () {
-                                    setState(() {
-                                      _salaryController.text = salaryValue;
-                                      _isSalaryEditable =
-                                          false; // Reset to non-editable when new designation selected
-                                    });
-                                  },
-                                );
-                              }).toList()
-                            : [],
-                        onChanged: (String? value) {
-                          setState(() {
-                            _selectedDesignation = value;
-                          });
-                        },
-                      ),
-                    ),
+                            return DropdownMenuItem<String>(
+                              value: designationValue.isEmpty
+                                  ? null
+                                  : designationValue,
+                              child: Text(designationValue),
+                              onTap: () {
+                                setState(() {
+                                  _salaryController.text = salaryValue;
+                                  _isSalaryEditable = false;
+                                });
+                              },
+                            );
+                          }).toList()
+                        : [],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedDesignation = value;
+                      });
+                    },
                   ),
                   SizedBox(height: 16),
                   _buildSalaryField(),
@@ -554,7 +573,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                   ElevatedButton(
                     onPressed: _createWorker,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0b3470),
+                      backgroundColor: ManagerTheme.primaryColor,
                       foregroundColor: Colors.white,
                       minimumSize: Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
@@ -613,7 +632,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
           IconButton(
             icon: Icon(
               _isSalaryEditable ? Icons.lock_open : Icons.edit,
-              color: _isSalaryEditable ? const Color(0xFF0b3470) : Colors.grey,
+              color: _isSalaryEditable ? ManagerTheme.primaryColor : Colors.grey,
             ),
             onPressed: () {
               setState(() {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 class MaterialAvailability extends StatefulWidget {
   const MaterialAvailability({super.key});
@@ -343,7 +344,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             'Edit Count',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Color(0xFF003768),
+              color: ManagerTheme.primaryColor,
             ),
           ),
           content: Column(
@@ -374,7 +375,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF003768),
+                backgroundColor: ManagerTheme.primaryColor,
               ),
               child: const Text(
                 'Update',
@@ -462,7 +463,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
               child: const Text(
                 'OK',
                 style: TextStyle(
-                  color: Color(0xFF003768),
+                  color: ManagerTheme.primaryColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -503,7 +504,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
               child: const Text(
                 'OK',
                 style: TextStyle(
-                  color: Color(0xFF003768),
+                  color: ManagerTheme.primaryColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -524,30 +525,36 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
     });
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Material Management',
+      title: 'Material Availability',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          'Material Availability',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF003768),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: _isLoadingMaterials
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF003768),
-                    ),
-                  ),
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
+            ),
+            Expanded(
+              child: _isLoadingMaterials
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              ManagerTheme.primaryColor,
+                            ),
+                          ),
                   SizedBox(height: 16),
                   Text(
                     'Loading materials...',
@@ -572,6 +579,10 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    ),
     );
   }
 
@@ -583,16 +594,16 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             onPressed: _switchToNewMode,
             style: ElevatedButton.styleFrom(
               backgroundColor: _isNewMode
-                  ? const Color(0xFF003768)
+                  ? ManagerTheme.primaryColor
                   : Colors.white,
               foregroundColor: _isNewMode
                   ? Colors.white
-                  : const Color(0xFF003768),
+                  : ManagerTheme.primaryColor,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
-                  color: const Color(0xFF003768),
+                  color: ManagerTheme.primaryColor,
                   width: _isNewMode ? 0 : 2,
                 ),
               ),
@@ -610,16 +621,16 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             onPressed: _switchToUpdateMode,
             style: ElevatedButton.styleFrom(
               backgroundColor: !_isNewMode
-                  ? const Color(0xFF003768)
+                  ? ManagerTheme.primaryColor
                   : Colors.white,
               foregroundColor: !_isNewMode
                   ? Colors.white
-                  : const Color(0xFF003768),
+                  : ManagerTheme.primaryColor,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
-                  color: const Color(0xFF003768),
+                  color: ManagerTheme.primaryColor,
                   width: !_isNewMode ? 0 : 2,
                 ),
               ),
@@ -644,7 +655,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF003768),
+            color: ManagerTheme.primaryColor,
           ),
         ),
         const SizedBox(height: 16),
@@ -676,7 +687,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: const Color(0xFF003768).withValues(alpha: 0.7),
+                    color: ManagerTheme.primaryColor.withValues(alpha: 0.7),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -686,7 +697,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF003768),
+                        color: ManagerTheme.primaryColor,
                       ),
                     ),
                   ),
@@ -719,7 +730,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF003768),
+            color: ManagerTheme.primaryColor,
           ),
         ),
         const SizedBox(height: 16),
@@ -738,17 +749,17 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF003768).withValues(alpha: 0.1),
+              color: ManagerTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: const Color(0xFF003768).withValues(alpha: 0.3),
+                color: ManagerTheme.primaryColor.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.inventory_2_outlined,
-                  color: const Color(0xFF003768),
+                  color: ManagerTheme.primaryColor,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
@@ -761,7 +772,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -770,7 +781,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                     ],
@@ -830,7 +841,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: const Color(0xFF003768).withValues(alpha: 0.7),
+                    color: ManagerTheme.primaryColor.withValues(alpha: 0.7),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -840,7 +851,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF003768),
+                        color: ManagerTheme.primaryColor,
                       ),
                     ),
                   ),
@@ -877,7 +888,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF003768),
+            color: ManagerTheme.primaryColor,
           ),
         ),
         const SizedBox(height: 12),
@@ -888,28 +899,31 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
               child: Container(
                 decoration: BoxDecoration(
                   color: _addToExisting
-                      ? const Color(0xFF003768).withValues(alpha: 0.1)
+                      ? ManagerTheme.primaryColor.withValues(alpha: 0.1)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: _addToExisting
-                        ? const Color(0xFF003768)
+                        ? ManagerTheme.primaryColor
                         : Colors.grey.shade300,
                     width: _addToExisting ? 2 : 1,
                   ),
                 ),
-                child: CheckboxListTile(
-                  title: const Text(
-                    'Add',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                child: Material(
+                  color: Colors.transparent,
+                  child: CheckboxListTile(
+                    title: const Text(
+                      'Add',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text('Add to existing count'),
+                    value: _addToExisting,
+                    onChanged: _onAddToExistingChanged,
+                    activeColor: ManagerTheme.primaryColor,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  subtitle: const Text('Add to existing count'),
-                  value: _addToExisting,
-                  onChanged: _onAddToExistingChanged,
-                  activeColor: const Color(0xFF003768),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
               ),
             ),
@@ -919,28 +933,31 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
               child: Container(
                 decoration: BoxDecoration(
                   color: _updateExisting
-                      ? const Color(0xFF003768).withValues(alpha: 0.1)
+                      ? ManagerTheme.primaryColor.withValues(alpha: 0.1)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: _updateExisting
-                        ? const Color(0xFF003768)
+                        ? ManagerTheme.primaryColor
                         : Colors.grey.shade300,
                     width: _updateExisting ? 2 : 1,
                   ),
                 ),
-                child: CheckboxListTile(
-                  title: const Text(
-                    'Update',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                child: Material(
+                  color: Colors.transparent,
+                  child: CheckboxListTile(
+                    title: const Text(
+                      'Update',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text('Replace existing count'),
+                    value: _updateExisting,
+                    onChanged: _onUpdateExistingChanged,
+                    activeColor: ManagerTheme.primaryColor,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
-                  subtitle: const Text('Replace existing count'),
-                  value: _updateExisting,
-                  onChanged: _onUpdateExistingChanged,
-                  activeColor: const Color(0xFF003768),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
               ),
             ),
@@ -970,7 +987,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF003768),
+            color: ManagerTheme.primaryColor,
           ),
         ),
         const SizedBox(height: 8),
@@ -1019,7 +1036,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
                 }
                 return null;
               },
-              icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF003768)),
+              icon: const Icon(Icons.arrow_drop_down, color: ManagerTheme.primaryColor),
             ),
           ),
         ),
@@ -1049,7 +1066,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF003768),
+            color: ManagerTheme.primaryColor,
           ),
         ),
         const SizedBox(height: 8),
@@ -1118,7 +1135,7 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF003768),
+            color: ManagerTheme.primaryColor,
           ),
         ),
         const SizedBox(height: 8),
@@ -1170,12 +1187,12 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _submitNewMaterial,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF003768),
+          backgroundColor: ManagerTheme.primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           elevation: 2,
-          shadowColor: const Color(0xFF003768).withValues(alpha: 0.3),
+          shadowColor: ManagerTheme.primaryColor.withValues(alpha: 0.3),
         ),
         child: _isLoading
             ? const SizedBox(
@@ -1207,12 +1224,12 @@ class _MaterialAvailabilityState extends State<MaterialAvailability> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _updateExistingMaterial,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF003768),
+          backgroundColor: ManagerTheme.primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           elevation: 2,
-          shadowColor: const Color(0xFF003768).withValues(alpha: 0.3),
+          shadowColor: ManagerTheme.primaryColor.withValues(alpha: 0.3),
         ),
         child: _isLoading
             ? const SizedBox(

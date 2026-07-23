@@ -1,9 +1,9 @@
  import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ideal_cst/screens/organization/Organization_Dashboard.dart';
-import 'package:ideal_cst/screens/config_account_dashboard.dart';
+import 'package:ideal_cst/screens/manager/config_account_dashboard.dart';
 import 'package:ideal_cst/screens/supervisor/supervisor_dashboard.dart';
-import 'package:ideal_cst/screens/contractor_entry_page.dart';
+import 'package:ideal_cst/screens/manager/contractor_entry_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

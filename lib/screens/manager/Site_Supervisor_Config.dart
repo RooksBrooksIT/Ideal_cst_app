@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lottie/lottie.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class SiteSupervisorConfig extends StatefulWidget {
   const SiteSupervisorConfig({super.key});
@@ -22,7 +24,7 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
   int _selectedTab = 0; // 0: Create, 1: Info
   bool _isSubmitting = false;
 
-  final Color primaryColor = const Color(0xFF0b3470);
+  final Color primaryColor = ManagerTheme.primaryColor;
 
   @override
   void initState() {
@@ -461,22 +463,26 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
     super.dispose();
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Supervisor Management',
+      title: 'Supervisor Configuration',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Site Supervisor Configuration',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: primaryColor,
-        centerTitle: true,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
+            ),
+            const SizedBox(height: 8),
           // Top Two Buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -565,6 +571,7 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -577,7 +584,7 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildHeader(),
+            _buildFormHeader(),
             const SizedBox(height: 24),
             _buildTextField('Full Name', _fullNameController, isRequired: true),
             const SizedBox(height: 16),
@@ -614,7 +621,7 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildFormHeader() {
     return Column(
       children: [
         Container(
@@ -786,41 +793,21 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
           ),
         ),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          decoration: InputDecoration(
-            hintText: 'Select Designation',
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            filled: true,
-            fillColor: Colors.grey[50],
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: primaryColor, width: 2),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.grey[400]!),
-            ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
-          initialValue: _selectedDesignation,
+        CustomDropdown<String>(
+          value: _selectedDesignation,
+          hintText: 'Select Designation',
+          prefixIcon: Icons.work,
           items: _designationList
               .map(
-                (designation) => DropdownMenuItem(
-                  value: designation,
-                  child: Text(
-                    designation,
-                    style: TextStyle(color: Colors.black87, fontSize: 15),
-                  ),
+                (desig) => DropdownMenuItem(
+                  value: desig,
+                  child: Text(desig),
                 ),
               )
               .toList(),
-          onChanged: (value) {
+          onChanged: (val) {
             setState(() {
-              _selectedDesignation = value;
+              _selectedDesignation = val;
             });
           },
           validator: (value) {
@@ -829,8 +816,6 @@ class _SiteSupervisorConfigState extends State<SiteSupervisorConfig> {
             }
             return null;
           },
-          dropdownColor: Colors.white,
-          style: TextStyle(color: Colors.black87, fontSize: 15),
         ),
       ],
     );

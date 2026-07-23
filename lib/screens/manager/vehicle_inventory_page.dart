@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-// import 'package:ideal_cst/screens/vehichle_inventory_pdf.dart';
-import 'package:ideal_cst/screens/vehicle_inventory_pdf.dart';
+import 'package:ideal_cst/screens/manager/vehicle_inventory_pdf.dart';
 import 'package:intl/intl.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 /// Vehicle Inventory Report
 /// - Filter modes: by Date (string equality on 'date'), by Month (createdAt range), by Site (toLocation equality)
@@ -343,15 +344,14 @@ class _VehicleInventoryReportPageState
           ],
         );
       case ReportFilterMode.site:
-        return DropdownButtonFormField<String>(
-          decoration: const InputDecoration(labelText: 'Site'),
-          isExpanded: true,
+        return CustomDropdown<String>(
+          labelText: 'Site',
+          prefixIcon: Icons.construction,
+          value: _selectedSite,
           items: _sites
               .map((s) => DropdownMenuItem(value: s, child: Text(s)))
               .toList(),
-          initialValue: _selectedSite,
           onChanged: (v) => setState(() => _selectedSite = v),
-          validator: (v) => v == null || v.isEmpty ? 'Select a site' : null,
         );
     }
   }
@@ -409,19 +409,30 @@ class _VehicleInventoryReportPageState
     );
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Vehicle Management',
+      title: 'Vehicle Inventory Report',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Vehicle Inventory Report')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 16),
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   _buildModeSelector(),
                   const SizedBox(height: 16),
                   if (_isLoadingSites && _mode == ReportFilterMode.site)
@@ -473,6 +484,7 @@ class _VehicleInventoryReportPageState
           ],
         ),
       ),
+    ),
     );
   }
 }

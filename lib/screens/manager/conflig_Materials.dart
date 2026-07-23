@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 class MatlsScreen extends StatefulWidget {
   const MatlsScreen({super.key});
@@ -10,7 +11,7 @@ class MatlsScreen extends StatefulWidget {
 
 class _MatlsScreenState extends State<MatlsScreen> {
   // Constants
-  static const Color primaryColor = Color(0xFF0b3470); // Professional blue
+  static const Color primaryColor = ManagerTheme.primaryColor; // Professional blue
   static const Color dangerColor = Color(0xFFDC3545);
   static const Color successColor = Color(0xFF28A745);
   static const double defaultPadding = 16.0;
@@ -399,70 +400,43 @@ class _MatlsScreenState extends State<MatlsScreen> {
 
   // Form action buttons UI
   Widget _buildFormActionButtons() {
-    return Wrap(
-      spacing: defaultPadding,
-      runSpacing: defaultPadding / 2,
-      children: [
-        ElevatedButton.icon(
-          icon: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Icon(Icons.save, size: 20),
-          label: Text(_isSaving ? 'Saving...' : 'Save'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: successColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Padding(
+      padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ManagerTheme.buildCircularButton(
+            icon: Icons.save,
+            label: 'Save',
+            backgroundColor: ManagerTheme.primaryColor,
+            onPressed: _isSaving ? null : _handleSaveAll,
           ),
-          onPressed: _isSaving ? null : _handleSaveAll,
-        ),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.clear, size: 20),
-          label: const Text('Clear'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.grey[700],
-            side: BorderSide(color: Colors.grey[400]!),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ManagerTheme.buildCircularButton(
+            icon: Icons.refresh,
+            label: 'Reset',
+            backgroundColor: Colors.orange,
+            onPressed: _isSaving
+                ? null
+                : () {
+                    if (_mode == 'category') {
+                      setState(() {
+                        _categoryController.clear();
+                      });
+                    } else {
+                      setState(() {
+                        _unitEditController.clear();
+                      });
+                    }
+                  },
           ),
-          onPressed: () {
-            if (_mode == 'category') {
-              setState(() {
-                _categoryController.clear();
-              });
-            } else {
-              setState(() {
-                _unitEditController.clear();
-              });
-            }
-          },
-        ),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.cancel, size: 20),
-          label: const Text('Cancel'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: dangerColor,
-            side: BorderSide(color: dangerColor.withValues(alpha: 0.5)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ManagerTheme.buildCircularButton(
+            icon: Icons.cancel,
+            label: 'Cancel',
+            backgroundColor: Colors.red,
+            onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
           ),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -572,7 +546,7 @@ class _MatlsScreenState extends State<MatlsScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: dangerColor,
+                  color: primaryColor,
                 ),
               ),
               const SizedBox(height: formFieldSpacing),
@@ -595,7 +569,7 @@ class _MatlsScreenState extends State<MatlsScreen> {
                   ElevatedButton(
                     onPressed: _addEntry,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: dangerColor,
+                      backgroundColor: primaryColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(borderRadius),
                       ),
@@ -644,31 +618,35 @@ class _MatlsScreenState extends State<MatlsScreen> {
     );
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Material Configuration',
+      title: 'Material Master',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Material Master',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: primaryColor,
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildModeSwitchButtons(),
-            const SizedBox(height: defaultPadding),
-            Expanded(
-              child: _mode == 'category'
-                  ? _buildCategoryContent()
-                  : _buildUnitContent(),
-            ),
-          ],
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 16),
+              _buildModeSwitchButtons(),
+              const SizedBox(height: defaultPadding),
+              Expanded(
+                child: _mode == 'category'
+                    ? _buildCategoryContent()
+                    : _buildUnitContent(),
+              ),
+            ],
+          ),
         ),
       ),
     );

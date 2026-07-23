@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 class VehicleDriverConfigPage extends StatefulWidget {
   const VehicleDriverConfigPage({super.key});
@@ -152,25 +153,59 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
     }
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Vehicle Management',
+      title: 'Driver Configuration',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Driver Configuration'),
-          centerTitle: true,
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.person_add), text: 'New Driver'),
-              Tab(icon: Icon(Icons.people), text: 'Existing Drivers'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          controller: _tabController,
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: ManagerTheme.primaryColor,
+                labelColor: ManagerTheme.primaryColor,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                tabs: const [
+                  Tab(icon: Icon(Icons.person_add), text: 'New Driver'),
+                  Tab(icon: Icon(Icons.people), text: 'Existing Drivers'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
             // New Driver Tab
             SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -188,7 +223,7 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                               children: [
                                 Icon(
                                   _isEditing ? Icons.edit : Icons.person_add,
-                                  color: Colors.blue,
+                                  color: ManagerTheme.primaryColor,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -198,7 +233,7 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blue,
+                                    color: ManagerTheme.primaryColor,
                                   ),
                                 ),
                               ],
@@ -206,10 +241,9 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _driverNameController,
-                              decoration: const InputDecoration(
+                              decoration: ManagerTheme.buildInputDecoration(
                                 labelText: 'Driver Name',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.person),
+                                prefixIcon: Icons.person,
                               ),
                               validator: (v) =>
                                   v!.isEmpty ? 'Enter driver name' : null,
@@ -218,10 +252,9 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                             TextFormField(
                               controller: _driverPhoneController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
+                              decoration: ManagerTheme.buildInputDecoration(
                                 labelText: 'Phone Number',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.phone),
+                                prefixIcon: Icons.phone,
                               ),
                               inputFormatters: [
                                 // Allow only numbers and limit to 10 digits
@@ -243,10 +276,9 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
 
                             TextFormField(
                               controller: _driverLicenseController,
-                              decoration: const InputDecoration(
+                              decoration: ManagerTheme.buildInputDecoration(
                                 labelText: 'License Number',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.card_membership),
+                                prefixIcon: Icons.card_membership,
                               ),
                               validator: (v) =>
                                   v!.isEmpty ? 'Enter license number' : null,
@@ -255,10 +287,9 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                             TextFormField(
                               controller: _experienceController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
+                              decoration: ManagerTheme.buildInputDecoration(
                                 labelText: 'Experience (years)',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.work),
+                                prefixIcon: Icons.work,
                               ),
                               validator: (v) =>
                                   v!.isEmpty ? 'Enter experience' : null,
@@ -266,10 +297,9 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                             const SizedBox(height: 10),
                             TextFormField(
                               controller: _driverAddressController,
-                              decoration: const InputDecoration(
+                              decoration: ManagerTheme.buildInputDecoration(
                                 labelText: 'Address',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.location_on),
+                                prefixIcon: Icons.location_on,
                               ),
                               maxLines: 2,
                               validator: (v) =>
@@ -306,17 +336,10 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton.icon(
+                          child: ManagerTheme.buildPrimaryButton(
+                            label: _isEditing ? 'Update Driver' : 'Save Driver',
+                            icon: _isEditing ? Icons.save : Icons.person_add,
                             onPressed: _saveDriver,
-                            icon: Icon(
-                              _isEditing ? Icons.save : Icons.person_add,
-                            ),
-                            label: Text(
-                              _isEditing ? 'Update Driver' : 'Save Driver',
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
                           ),
                         ),
                         if (_isEditing) ...[
@@ -401,7 +424,7 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                       elevation: 2,
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: ManagerTheme.primaryColor,
                           child: Text(
                             data['driverId']?.toString().substring(2) ?? '',
                             style: const TextStyle(color: Colors.white),
@@ -456,7 +479,7 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
                           children: [
                             IconButton(
                               onPressed: () => _editDriver(driver),
-                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              icon: const Icon(Icons.edit, color: ManagerTheme.primaryColor),
                               tooltip: 'Edit Driver',
                             ),
                             IconButton(
@@ -475,6 +498,9 @@ class _VehicleDriverConfigPageState extends State<VehicleDriverConfigPage>
           ],
         ),
       ),
+    ],
+    ),
+    ),
     );
   }
 }

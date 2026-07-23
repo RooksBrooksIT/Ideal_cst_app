@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class AddVehicleLogPage extends StatefulWidget {
   const AddVehicleLogPage({super.key});
@@ -405,23 +407,43 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
     );
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Vehicle Management',
+      title: 'Vehicle Movement Log',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Vehicle Movement Log'),
-          centerTitle: true,
-          backgroundColor: Colors.blue[700],
-          foregroundColor: Colors.white,
-        ),
-        body: const Center(
+        backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+        body: SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading data...'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                child: _buildHeader(context),
+              ),
+              const Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(ManagerTheme.primaryColor),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading data...',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -429,103 +451,57 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vehicle Movement Log'),
-        centerTitle: true,
-        backgroundColor: Color(0xFF003768),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadInitialData,
-            tooltip: 'Reload Data',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Basic Information Card
-              Card(
-                elevation: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Basic Information',
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 16),
+                Card(
+                  elevation: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Basic Information',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 16),
                       // Vehicle Dropdown
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedVehicle,
-                        decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
-                          labelText: 'Select Vehicle',
-                          prefixIcon: const Icon(Icons.local_shipping),
-                          errorText: _vehicles.isEmpty
-                              ? 'No vehicles available'
-                              : null,
-                        ),
+                      CustomDropdown<String>(
+                        value: _selectedVehicle,
+                        labelText: 'Select Vehicle',
+                        prefixIcon: Icons.local_shipping,
                         items: _vehicles
                             .map<DropdownMenuItem<String>>(
                               (vehicle) => DropdownMenuItem<String>(
                                 value: vehicle['id'],
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      vehicle['modelName'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    // Text(
-                                    //   vehicle['modelName'],
-                                    //   style: TextStyle(
-                                    //     fontSize: 14,
-                                    //     color: Colors.grey[600],
-                                    //   ),
-                                    // ),
-                                    // if (vehicle['numberPlate'] != null &&
-                                    //     vehicle['numberPlate']
-                                    //         .toString()
-                                    //         .isNotEmpty)
-                                    //   Text(
-                                    //     'Plate: ${vehicle['numberPlate']}',
-                                    //     style: TextStyle(
-                                    //       fontSize: 12,
-                                    //       color: Colors.grey[500],
-                                    //     ),
-                                    //   ),
-                                  ],
+                                child: Text(
+                                  vehicle['modelName'] ?? '',
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             )
                             .toList(),
                         onChanged: _vehicles.isEmpty
-                            ? null
+                            ? (val) {}
                             : (value) {
                                 setState(() {
                                   _selectedVehicle = value;
                                 });
                               },
-                        validator: (value) =>
-                            value == null ? 'Please select a vehicle' : null,
-                        isExpanded: true,
                       ),
                       const SizedBox(height: 12),
                       // Selected Vehicle Info
@@ -541,7 +517,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                             children: [
                               const Icon(
                                 Icons.info,
-                                color: Color(0xFF003768),
+                                color: ManagerTheme.primaryColor,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
@@ -553,7 +529,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                                       'Selected Vehicle:',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Color(0xFF003768),
+                                        color: ManagerTheme.primaryColor,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -583,7 +559,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         children: [
                           const Icon(
                             Icons.calendar_today,
-                            color: Color(0xFF003768),
+                            color: ManagerTheme.primaryColor,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -594,7 +570,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                           ElevatedButton(
                             onPressed: () => _selectDate(context),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF003768),
+                              backgroundColor: ManagerTheme.primaryColor,
                               foregroundColor: Colors.white,
                             ),
                             child: const Text('Change Date'),
@@ -620,7 +596,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -666,7 +642,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -766,7 +742,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -850,7 +826,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                                     ? _selectedUnit
                                     : null,
                                 suffixStyle: const TextStyle(
-                                  color: Color(0xFF003768),
+                                  color: ManagerTheme.primaryColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -892,7 +868,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -963,7 +939,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003768),
+                          color: ManagerTheme.primaryColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1011,6 +987,7 @@ class _AddVehicleLogPageState extends State<AddVehicleLogPage> {
           ),
         ),
       ),
+    ),
     );
   }
 }

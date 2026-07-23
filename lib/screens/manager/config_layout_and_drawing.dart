@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class LayoutAndDrawingsPage extends StatefulWidget {
   const LayoutAndDrawingsPage({super.key});
@@ -19,9 +21,9 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
 
   List<Map<String, String>> uploadedDocuments = [];
 
-  final Color primaryColor = const Color(0xFF0b3470);
+  final Color primaryColor = ManagerTheme.primaryColor;
   final Color accentColor = const Color(0xFF073060);
-  final Color backgroundColor = const Color(0xFFF5F7FA);
+  final Color backgroundColor = const Color.fromARGB(255, 218, 238, 220);
 
   List<Map<String, String>> allSites = [];
 
@@ -148,25 +150,26 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
     return true;
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Layout & Drawings',
+      title: 'Layout and Drawings',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: const Text('Layout and Drawings',style: TextStyle(color: Colors.white),),
-        backgroundColor: primaryColor,
-        centerTitle: true,
-        elevation: 5,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
-        ),
-        shadowColor: primaryColor.withValues(alpha: 0.6),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 20),
             Card(
               elevation: 4,
               shadowColor: primaryColor.withValues(alpha: 0.25),
@@ -189,25 +192,11 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
                         }
                         allSites = snapshot.data!;
                         final sites = allSites.map((site) => site['site']!).toList();
-                        return DropdownButtonFormField<String>(
-                          initialValue: selectedSiteId,
-                          decoration: InputDecoration(
-                            labelText: 'Site ID',
-                            labelStyle:
-                                TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: primaryColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: primaryColor, width: 2),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                          ),
+                        return CustomDropdown<String>(
+                          value: selectedSiteId,
+                          labelText: 'Site ID',
+                          hintText: 'Select Site ID',
+                          prefixIcon: Icons.construction,
                           items: sites
                               .map((site) => DropdownMenuItem(
                                     value: site,
@@ -218,10 +207,6 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
                             setState(() => selectedSiteId = value);
                             setSupervisorAndProject(value);
                           },
-                          hint: const Text('Select Site ID'),
-                          borderRadius: BorderRadius.circular(14),
-                          icon: Icon(Icons.arrow_drop_down, color: primaryColor),
-                          style: TextStyle(color: Colors.grey[900], fontWeight: FontWeight.w500),
                         );
                       },
                     ),
@@ -461,54 +446,30 @@ class _LayoutAndDrawingsPageState extends State<LayoutAndDrawingsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
+      ),
+      bottomNavigationBar: Container(
+        color: backgroundColor,
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _canSave ? _saveDocuments : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 6,
-                  shadowColor: primaryColor.withValues(alpha: 0.8),
-                ),
-                child: const Text('Save', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              ),
+            ManagerTheme.buildCircularButton(
+              icon: Icons.save,
+              label: 'Save',
+              backgroundColor: primaryColor,
+              onPressed: _canSave ? _saveDocuments : null,
             ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _cancelDocuments,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 6,
-                  shadowColor: Colors.black45,
-                ),
-                child: const Text('Reset', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              ),
+            ManagerTheme.buildCircularButton(
+              icon: Icons.refresh,
+              label: 'Reset',
+              backgroundColor: Colors.orange,
+              onPressed: _cancelDocuments,
             ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 6,
-                  shadowColor: Colors.red.shade900,
-                ),
-                child: const Text('Cancel', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              ),
+            ManagerTheme.buildCircularButton(
+              icon: Icons.cancel,
+              label: 'Cancel',
+              backgroundColor: Colors.red,
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ],
         ),

@@ -3,7 +3,7 @@ import 'package:ideal_cst/screens/auth/auth_layout.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ideal_cst/screens/contractor_entry_page.dart';
+import 'package:ideal_cst/screens/manager/contractor_entry_page.dart';
 import 'package:ideal_cst/screens/supervisor/supervisor_dashboard.dart';
 
 class AppColors {

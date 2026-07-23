@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 class WorkerAttendanceSalaryPage extends StatefulWidget {
   const WorkerAttendanceSalaryPage({super.key});
@@ -1153,36 +1154,55 @@ class _WorkerAttendanceSalaryPageState
     );
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: ManagerTheme.buildHeader(
+            context,
+            category: 'Worker Management',
+            title: 'Attendance & Salary',
+          ),
+        ),
+        Row(
+          children: [
+            if (_filteredWorkers.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.select_all, color: ManagerTheme.primaryColor),
+                onPressed: _selectAllWorkers,
+                tooltip: 'Select/Deselect All',
+              ),
+            IconButton(
+              icon: const Icon(Icons.refresh, color: ManagerTheme.primaryColor),
+              onPressed: _isLoading ? null : _loadInitialData,
+              tooltip: 'Refresh Data',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Worker Attendance & Salary'),
-        backgroundColor: Color(0xFF003768),
-        foregroundColor: Colors.white,
-        actions: [
-          if (_filteredWorkers.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.select_all),
-              onPressed: _selectAllWorkers,
-              tooltip: 'Select/Deselect All',
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
             ),
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadInitialData,
-            tooltip: 'Refresh Data',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        children: [
                         _buildFilterSection(),
                         SizedBox(height: 16),
                         Row(
@@ -1199,7 +1219,7 @@ class _WorkerAttendanceSalaryPageState
                               Text(
                                 '${_selectedWorkerIds.length} selected',
                                 style: TextStyle(
-                                  color: Color(0xFF003768),
+                                  color: ManagerTheme.primaryColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1250,6 +1270,7 @@ class _WorkerAttendanceSalaryPageState
           _buildSubmitButton(),
         ],
       ),
+    ),
     );
   }
 }

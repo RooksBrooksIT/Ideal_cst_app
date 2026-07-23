@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/screens/supervisor/supervisor_dashboard.dart';
 import 'package:ideal_cst/services/expense_service.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 import 'package:intl/intl.dart';
 
 
@@ -71,9 +72,9 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
   DateTime? _selectedUpdateDate;
 
   // Color scheme
-  final Color primaryColor = const Color(0xFF0b3470);
+  final Color primaryColor = ManagerTheme.primaryColor;
   final Color accentColor = const Color(0xFF4a7cda);
-  final Color lightBackgroundColor = const Color(0xFFf5f7fa);
+  final Color lightBackgroundColor = const Color.fromARGB(255, 218, 238, 220);
   final Color cardBackgroundColor = Colors.white;
   final Color textColor = const Color(0xFF2c3e50);
   final Color successColor = const Color(0xFF27ae60);
@@ -1261,28 +1262,16 @@ class _ManagerSiteEntryPageState extends State<ManagerSiteEntryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SupervisorDashboard(
-                  username: widget.userName,
-                  supervisorId: '',
-                  supervisorName: '',
-                ),
-              ),
-            );
-          },
-          child: const Text('Manager Daily Site Entry',
-              style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Manager Daily Site Entry',
+          style: TextStyle(color: Color(0xFF1E1E2D), fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: primaryColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF1E1E2D)),
       ),
-      backgroundColor: lightBackgroundColor,
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(

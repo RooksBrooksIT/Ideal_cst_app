@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 class ToolsMovementPage extends StatefulWidget {
   const ToolsMovementPage({super.key});
@@ -12,9 +13,9 @@ class ToolsMovementPage extends StatefulWidget {
 class _ToolsMovementPageState extends State<ToolsMovementPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final Color _primaryColor = const Color(0xFF0b3470);
+  final Color _primaryColor = ManagerTheme.primaryColor;
   final Color _accentColor = const Color(0xFF4d79c2);
-  final Color _backgroundColor = const Color(0xFFF5F7FA);
+  final Color _backgroundColor = const Color.fromARGB(255, 218, 238, 220);
   final Color _cardColor = Colors.white;
   final Color _textColor = const Color(0xFF2c3e50);
   final Color _successColor = const Color(0xFF27ae60);
@@ -364,60 +365,83 @@ class _ToolsMovementPageState extends State<ToolsMovementPage>
     });
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Tools Management',
+      title: 'Tools Movement',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Filtered lists for search bars (case-insensitive)
-    final companyFilteredTools = _tools.where((t) {
-      final code = (t['toolCode'] ?? '').toString().toLowerCase();
-      final name = (t['toolName'] ?? '').toString().toLowerCase();
+    // Filter tools based on search
+    final companyFilteredTools = _tools.where((tool) {
+      if (_companyToolSearchText.isEmpty) return true;
+      final code = (tool['toolCode'] ?? '').toString().toLowerCase();
+      final name = (tool['toolName'] ?? '').toString().toLowerCase();
       return code.contains(_companyToolSearchText) ||
           name.contains(_companyToolSearchText);
     }).toList();
 
-    final returnFilteredTools = _tools.where((t) {
-      final code = (t['toolCode'] ?? '').toString().toLowerCase();
-      final name = (t['toolName'] ?? '').toString().toLowerCase();
+    final returnFilteredTools = _tools.where((tool) {
+      if (_returnToolSearchText.isEmpty) return true;
+      final code = (tool['toolCode'] ?? '').toString().toLowerCase();
+      final name = (tool['toolName'] ?? '').toString().toLowerCase();
       return code.contains(_returnToolSearchText) ||
           name.contains(_returnToolSearchText);
     }).toList();
 
     return Scaffold(
       backgroundColor: _backgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'Tools Movement',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        centerTitle: true,
-        backgroundColor: _primaryColor,
-        elevation: 4,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 4,
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-          tabs: const [
-            Tab(text: 'Company to Site'),
-            Tab(text: 'Site to Company'),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: _primaryColor,
+                labelColor: _primaryColor,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                tabs: const [
+                  Tab(text: 'Company to Site'),
+                  Tab(text: 'Site to Company'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildCompanyToSiteTab(companyFilteredTools),
+                  _buildSiteToCompanyTab(returnFilteredTools),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildCompanyToSiteTab(companyFilteredTools),
-          _buildSiteToCompanyTab(returnFilteredTools),
-        ],
       ),
     );
   }

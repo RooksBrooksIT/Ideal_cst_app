@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 class WorkerMappingPage extends StatefulWidget {
   const WorkerMappingPage({super.key});
@@ -355,21 +356,28 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
         _selectedWorkersList.isNotEmpty;
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Worker Management',
+      title: 'Worker Site Mapping',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Worker Site Mapping'),
-        backgroundColor: Color(0xFF003768),
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Site Selection Section
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 20),
+                // Site Selection Section
               _buildSectionHeader('Select Site'),
               _buildSiteSelectionSection(),
 
@@ -392,6 +400,7 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -403,7 +412,7 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF003768),
+          color: ManagerTheme.primaryColor,
         ),
       ),
     );
@@ -412,21 +421,22 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
   Widget _buildSiteSelectionSection() {
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             // Site Dropdown
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: _selectedSite,
-              decoration: InputDecoration(
+              decoration: ManagerTheme.buildInputDecoration(
                 labelText: 'Site *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.construction),
+                prefixIcon: Icons.construction,
               ),
               items: _isLoadingSites
                   ? [
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: null,
                         child: Text('Loading sites...'),
                       ),
@@ -434,13 +444,16 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
                   : _sites.map<DropdownMenuItem<String>>((site) {
                       return DropdownMenuItem<String>(
                         value: site['site'] as String?,
-                        child: Text(site['site'] ?? ''),
+                        child: Text(
+                          site['site'] ?? '',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
               onChanged: _onSiteSelected,
             ),
 
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
 
             // Auto-filled Supervisor and Project Name
             if (_selectedSupervisor != null || _selectedProjectName != null)
@@ -450,7 +463,7 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
                     'Supervisor',
                     _selectedSupervisor ?? 'Not available',
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   _buildReadOnlyField(
                     'Project Name',
                     _selectedProjectName ?? 'Not available',
@@ -458,7 +471,7 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
                 ],
               )
             else if (_selectedSite != null)
-              Text(
+              const Text(
                 'No supervisor/project details found for this site',
                 style: TextStyle(color: Colors.orange),
               ),
@@ -478,24 +491,26 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
 
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             // Worker Dropdown and Add Button Row
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _selectedWorker,
-                    decoration: InputDecoration(
+                    decoration: ManagerTheme.buildInputDecoration(
                       labelText: 'Select Worker',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                      prefixIcon: Icons.person,
                     ),
                     items: _isLoadingWorkers
                         ? [
-                            DropdownMenuItem(
+                            const DropdownMenuItem(
                               value: null,
                               child: Text('Loading workers...'),
                             ),
@@ -505,22 +520,26 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
                           ) {
                             return DropdownMenuItem<String>(
                               value: worker['name'] as String?,
-                              child: Text(worker['name'] ?? ''),
+                              child: Text(
+                                worker['name'] ?? '',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                     onChanged: _onWorkerSelected,
                   ),
                 ),
-                SizedBox(width: 12),
-                SizedBox(
-                  height: 56, // Match the dropdown height
-                  child: ElevatedButton.icon(
-                    onPressed: _addWorkerToList,
-                    icon: Icon(Icons.add),
-                    label: Text('Add'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _addWorkerToList,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ManagerTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -578,7 +597,7 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF003768),
+                    color: ManagerTheme.primaryColor,
                   ),
                 ),
                 if (_selectedWorkersList.isNotEmpty)
@@ -674,18 +693,10 @@ class _WorkerMappingPageState extends State<WorkerMappingPage> {
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
+      child: ManagerTheme.buildPrimaryButton(
+        label: 'Save Site Mapping',
+        icon: Icons.save,
         onPressed: _isFormComplete ? _submitMapping : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _isFormComplete ? Color(0xFF003768) : Colors.grey,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: Text(
-          'Save Site Mapping',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
       ),
     );
   }

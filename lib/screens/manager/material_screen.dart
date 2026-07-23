@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class MaterialScreen extends StatefulWidget {
   const MaterialScreen({super.key});
@@ -432,13 +434,13 @@ class _MaterialScreenState extends State<MaterialScreen>
           title: const Text('Confirm Update'),
           content: const Text('Would you like to save your changes?'),
           actions: [
-            TextButton(
+            ManagerTheme.buildDialogCancelButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
             ),
-            ElevatedButton(
+            ManagerTheme.buildDialogButton(
+              label: 'Confirm',
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Confirm'),
+              icon: Icons.check,
             ),
           ],
         ),
@@ -463,35 +465,59 @@ class _MaterialScreenState extends State<MaterialScreen>
 
   // --- UI ---
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Material Management',
+      title: 'Material Setup',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Material Configuration',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
-        ),
-        backgroundColor: const Color(0xFF0b3470),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'New Material'),
-            Tab(text: 'Update Material'),
-          ],
-          labelColor: Colors.white,
-          unselectedLabelColor: const Color.fromARGB(255, 200, 200, 200),
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: ManagerTheme.primaryColor,
+                labelColor: ManagerTheme.primaryColor,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                tabs: const [
+                  Tab(text: 'New Material'),
+                  Tab(text: 'Update Material'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
           // --- NEW TAB ---
           SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
@@ -514,7 +540,7 @@ class _MaterialScreenState extends State<MaterialScreen>
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0b3470),
+                              color: ManagerTheme.primaryColor,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -529,12 +555,12 @@ class _MaterialScreenState extends State<MaterialScreen>
                                     labelText: 'Material ID',
                                     prefixIcon: const Icon(
                                       Icons.confirmation_number_outlined,
-                                      color: Color(0xFF0b3470),
+                                      color: ManagerTheme.primaryColor,
                                     ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10),
                                       borderSide: const BorderSide(
-                                        color: Color(0xFF0b3470),
+                                        color: ManagerTheme.primaryColor,
                                       ),
                                     ),
                                     filled: true,
@@ -564,12 +590,12 @@ class _MaterialScreenState extends State<MaterialScreen>
                               labelText: 'Material Name',
                               prefixIcon: const Icon(
                                 Icons.label_important_outline,
-                                color: Color(0xFF0b3470),
+                                color: ManagerTheme.primaryColor,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFF0b3470),
+                                  color: ManagerTheme.primaryColor,
                                 ),
                               ),
                               filled: true,
@@ -640,7 +666,7 @@ class _MaterialScreenState extends State<MaterialScreen>
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0b3470),
+                              color: ManagerTheme.primaryColor,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -691,13 +717,13 @@ class _MaterialScreenState extends State<MaterialScreen>
                                             labelText: 'Material Eg:Cement',
                                             prefixIcon: const Icon(
                                               Icons.category_outlined,
-                                              color: Color(0xFF0b3470),
+                                              color: ManagerTheme.primaryColor,
                                             ),
                                             border: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(10),
                                               borderSide: const BorderSide(
-                                                color: Color(0xFF0b3470),
+                                                color: ManagerTheme.primaryColor,
                                               ),
                                             ),
                                             filled: true,
@@ -733,12 +759,12 @@ class _MaterialScreenState extends State<MaterialScreen>
                               labelText: 'Material ID',
                               prefixIcon: const Icon(
                                 Icons.confirmation_number_outlined,
-                                color: Color(0xFF0b3470),
+                                color: ManagerTheme.primaryColor,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFF0b3470),
+                                  color: ManagerTheme.primaryColor,
                                 ),
                               ),
                               filled: true,
@@ -760,12 +786,12 @@ class _MaterialScreenState extends State<MaterialScreen>
                               labelText: 'Unit',
                               prefixIcon: const Icon(
                                 Icons.category_outlined,
-                                color: Color(0xFF0b3470),
+                                color: ManagerTheme.primaryColor,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFF0b3470),
+                                  color: ManagerTheme.primaryColor,
                                 ),
                               ),
                               filled: true,
@@ -785,12 +811,12 @@ class _MaterialScreenState extends State<MaterialScreen>
                                     labelText: 'Material Price',
                                     prefixIcon: const Icon(
                                       Icons.attach_money_outlined,
-                                      color: Color(0xFF0b3470),
+                                      color: ManagerTheme.primaryColor,
                                     ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10),
                                       borderSide: const BorderSide(
-                                        color: Color(0xFF0b3470),
+                                        color: ManagerTheme.primaryColor,
                                       ),
                                     ),
                                     filled: true,
@@ -814,16 +840,10 @@ class _MaterialScreenState extends State<MaterialScreen>
                               const SizedBox(width: 8),
                               if (!isEditingPrice &&
                                   selectedMaterialRef != null)
-                                ElevatedButton(
+                                ManagerTheme.buildDialogButton(
+                                  label: 'Edit',
+                                  icon: Icons.edit,
                                   onPressed: _onEditPrice,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0b3470),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: const Text('Edit'),
                                 ),
                             ],
                           ),
@@ -835,28 +855,24 @@ class _MaterialScreenState extends State<MaterialScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildActionButton(
-                        context,
-                        icon: Icons.save,
-                        label: 'Save',
-                        color: const Color(0xFF0b3470),
-                        onPressed: (_isSaving || _isSaved) ? () {} : _saveForm,
-                      ),
-
-                      _buildActionButton(
-                        context,
-                        icon: Icons.refresh,
-                        label: 'Reset',
-                        color: Colors.orange,
-                        onPressed: _resetUpdateForm,
-                      ),
-                      _buildActionButton(
-                        context,
-                        icon: Icons.cancel,
-                        label: 'Cancel',
-                        color: Colors.red,
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                      ManagerTheme.buildCircularButton(
+                  icon: Icons.save,
+                  label: 'Save',
+                  backgroundColor: ManagerTheme.primaryColor,
+                  onPressed: (_isSaving || _isSaved) ? null : _saveForm,
+                ),
+                ManagerTheme.buildCircularButton(
+                  icon: Icons.refresh,
+                  label: 'Reset',
+                  backgroundColor: Colors.orange,
+                  onPressed: _resetUpdateForm,
+                ),
+                ManagerTheme.buildCircularButton(
+                  icon: Icons.cancel,
+                  label: 'Cancel',
+                  backgroundColor: Colors.red,
+                  onPressed: () => Navigator.pop(context),
+                ),
                     ],
                   ),
                 ],
@@ -865,35 +881,29 @@ class _MaterialScreenState extends State<MaterialScreen>
           ),
         ],
       ),
-    );
+    ),
+  ],
+),
+),
+);
   }
 
   Widget _buildCategoryDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: selectedCategoryRef?.path, // Use document path as unique value
-      decoration: InputDecoration(
-        labelText: 'Material Category',
-        prefixIcon: const Icon(
-          Icons.category_outlined,
-          color: Color(0xFF0b3470),
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF0b3470)),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
+    return CustomDropdown<String>(
+      value: selectedCategoryRef?.path,
+      labelText: 'Material Category',
+      prefixIcon: Icons.category_outlined,
       items: categories
           .map(
             (cat) => DropdownMenuItem<String>(
               value:
-                  (cat['ref'] as DocumentReference).path, // Use path as value
+                  (cat['ref'] as DocumentReference).path,
               child: Text(cat['name'] as String),
             ),
           )
           .toList(),
       onChanged: (path) {
+        if (path == null) return;
         final cat = categories.firstWhere(
           (c) => (c['ref'] as DocumentReference).path == path,
         );
@@ -902,40 +912,25 @@ class _MaterialScreenState extends State<MaterialScreen>
           cat['name'] as String,
         );
       },
-      icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF0b3470)),
-      borderRadius: BorderRadius.circular(10),
-      dropdownColor: Colors.white,
-      validator: (value) =>
-          value == null ? 'Please select a material category' : null,
     );
   }
 
   Widget _buildSubCategoryDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: selectedSubCategoryRef?.path, // Use document path as unique value
-      decoration: InputDecoration(
-        labelText: 'Material Sub Category',
-        prefixIcon: const Icon(
-          Icons.category_outlined,
-          color: Color(0xFF0b3470),
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF0b3470)),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
+    return CustomDropdown<String>(
+      value: selectedSubCategoryRef?.path,
+      labelText: 'Material Sub Category',
+      prefixIcon: Icons.category_outlined,
       items: subCategories
           .map(
             (sub) => DropdownMenuItem<String>(
               value:
-                  (sub['ref'] as DocumentReference).path, // Use path as value
+                  (sub['ref'] as DocumentReference).path,
               child: Text(sub['name'] as String),
             ),
           )
           .toList(),
       onChanged: (path) {
+        if (path == null) return;
         final sub = subCategories.firstWhere(
           (s) => (s['ref'] as DocumentReference).path == path,
         );
@@ -945,11 +940,6 @@ class _MaterialScreenState extends State<MaterialScreen>
           sub['unitRef'] as DocumentReference,
         );
       },
-      icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF0b3470)),
-      borderRadius: BorderRadius.circular(10),
-      dropdownColor: Colors.white,
-      validator: (value) =>
-          value == null ? 'Please select a sub category' : null,
     );
   }
 
@@ -960,11 +950,11 @@ class _MaterialScreenState extends State<MaterialScreen>
         labelText: 'Unit',
         prefixIcon: const Icon(
           Icons.category_outlined,
-          color: Color(0xFF0b3470),
+          color: ManagerTheme.primaryColor,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF0b3470)),
+          borderSide: const BorderSide(color: ManagerTheme.primaryColor),
         ),
         filled: true,
         fillColor: Colors.grey[50],
@@ -993,13 +983,13 @@ class _MaterialScreenState extends State<MaterialScreen>
           child: Center(
             child: Text(
               '₹',
-              style: TextStyle(fontSize: 20, color: Color(0xFF0b3470)),
+              style: TextStyle(fontSize: 20, color: ManagerTheme.primaryColor),
             ),
           ),
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF0b3470)),
+          borderSide: const BorderSide(color: ManagerTheme.primaryColor),
         ),
         filled: true,
         fillColor: Colors.grey[50],
@@ -1017,11 +1007,11 @@ class _MaterialScreenState extends State<MaterialScreen>
         labelText: 'Description',
         prefixIcon: const Icon(
           Icons.description_outlined,
-          color: Color(0xFF0b3470),
+          color: ManagerTheme.primaryColor,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF0b3470)),
+          borderSide: const BorderSide(color: ManagerTheme.primaryColor),
         ),
         filled: true,
         fillColor: Colors.grey[50],
@@ -1034,61 +1024,26 @@ class _MaterialScreenState extends State<MaterialScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildActionButton(
-          context,
+        ManagerTheme.buildCircularButton(
           icon: Icons.save,
           label: 'Save',
-          color: const Color(0xFF0b3470),
+          backgroundColor: ManagerTheme.primaryColor,
           onPressed: _saveForm,
         ),
-        _buildActionButton(
-          context,
+        ManagerTheme.buildCircularButton(
           icon: Icons.refresh,
           label: 'Reset',
-          color: Colors.orange,
+          backgroundColor: Colors.orange,
           onPressed: _resetForm,
         ),
-        _buildActionButton(
-          context,
+        ManagerTheme.buildCircularButton(
           icon: Icons.cancel,
           label: 'Cancel',
-          color: Colors.red,
+          backgroundColor: Colors.red,
           onPressed: () => Navigator.pop(context),
         ),
       ],
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: 1.5),
-          ),
-          child: IconButton(
-            icon: Icon(icon, color: color),
-            onPressed: onPressed,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
 }

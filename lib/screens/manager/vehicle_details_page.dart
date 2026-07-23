@@ -1,7 +1,7 @@
-// pages/vehicle_details_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 
 // Custom input formatter for number plate
 class NumberPlateFormatter extends TextInputFormatter {
@@ -313,28 +313,42 @@ class _VehicleDetailsPageState extends State<VehicleDetailsPage> {
     }
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: ManagerTheme.buildHeader(
+            context,
+            category: 'Vehicle Management',
+            title: 'Vehicle Details',
+          ),
+        ),
+        if (_submittedVehicle != null && !_isEditing)
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: _deleteVehicle,
+            tooltip: 'Delete Vehicle',
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vehicle Details'),
-        backgroundColor: Color(0xFF003768),
-        foregroundColor: Colors.white,
-        actions: [
-          if (_submittedVehicle != null && !_isEditing)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteVehicle,
-              tooltip: 'Delete Vehicle',
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    const SizedBox(height: 16),
+                    // Generated ID Display
                   // Generated ID Display
                   if (_generatedId.isNotEmpty && !_isEditing)
                     Container(
@@ -497,7 +511,7 @@ class _VehicleDetailsPageState extends State<VehicleDetailsPage> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _isEditing
                                         ? Colors.orange
-                                        : Color(0xFF003768),
+                                        : ManagerTheme.primaryColor,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
@@ -558,7 +572,7 @@ class _VehicleDetailsPageState extends State<VehicleDetailsPage> {
                               IconButton(
                                 icon: const Icon(
                                   Icons.edit,
-                                  color: Color(0xFF003768),
+                                  color: ManagerTheme.primaryColor,
                                 ),
                                 onPressed: _editVehicle,
                                 tooltip: 'Edit Vehicle',
@@ -586,7 +600,7 @@ class _VehicleDetailsPageState extends State<VehicleDetailsPage> {
                               children: [
                                 Icon(
                                   Icons.info,
-                                  color: Color(0xFF003768),
+                                  color: ManagerTheme.primaryColor,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 8),
@@ -595,7 +609,7 @@ class _VehicleDetailsPageState extends State<VehicleDetailsPage> {
                                     'Tap the edit icon to modify vehicle details',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF003768),
+                                      color: ManagerTheme.primaryColor,
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -637,6 +651,7 @@ class _VehicleDetailsPageState extends State<VehicleDetailsPage> {
                 ],
               ),
             ),
+    ),
     );
   }
 

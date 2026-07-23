@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
 import 'workers_config_page.dart';
 
 class ContractorPage extends StatefulWidget {
@@ -23,7 +24,7 @@ class _ContractorPageState extends State<ContractorPage> {
   List<String> _selectedSiteIds = [];
   bool _isSaving = false;
 
-  static const Color primaryColor = Color(0xFF0b3470);
+  static const Color primaryColor = ManagerTheme.primaryColor;
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get _contractorsStream {
     if (widget.supervisorId != null) {
@@ -213,31 +214,26 @@ class _ContractorPageState extends State<ContractorPage> {
     return 'CT${(numPart + 1).toString().padLeft(3, '0')}';
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Contractor Management',
+      title: _editingContractorId != null ? 'Edit Contractor' : 'Manage Sub-Contractors',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        title: Text(
-          _editingContractorId != null
-              ? "Edit Contractor"
-              : "Manage Sub-Contractors",
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 3,
-        shadowColor: Colors.black38,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 20),
             // Section 1: Input form and buttons
             Container(
               padding: const EdgeInsets.all(24),
@@ -529,6 +525,7 @@ class _ContractorPageState extends State<ContractorPage> {
           ],
         ),
       ),
+    ),
     );
   }
 

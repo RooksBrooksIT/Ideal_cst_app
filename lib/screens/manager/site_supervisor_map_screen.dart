@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class SiteSupervisorMapScreen extends StatefulWidget {
   const SiteSupervisorMapScreen({super.key});
@@ -30,7 +32,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
   List<String> supervisorIdList = [];
   List<String> projectStageList = [];
 
-  final Color primaryColor = Color(0xFF0b3470);
+  final Color primaryColor = ManagerTheme.primaryColor;
   final Color mutedColor = Colors.grey;
 
   @override
@@ -288,30 +290,21 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
     super.dispose();
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Supervisor Management',
+      title: 'Site-Supervisor Mapping',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        title: Text(
-          'Site-Supervisor Mapping',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            color: Colors.white,
-            letterSpacing: 0.7,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
-        ),
-        toolbarHeight: 65,
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
           double horizontalPadding = constraints.maxWidth * 0.06; // 6%
           double verticalPadding = constraints.maxHeight * 0.025; // 2.5%
           double cardPadding = constraints.maxWidth < 500 ? 16 : 24;
@@ -325,6 +318,8 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _buildHeader(context),
+                const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -352,6 +347,7 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
           );
         },
       ),
+    ),
     );
   }
 
@@ -500,13 +496,11 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
                   style: TextStyle(fontSize: fontSize, color: Colors.black87),
                 ),
                 SizedBox(height: 20),
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: selectedSupervisorId,
-                  hint: Text(
-                    'Select Supervisor ID',
-                    style: TextStyle(color: primaryColor, fontSize: fontSize),
-                  ),
+                CustomDropdown<String>(
+                  value: selectedSupervisorId,
+                  labelText: 'Supervisor ID',
+                  hintText: 'Select Supervisor ID',
+                  prefixIcon: Icons.badge_outlined,
                   items: supervisorIdList.map((id) {
                     return DropdownMenuItem(
                       value: id,
@@ -527,24 +521,6 @@ class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
                           : null;
                     });
                   },
-                  decoration: InputDecoration(
-                    labelText: 'Supervisor ID',
-                    prefixIcon: Icon(Icons.badge_outlined, color: primaryColor),
-                    border: inputBorder.copyWith(
-                      borderSide: BorderSide(color: primaryColor),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    labelStyle: TextStyle(color: primaryColor),
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 18,
-                    ),
-                  ),
-                  icon: Icon(Icons.arrow_drop_down, color: primaryColor),
-                  borderRadius: BorderRadius.circular(12),
-                  dropdownColor: Colors.white,
-                  elevation: 4,
                 ),
                 SizedBox(height: 14),
                 TextFormField(

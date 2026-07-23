@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lottie/lottie.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 import 'project_screen.dart';
 
 class SiteScreen extends StatefulWidget {
@@ -29,9 +31,9 @@ class _SiteScreenState extends State<SiteScreen>
 
   TabController? _tabController;
 
-  static const Color primaryColor = Color(0xFF0b3470);
+  static const Color primaryColor = ManagerTheme.primaryColor;
   static const Color accentColor = Color(0xFF084a99);
-  static const Color backgroundColor = Color(0xFFF5F7FA);
+  static const Color backgroundColor = Color.fromARGB(255, 218, 238, 220);
 
   @override
   void initState() {
@@ -197,6 +199,14 @@ class _SiteScreenState extends State<SiteScreen>
     }
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Site Management',
+      title: 'Site Details',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_tabController == null) {
@@ -205,40 +215,51 @@ class _SiteScreenState extends State<SiteScreen>
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'Site Details',
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryColor, Color.fromARGB(255, 13, 64, 140)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: _buildHeader(context),
             ),
-          ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          unselectedLabelColor: Color(0xFFd1d5db),
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-          tabs: const [
-            Tab(text: 'New Site'),
-            Tab(text: 'All Site'),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: primaryColor,
+                labelColor: primaryColor,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                tabs: const [
+                  Tab(text: 'New Site'),
+                  Tab(text: 'All Sites'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [_buildNewSiteTab(), _buildAllSiteTab()],
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildNewSiteTab(), _buildAllSiteTab()],
       ),
     );
   }
@@ -540,8 +561,9 @@ class _SiteScreenState extends State<SiteScreen>
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
         const SizedBox(height: 7),
-        DropdownButtonFormField<String>(
-          initialValue: value,
+        CustomDropdown<String>(
+          value: value,
+          labelText: label,
           items: items
               .map(
                 (item) => DropdownMenuItem(
@@ -554,32 +576,6 @@ class _SiteScreenState extends State<SiteScreen>
               )
               .toList(),
           onChanged: onChanged,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.6)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.4)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: primaryColor, width: 2.5),
-            ),
-          ),
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Colors.black87,
-          ),
-          dropdownColor: Colors.white,
           validator: (value) => value == null ? 'Please select $label' : null,
         ),
       ],
@@ -908,18 +904,8 @@ class _SiteScreenState extends State<SiteScreen>
                   style: const TextStyle(fontSize: 17, color: Colors.black87),
                 ),
                 const SizedBox(height: 30),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 14,
-                    ),
-                    elevation: 5,
-                  ),
+                ManagerTheme.buildPrimaryButton(
+                  label: 'OK',
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
                     Navigator.pushReplacement(
@@ -930,10 +916,6 @@ class _SiteScreenState extends State<SiteScreen>
                       ),
                     );
                   },
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
                 ),
               ],
             ),

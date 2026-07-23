@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class MatlsSubCat extends StatefulWidget {
   const MatlsSubCat({super.key});
@@ -10,7 +12,7 @@ class MatlsSubCat extends StatefulWidget {
 
 class _MatlsSubCatState extends State<MatlsSubCat> {
   // Constants
-  static const Color primaryColor = Color(0xFF0b3470); // Updated primary color
+  static const Color primaryColor = ManagerTheme.primaryColor; // Updated primary color
   static const Color cardColor = Color(0xFFF5F5F5);
   static const double defaultPadding = 16.0;
   static const double borderRadius = 12.0; // larger radius for modern look
@@ -200,32 +202,33 @@ class _MatlsSubCatState extends State<MatlsSubCat> {
     super.dispose();
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Material Configuration',
+      title: 'Sub Category Setup',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: cardColor,
-      appBar: AppBar(
-        title: const Text(
-          'Material Sub Category Master',
-          style: TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.5,color: Colors.white),
-        ),
-        centerTitle: true,
-        backgroundColor: primaryColor,
-        elevation: 2,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-        ),
-      ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(defaultPadding),
-              child: Card(
-                elevation: cardElevation,
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: _loading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                ),
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    const SizedBox(height: 20),
+                    Card(
+                      elevation: cardElevation,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(borderRadius),
                 ),
@@ -253,18 +256,10 @@ class _MatlsSubCatState extends State<MatlsSubCat> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      DropdownButtonFormField<DocumentSnapshot>(
-                        initialValue: _selectedCategory,
-                        decoration: InputDecoration(
-                          hintText: 'Select category',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(borderRadius),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          prefixIcon: const Icon(Icons.category, color: primaryColor),
-                        ),
-                        isExpanded: true,
+                      CustomDropdown<DocumentSnapshot>(
+                        value: _selectedCategory,
+                        hintText: 'Select category',
+                        prefixIcon: Icons.category,
                         items: _categories.map((cat) {
                           final data =
                               cat.data() as Map<String, dynamic>? ?? {};
@@ -291,18 +286,10 @@ class _MatlsSubCatState extends State<MatlsSubCat> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      DropdownButtonFormField<DocumentSnapshot>(
-                        initialValue: _selectedUnit,
-                        decoration: InputDecoration(
-                          hintText: 'Select unit',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(borderRadius),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          prefixIcon: const Icon(Icons.straighten, color: primaryColor),
-                        ),
-                        isExpanded: true,
+                      CustomDropdown<DocumentSnapshot>(
+                        value: _selectedUnit,
+                        hintText: 'Select unit',
+                        prefixIcon: Icons.straighten,
                         items: _units.map((unit) {
                           final data =
                               unit.data() as Map<String, dynamic>? ?? {};
@@ -391,7 +378,10 @@ class _MatlsSubCatState extends State<MatlsSubCat> {
                   ),
                 ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

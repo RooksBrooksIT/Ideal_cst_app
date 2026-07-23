@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class MaterialInfoScreen extends StatefulWidget {
   const MaterialInfoScreen({super.key});
@@ -597,7 +599,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                 _saveTransferData();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF772323),
+                backgroundColor: ManagerTheme.primaryColor,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Confirm Transfer'),
@@ -1238,133 +1240,27 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
     }
   }
 
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Material Management',
+      title: 'Material Information',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _transferMode == 0
-              ? 'Company To Site Transfer'
-              : _transferMode == 1
-              ? 'Site To Site Transfer'
-              : 'Site To Company Transfer',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: const Color(0xFF772323),
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Toggle Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _transferMode = 0;
-                        _selectedMaterialName = null;
-                        availableCount = 0;
-                        _neededCountController.clear();
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _transferMode == 0
-                          ? const Color(0xFF772323)
-                          : Colors.white,
-                      foregroundColor: _transferMode == 0
-                          ? Colors.white
-                          : const Color(0xFF772323),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: const Color(0xFF772323),
-                          width: _transferMode == 0 ? 0 : 2,
-                        ),
-                      ),
-                    ),
-                    child: const Text(
-                      'CompanyToSite',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _transferMode = 1;
-                        _selectedMaterialName = null;
-                        availableCount = 0;
-                        _neededCountController.clear();
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _transferMode == 1
-                          ? const Color(0xFF772323)
-                          : Colors.white,
-                      foregroundColor: _transferMode == 1
-                          ? Colors.white
-                          : const Color(0xFF772323),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: const Color(0xFF772323),
-                          width: _transferMode == 1 ? 0 : 2,
-                        ),
-                      ),
-                    ),
-                    child: const Text(
-                      'SiteToSite',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _transferMode = 2;
-                        _selectedMaterialName = null;
-                        availableCount = 0;
-                        _neededCountController.clear();
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _transferMode == 2
-                          ? const Color(0xFF772323)
-                          : Colors.white,
-                      foregroundColor: _transferMode == 2
-                          ? Colors.white
-                          : const Color(0xFF772323),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: const Color(0xFF772323),
-                          width: _transferMode == 2 ? 0 : 2,
-                        ),
-                      ),
-                    ),
-                    child: const Text(
-                      'SiteToCompany',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 16),
+              _buildModeSegmentedControl(),
             const SizedBox(height: 16),
 
             if (_transferMode == 0) ...[
@@ -1455,7 +1351,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _addMaterial,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF772323),
+                        backgroundColor: ManagerTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -1517,7 +1413,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                     child: ElevatedButton(
                       onPressed: _transferMaterials,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF772323),
+                        backgroundColor: ManagerTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -1714,7 +1610,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _addMaterial,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF772323),
+                        backgroundColor: ManagerTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -1773,7 +1669,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF772323),
+                        backgroundColor: ManagerTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -1900,7 +1796,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _addMaterial,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF772323),
+                        backgroundColor: ManagerTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -1966,7 +1862,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF772323),
+                        backgroundColor: ManagerTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -2024,6 +1920,77 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
           ],
         ),
       ),
+    ),
+    );
+  }
+
+  Widget _buildModeSegmentedControl() {
+    final modes = [
+      {'title': 'CompanyToSite', 'icon': Icons.business_outlined},
+      {'title': 'SiteToSite', 'icon': Icons.swap_horiz_rounded},
+      {'title': 'SiteToCompany', 'icon': Icons.undo_rounded},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: ManagerTheme.primaryColor.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: List.generate(modes.length, (index) {
+          final isSelected = _transferMode == index;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _transferMode = index;
+                  _selectedMaterialName = null;
+                  availableCount = 0;
+                  _neededCountController.clear();
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? ManagerTheme.primaryColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      modes[index]['icon'] as IconData,
+                      size: 16,
+                      color: isSelected ? Colors.white : ManagerTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        modes[index]['title'] as String,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: isSelected ? Colors.white : ManagerTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
     );
   }
 
@@ -2038,7 +2005,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF772323),
+          color: ManagerTheme.primaryColor,
         ),
       ),
     );
@@ -2053,45 +2020,24 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
     VoidCallback? onTap,
     IconData? icon,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          enabled: enabled,
-          keyboardType: keyboardType,
-          onTap: onTap,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey.shade400),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey.shade400),
-            ),
-            filled: !enabled,
-            fillColor: !enabled ? Colors.grey.shade100 : Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 14,
-            ),
-            prefixIcon: icon != null
-                ? Icon(icon, size: 20, color: Colors.grey.shade600)
-                : null,
-          ),
-        ),
-      ],
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      keyboardType: keyboardType,
+      onTap: onTap,
+      readOnly: onTap != null,
+      style: TextStyle(
+        color: enabled ? Colors.black87 : Colors.black54,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: ManagerTheme.buildInputDecoration(
+        labelText: label,
+        prefixIcon: icon ?? Icons.edit,
+      ).copyWith(
+        hintText: hint,
+        filled: true,
+        fillColor: enabled ? Colors.white : Colors.grey.shade100,
+      ),
     );
   }
 
@@ -2101,234 +2047,117 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
     required ValueChanged<String?> onChanged,
     required String label,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black87,
+    if (_isLoadingSites) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return CustomDropdown<String>(
+      value: selectedId,
+      labelText: label,
+      hintText: 'Select Site',
+      prefixIcon: Icons.construction,
+      items: sitesList.map((site) {
+        return DropdownMenuItem<String>(
+          value: site['siteId'],
+          child: Text(
+            site['siteName'] ?? site['siteId'],
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: _isLoadingSites
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Loading sites...',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )
-              : InputDecorator(
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                  ),
-                  child: DropdownButton<String>(
-                    value: selectedId,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    hint: const Text(
-                      'Select Site',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    items: sitesList.map((site) {
-                      return DropdownMenuItem<String>(
-                        value: site['siteId'],
-                        child: Text(site['siteName'] ?? site['siteId']),
-                      );
-                    }).toList(),
-                    onChanged: onChanged,
-                  ),
-                ),
-        ),
-      ],
+        );
+      }).toList(),
+      onChanged: onChanged,
     );
   }
 
   Widget _buildSiteDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Site *',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black87,
+    if (_isLoadingSites) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return CustomDropdown<String>(
+      value: _selectedSiteId,
+      labelText: 'Site *',
+      hintText: 'Select Site',
+      prefixIcon: Icons.construction,
+      items: sitesList.map((site) {
+        return DropdownMenuItem<String>(
+          value: site['siteId'],
+          child: Text(
+            site['siteName'] ?? site['siteId'],
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: _isLoadingSites
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Loading sites...',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )
-              : InputDecorator(
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                  ),
-                  child: DropdownButton<String>(
-                    value: _selectedSiteId,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    hint: const Text(
-                      'Select Site',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    items: sitesList.map((site) {
-                      return DropdownMenuItem<String>(
-                        value: site['siteId'],
-                        child: Text(site['siteName'] ?? site['siteId']),
-                      );
-                    }).toList(),
-                    onChanged: (v) {
-                      final site = sitesList.firstWhere(
-                        (s) => s['siteId'] == v,
-                        orElse: () => {},
-                      );
-                      setState(() {
-                        _selectedSiteId = v;
-                        _projectNameController.text =
-                            site['projectName']?.toString() ?? '';
-                        _supervisorNameController.text =
-                            site['supervisorName']?.toString() ?? '';
-                      });
-                    },
-                  ),
-                ),
-        ),
-      ],
+        );
+      }).toList(),
+      onChanged: (v) {
+        final site = sitesList.firstWhere(
+          (s) => s['siteId'] == v,
+          orElse: () => {},
+        );
+        setState(() {
+          _selectedSiteId = v;
+          _projectNameController.text =
+              site['projectName']?.toString() ?? '';
+          _supervisorNameController.text =
+              site['supervisorName']?.toString() ?? '';
+        });
+      },
     );
   }
 
   Widget _buildMaterialDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Material Name *',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: _isLoadingMaterials
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Loading materials...',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )
-              : InputDecorator(
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                  ),
-                  child: DropdownButton<String>(
-                    value: _selectedMaterialName,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    hint: const Text(
-                      'Select Material',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    items:
-                        (_transferMode == 0 ? materialsList : siteMaterialsList)
-                            .map((material) {
-                              final materialName = material['materialName'];
-                              final displayName = material['displayName'];
-                              final count = material['count'] ?? 0;
+    if (_isLoadingMaterials) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return CustomDropdown<String>(
+      value: _selectedMaterialName,
+      labelText: 'Material Name *',
+      hintText: 'Select Material',
+      prefixIcon: Icons.category,
+      items: (_transferMode == 0 ? materialsList : siteMaterialsList)
+          .map((material) {
+            final materialName = material['materialName'];
+            final displayName = material['displayName'];
+            final count = material['count'] ?? 0;
 
-                              return DropdownMenuItem<String>(
-                                value: materialName,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(displayName ?? materialName),
-                                    Text(
-                                      'Available: $count',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: count > 0
-                                            ? Colors.green
-                                            : Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            })
-                            .toList(),
-                    onChanged: _onMaterialChanged,
+            return DropdownMenuItem<String>(
+              value: materialName,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayName ?? materialName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-        ),
-      ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (count > 0 ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Avail: $count',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: count > 0 ? Colors.green.shade800 : Colors.red.shade800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          })
+          .toList(),
+      onChanged: _onMaterialChanged,
     );
   }
 
@@ -2338,27 +2167,26 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
     Color color,
     IconData icon,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black87,
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: Colors.grey.shade700,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(8.0),
-            color: color.withValues(alpha: 0.1),
-          ),
-          child: Row(
+          const SizedBox(height: 6),
+          Row(
             children: [
               Icon(icon, size: 20, color: color),
               const SizedBox(width: 8),
@@ -2372,8 +2200,8 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -2411,7 +2239,7 @@ class _MaterialInfoScreenState extends State<MaterialInfoScreen> {
                   child: ListTile(
                     leading: const Icon(
                       Icons.inventory,
-                      color: Color(0xFF772323),
+                      color: ManagerTheme.primaryColor,
                     ),
                     title: Text(
                       material['displayName'],

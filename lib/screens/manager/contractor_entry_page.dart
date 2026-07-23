@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../services/expense_service.dart';
+import 'package:ideal_cst/services/expense_service.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
 
 class ContractorEntryPage extends StatefulWidget {
   final String userName;
@@ -19,9 +21,9 @@ class ContractorEntryPage extends StatefulWidget {
 
 class _ContractorEntryPageState extends State<ContractorEntryPage> {
   // --- Color Configuration and Utilities ---
-  final Color _primaryColor = const Color(0xFF0b3470);
-  final Color _sectionBgColor = const Color(0xfff7fafc); // main bg
-  final Color _actionTextColor = const Color(0xFF0b3470); // Save button text
+  final Color _primaryColor = ManagerTheme.primaryColor;
+  final Color _sectionBgColor = const Color.fromARGB(255, 218, 238, 220); // main bg
+  final Color _actionTextColor = ManagerTheme.primaryColor; // Save button text
   final Color _secondaryColor = const Color(0xFF64748B);
   final Color _successColor = const Color(0xFF10B981);
   final Color _errorColor = const Color(0xFFEF4444);
@@ -787,63 +789,12 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
   }
 
   Widget _buildHeaderSection(BuildContext context, bool isDark, double hPad) {
-    return Container(
-      color: _actionTextColor, // Use the requested color
-      child: SafeArea(
-        child: SizedBox(
-          height: kToolbarHeight,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: hPad),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                  splashRadius: 24,
-                ),
-                const Expanded(
-                  child: Center(
-                    child: Text(
-                      'Contractor Entry',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.1,
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.logout, color: Colors.white, size: 22),
-                  onPressed: () async {
-                    final shouldLogout = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Confirm Logout'),
-                        content: Text('Are you sure you want to log out?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: Text('Logout'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (shouldLogout == true) {
-                      Navigator.popUntil(context, (route) => route.isFirst);
-                    }
-                  },
-                  splashRadius: 24,
-                ),
-              ],
-            ),
-          ),
-        ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 12),
+      child: ManagerTheme.buildHeader(
+        context,
+        category: 'Contractor Management',
+        title: 'Contractor Entry',
       ),
     );
   }
@@ -1003,13 +954,10 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              DropdownButtonFormField<String>(
-                                initialValue: selectedMaterial,
-                                decoration: InputDecoration(
-                                  labelText: 'Material',
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                ),
+                              CustomDropdown<String>(
+                                value: selectedMaterial,
+                                labelText: 'Material',
+                                prefixIcon: Icons.category,
                                 items: (_filteredMaterialOptions ??
                                         materialOptions)
                                     .map((item) => DropdownMenuItem(
@@ -1174,13 +1122,10 @@ class _ContractorEntryPageState extends State<ContractorEntryPage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              DropdownButtonFormField<String>(
-                                initialValue: selectedLabour,
-                                decoration: InputDecoration(
-                                  labelText: 'Labour',
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                ),
+                              CustomDropdown<String>(
+                                value: selectedLabour,
+                                labelText: 'Labour',
+                                prefixIcon: Icons.engineering,
                                 items: (_filteredLabourOptions ?? labourOptions)
                                     .map((item) => DropdownMenuItem(
                                           value: item,
