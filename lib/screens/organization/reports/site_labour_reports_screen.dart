@@ -152,6 +152,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   String selectedReportType = 'Site Labour Details Report';
 
   // Filters State
+  String selectedDateFilter = 'Today';
   DateTime? startDate;
   DateTime? endDate;
   String? selectedSiteId;
@@ -194,12 +195,71 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    startDate = now;
-    endDate = now;
+    selectedDateFilter = 'Today';
+    _applyDatePreset('Today', triggerReport: false);
     _loadFilterData().then((_) {
       _generateReport();
     });
+  }
+
+  String _formatDate(String? raw) {
+    if (raw == null || raw.isEmpty || raw == '-') return '-';
+    final dt = DateTime.tryParse(raw);
+    if (dt != null) return DateFormat('dd/MM/yyyy').format(dt);
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(raw)) {
+      final parts = raw.split('-');
+      return '${parts[2]}/${parts[1]}/${parts[0]}';
+    }
+    return raw;
+  }
+
+  void _applyDatePreset(String preset, {bool triggerReport = true}) {
+    final now = DateTime.now();
+    DateTime? newStart;
+    DateTime? newEnd;
+
+    switch (preset) {
+      case 'Today':
+        newStart = DateTime(now.year, now.month, now.day);
+        newEnd = DateTime(now.year, now.month, now.day);
+        break;
+      case 'Yesterday':
+        final yesterday = now.subtract(const Duration(days: 1));
+        newStart = DateTime(yesterday.year, yesterday.month, yesterday.day);
+        newEnd = DateTime(yesterday.year, yesterday.month, yesterday.day);
+        break;
+      case 'This Week':
+        final monday = now.subtract(Duration(days: now.weekday - 1));
+        final sunday = monday.add(const Duration(days: 6));
+        newStart = DateTime(monday.year, monday.month, monday.day);
+        newEnd = DateTime(sunday.year, sunday.month, sunday.day);
+        break;
+      case 'This Month':
+        newStart = DateTime(now.year, now.month, 1);
+        final lastDay = DateTime(now.year, now.month + 1, 0);
+        newEnd = DateTime(now.year, now.month, lastDay.day);
+        break;
+      case 'This Year':
+        newStart = DateTime(now.year, 1, 1);
+        newEnd = DateTime(now.year, 12, 31);
+        break;
+      case 'Custom':
+        newStart = startDate ?? DateTime(now.year, now.month, now.day);
+        newEnd = endDate ?? DateTime(now.year, now.month, now.day);
+        break;
+    }
+
+    setState(() {
+      selectedDateFilter = preset;
+      if (preset != 'Custom') {
+        startDate = newStart;
+        endDate = newEnd;
+      }
+    });
+
+    if (triggerReport) {
+      _generateReport();
+    }
   }
 
   @override
@@ -306,9 +366,10 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
 
   void _resetFilters() {
     setState(() {
+      selectedDateFilter = 'Today';
       final now = DateTime.now();
-      startDate = now;
-      endDate = now;
+      startDate = DateTime(now.year, now.month, now.day);
+      endDate = DateTime(now.year, now.month, now.day);
       selectedSiteId = null;
       selectedSiteName = null;
       selectedSupervisorName = null;
@@ -1178,11 +1239,62 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: _buildDateField('From Date', startDate, (d) => setState(() { startDate = d; _generateReport(); }))),
-              const SizedBox(width: 8),
-              Expanded(child: _buildDateField('To Date', endDate, (d) => setState(() { endDate = d; _generateReport(); }))),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: selectedDateFilter,
+                  isExpanded: true,
+                  dropdownColor: cardColor,
+                  style: TextStyle(color: textColor, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'Date Filter',
+                    labelStyle: TextStyle(fontSize: 12, color: mutedColor),
+                    filled: true,
+                    fillColor: bgColor,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  ),
+                  items: ['Today', 'Yesterday', 'This Week', 'This Month', 'This Year', 'Custom'].map((preset) {
+                    return DropdownMenuItem<String>(
+                      value: preset,
+                      child: Text(preset, overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      _applyDatePreset(val);
+                    }
+                  },
+                ),
+              ),
+              if (selectedDateFilter != 'Custom') ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: bgColor.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _dateRangeText(),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
+          if (selectedDateFilter == 'Custom') ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _buildDateField('From Date', startDate, (d) => setState(() { startDate = d; _generateReport(); }))),
+                const SizedBox(width: 8),
+                Expanded(child: _buildDateField('To Date', endDate, (d) => setState(() { endDate = d; _generateReport(); }))),
+              ],
+            ),
+          ],
           const SizedBox(height: 8),
           Row(
             children: [
@@ -1522,6 +1634,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final r = rows[index];
       return DataRow(cells: [
         DataCell(Text('${index + 1}')),
+        DataCell(Text(_formatDate(r['date']?.toString()))),
         DataCell(Text(r['coordinatorName']?.toString() ?? '-')),
         DataCell(Text(r['siteId']?.toString() ?? '-')),
         DataCell(Text(r['siteName']?.toString() ?? '-')),
@@ -1555,6 +1668,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           color: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
           cells: [
             DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
+            DataCell(const Text('-')),
             DataCell(const Text('-')),
             DataCell(Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold))),
             DataCell(const Text('-')),
@@ -1590,7 +1704,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       DataColumn plain(String h) => DataColumn(label: Text(h, style: headerStyle));
 
       return [
-        plain('SI'), plain('Coordinator'), plain('Site Code'), plain('Site Name'),
+        plain('SI'), plain('Date'), plain('Coordinator'), plain('Site Code'), plain('Site Name'),
         plain('Supervisor'), plain('Contractor'), plain('Worker Name'), plain('Group'),
         plain('Category'), plain('Basic Wage'), plain('Hrs'), plain('OT Rate'),
         plain('OT Hrs'), plain('OT Amount'), plain('Meals Exp'), plain('Meals Count'),
@@ -2065,6 +2179,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     if (selectedReportType == 'Site Labour Details Report') {
       result.add([
         'Sl',
+        'Date',
         'Co-ordinator',
         'Site Code',
         'Site Name',
@@ -2089,6 +2204,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         final r = reportData[i];
         result.add([
           (i + 1).toString(),
+          _formatDate(r['date']?.toString()),
           (r['coordinatorName'] ?? r['coordinator'] ?? '-').toString(),
           (r['siteId'] ?? '-').toString(),
           (r['siteName'] ?? '-').toString(),
@@ -2113,6 +2229,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       if (reportData.isNotEmpty) {
         result.add([
           'TOTAL',
+          '-',
           '-',
           '${totals.totalRecords} Recs',
           '-',
@@ -2467,6 +2584,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     final totals = _ReportTotals.fromRows(reportData);
     final headers = [
       'Sl',
+      'Date',
       'Co-ordinator',
       'Site Code',
       'Site Name',
@@ -2492,6 +2610,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       final r = reportData[index];
       return [
         '${index + 1}',
+        _formatDate(r['date']?.toString()),
         r['coordinatorName']?.toString() ?? r['coordinator']?.toString() ?? '-',
         r['siteId']?.toString() ?? '-',
         r['siteName']?.toString() ?? '-',
@@ -2518,6 +2637,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     if (reportData.isNotEmpty) {
       data.add([
         'TOTAL',
+        '-',
         '-',
         '${totals.totalRecords} Recs',
         '-',
