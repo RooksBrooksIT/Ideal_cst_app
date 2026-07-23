@@ -145,8 +145,13 @@ class _SiteExpensesReportPageState extends State<SiteExpensesReportPage> {
       List<Map<String, dynamic>> entries, num grandTotal) async {
     final pdf = pw.Document();
     final DateFormat displayDateFormat = DateFormat('dd-MMM-yyyy');
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final pdfTheme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
     pdf.addPage(
       pw.MultiPage(
+        theme: pdfTheme,
         build: (pw.Context context) => [
           pw.Header(
             level: 0,

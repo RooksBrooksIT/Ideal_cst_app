@@ -46,6 +46,7 @@ class _ProjectContractScreenState extends State<ProjectContractScreen> {
       setState(() {
         _contractTypes = querySnapshot.docs
             .map((doc) => doc['projectContract'] as String)
+            .toSet()
             .toList();
       });
     } catch (e) {
@@ -428,7 +429,10 @@ class _ProjectContractScreenState extends State<ProjectContractScreen> {
                                   fillColor: const Color.fromARGB(
                                       255, 245, 245, 245),
                                 ),
-                                value: _selectedContractType,
+                                value: (_selectedContractType != null &&
+                                        _contractTypes.contains(_selectedContractType))
+                                    ? _selectedContractType
+                                    : null,
                                 items: _contractTypes.map((type) {
                                   return DropdownMenuItem(
                                     value: type,

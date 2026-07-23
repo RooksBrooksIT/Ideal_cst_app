@@ -1,26 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:ideal_cst/screens/Supervisor_material_information.dart';
-import 'package:ideal_cst/screens/material_at_site_entry_page.dart';
-import 'package:ideal_cst/screens/material_request_form.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/site_selection_screen.dart';
 import 'package:ideal_cst/screens/supervisor_login_page.dart';
-import 'package:ideal_cst/screens/supervisor_material_view_request_screen.dart';
-import 'package:ideal_cst/screens/supervisor_tool_movement.dart';
-import 'package:ideal_cst/screens/supervisor_verification_page.dart';
-import 'package:ideal_cst/screens/supervisor_view_request_screen.dart';
-import 'package:ideal_cst/screens/supervisor_work_schedule_page.dart';
-import 'package:ideal_cst/screens/supervisor_worker_att_page.dart';
+import 'package:ideal_cst/screens/workers_config_page.dart';
+import 'package:ideal_cst/screens/contractor_page.dart';
+import 'package:ideal_cst/screens/contractor_dashboard.dart';
+import 'package:ideal_cst/screens/sub_contractor_management_screen.dart';
+import 'package:ideal_cst/screens/daily_attendance_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class SupervisorDashboard extends StatefulWidget {
   final String supervisorId;
   final String supervisorName;
+  final String? username;
 
   const SupervisorDashboard({
     super.key,
     required this.supervisorId,
     required this.supervisorName,
-    required String username,
+    this.username,
   });
 
   @override
@@ -29,128 +28,147 @@ class SupervisorDashboard extends StatefulWidget {
 
 class _SupervisorDashboardState extends State<SupervisorDashboard> {
   final Color primaryColor = const Color(0xFF0b3470);
-
-  late final Map<String, List<DashboardItem>> groupedItems;
+  List<DocumentSnapshot> assignedSites = [];
+  List<DocumentSnapshot> assignedContractors = [];
+  bool isLoading = true;
+  Map<String, dynamic> todayStats = {
+    'totalWorkers': 0,
+    'present': 0,
+    'halfDay': 0,
+    'earlyOut': 0,
+    'overtime': 0,
+    'materialRequests': 0,
+  };
 
   @override
   void initState() {
     super.initState();
-    groupedItems = {
-      "Expenses": [
-        DashboardItem(
-          'Site Supervisor Expenses',
-          Icons.monetization_on_outlined,
-          primaryColor,
-          () => _navigate(
-            context,
-            SupervisorVerificationPage(
-              supervisorId: widget.supervisorId,
-              supervisorName: widget.supervisorName,
-            ),
-          ),
-        ),
-      ],
-      "Requests": [
-        DashboardItem(
-          'Materials Request Form',
-          Icons.inventory_2_outlined,
-          primaryColor,
-          () => _navigate(
-            context,
-            MaterialRequestForm(
-              supervisorId: widget.supervisorId,
-              supervisorName: widget.supervisorName,
-            ),
-          ),
-        ),
-        DashboardItem(
-          'Work Schedule Request Form',
-          Icons.schedule_outlined,
-          primaryColor,
-          () => _navigate(
-            context,
-            SupervisorWorkSchedulePage(
-              supervisorId: widget.supervisorId,
-              supervisorName: widget.supervisorName,
-            ),
-          ),
-        ),
-      ],
-      "Site Info": [
-        DashboardItem(
-          'Materials',
-          Icons.warehouse_outlined,
-          primaryColor,
-          () => _navigate(
-            context,
-            MaterialAtSiteEntryPage(
-              supervisorId: widget.supervisorId,
-              supervisorName: widget.supervisorName,
-            ),
-          ),
-        ),
-        DashboardItem(
-          'Materials information',
-          Icons.warehouse_outlined,
-          primaryColor,
-          () => _navigate(context, supervisorMaterialInfoScreen()),
-        ),
-        DashboardItem(
-          'Tools Movement',
-          Icons.handyman_outlined,
-          primaryColor,
-          () => _navigate(
-            context,
-            SiteToCompanyReturn(
-              supervisorId: widget.supervisorId,
-              supervisorName: widget.supervisorName,
-            ),
-          ),
-        ),
-      ],
-      "Others": [
-        DashboardItem(
-          'Site Approvals',
-          Icons.check_circle_outline,
-          primaryColor,
-          () => _navigate(
-            context,
-            ViewApprovalScreen(
-              supervisorId: widget.supervisorId,
-              supervisorName: widget.supervisorName,
-            ),
-          ),
-        ),
-        DashboardItem(
-          'Materials Approvals',
-          Icons.check_box_sharp,
-          primaryColor,
-          () {
-            print('Navigating with supervisor: ${widget.supervisorName}');
-            _navigate(
-              context,
-              SupervisorMaterialViewRequestScreen(
-                supervisorId: widget.supervisorId,
-                supervisorName: widget.supervisorName,
-              ),
-            );
-          },
-        ),
-        DashboardItem(
-          'Workers Attendance',
-          Icons.check_box_sharp,
-          primaryColor,
-          () {
-            print('Navigating with supervisor: ${widget.supervisorName}');
-            _navigate(context, AttendanceManagementPage());
-          },
-        ),
-      ],
-    };
+    loadData();
   }
 
-  void _navigate(BuildContext context, Widget page) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  Future<void> loadData() async {
+    await fetchAssignedSites();
+    await fetchAssignedContractors();
+    await fetchTodayStats();
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  Future<void> fetchAssignedContractors() async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('contractors')
+          .where('supervisorName', isEqualTo: widget.supervisorName)
+          .get();
+
+      // If no results by name, try by supervisor ID
+      if (querySnapshot.docs.isEmpty) {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('contractors')
+            .where('supervisorId', isEqualTo: widget.supervisorId)
+            .get();
+      }
+
+      setState(() {
+        assignedContractors = querySnapshot.docs;
+      });
+    } catch (e) {
+      debugPrint('Error fetching assigned contractors: $e');
+    }
+  }
+
+  Future<void> fetchAssignedSites() async {
+    try {
+      // First try to find by supervisor name, then by supervisor ID
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('siteSupervisorMap')
+          .where('supervisor', isEqualTo: widget.supervisorName)
+          .get();
+
+      // If no results by name, try by Supervisor ID
+      if (querySnapshot.docs.isEmpty) {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('siteSupervisorMap')
+            .where('Supervisor ID', isEqualTo: widget.supervisorId)
+            .get();
+      }
+
+      setState(() {
+        assignedSites = querySnapshot.docs;
+      });
+    } catch (e) {
+      debugPrint('Error fetching assigned sites: $e');
+    }
+  }
+
+  Future<void> fetchTodayStats() async {
+    try {
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      int totalWorkers = 0;
+      int present = 0;
+      int halfDay = 0;
+      int earlyOut = 0;
+      int overtime = 0;
+      int materialRequests = 0;
+
+      // Fetch material requests
+      final requestsSnapshot = await FirebaseFirestore.instance
+          .collection('material_requests')
+          .where('supervisorId', isEqualTo: widget.supervisorId)
+          .where('status', isEqualTo: 'Pending')
+          .get();
+      materialRequests = requestsSnapshot.docs.length;
+
+      // Fetch attendance for today across all assigned sites
+      for (final site in assignedSites) {
+        final siteId = site.id;
+        final attendanceDocId = '${siteId}_$today';
+        final attendanceDoc = await FirebaseFirestore.instance
+            .collection('attendance')
+            .doc(attendanceDocId)
+            .get();
+
+        if (attendanceDoc.exists) {
+          final data = attendanceDoc.data()!;
+          totalWorkers += (data['totalWorkers'] as num?)?.toInt() ?? 0;
+
+          // Fetch workers subcollection
+          final workersSnapshot = await attendanceDoc.reference
+              .collection('workers')
+              .get();
+          for (final workerDoc in workersSnapshot.docs) {
+            final workerData = workerDoc.data();
+            final type = workerData['attendanceType'];
+            if (type == 'Full Day' || type == 'Night Shift') {
+              present++;
+            } else if (type == 'Half Day') {
+              halfDay++;
+              present++;
+            } else if (type == 'Early Out') {
+              earlyOut++;
+              present++;
+            } else if (type == 'Overtime') {
+              overtime++;
+              present++;
+            }
+          }
+        }
+      }
+
+      setState(() {
+        todayStats = {
+          'totalWorkers': totalWorkers,
+          'present': present,
+          'halfDay': halfDay,
+          'earlyOut': earlyOut,
+          'overtime': overtime,
+          'materialRequests': materialRequests,
+        };
+      });
+    } catch (e) {
+      debugPrint('Error fetching today stats: $e');
+    }
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -174,14 +192,9 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
               ),
             ),
             onPressed: () async {
-              // Close dialog
               Navigator.pop(context);
-
-              // Clear SharedPreferences
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear(); // Or remove specific keys
-
-              // Navigate to login and clear all routes
+              await prefs.clear();
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => Supervisor_LoginPage()),
@@ -200,7 +213,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     return WillPopScope(
       onWillPop: () async {
         _showLogoutDialog(context);
-        return false; // Prevent default back button behavior
+        return false;
       },
       child: Scaffold(
         body: Container(
@@ -251,137 +264,398 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                 const SizedBox(width: 8),
               ],
             ),
-            body: ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  elevation: 8,
-                  color: Colors.white,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+            body: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                : RefreshIndicator(
+                    onRefresh: loadData,
+                    child: ListView(
+                      padding: const EdgeInsets.all(16.0),
                       children: [
-                        CircleAvatar(
-                          radius: 56,
-                          backgroundColor: primaryColor,
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 54,
+                        // Profile Card
+                        Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          elevation: 8,
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 24,
+                              horizontal: 16,
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: primaryColor,
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.supervisorName,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF222222),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Assigned Sites: ${assignedSites.length}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Text(
-                          widget.supervisorName,
-                          style: const TextStyle(
-                            fontSize: 28,
+
+                        // Today's Stats Section
+                        const Text(
+                          "Today's Overview",
+                          style: TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF222222),
+                            color: Colors.white,
+                            letterSpacing: 0.4,
                           ),
-                          textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 12),
+
+                        // Stats Grid
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 1.0,
+                          children: [
+                            _buildStatCard(
+                              'Total Workers',
+                              todayStats['totalWorkers'].toString(),
+                              Icons.people,
+                              Colors.blue,
+                            ),
+                            _buildStatCard(
+                              'Present',
+                              todayStats['present'].toString(),
+                              Icons.check_circle,
+                              Colors.green,
+                            ),
+                            _buildStatCard(
+                              'Half Day',
+                              todayStats['halfDay'].toString(),
+                              Icons.access_time_filled,
+                              Colors.orange,
+                            ),
+                            _buildStatCard(
+                              'Early Out',
+                              todayStats['earlyOut'].toString(),
+                              Icons.logout,
+                              Colors.purple,
+                            ),
+                            _buildStatCard(
+                              'Overtime',
+                              todayStats['overtime'].toString(),
+                              Icons.timer,
+                              Colors.red,
+                            ),
+                            _buildStatCard(
+                              'Pending Requests',
+                              todayStats['materialRequests'].toString(),
+                              Icons.inventory,
+                              Colors.teal,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Select Site Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SiteSelectionScreen(
+                                    supervisorId: widget.supervisorId,
+                                    supervisorName: widget.supervisorName,
+                                    assignedSites: assignedSites,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.location_on,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Select Site',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Salary Management Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              // Convert DocumentSnapshot list to Map list
+                              final sitesList = assignedSites.map((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                return {'id': doc.id, ...data};
+                              }).toList();
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DailyAttendanceScreen(
+                                    supervisorId: widget.supervisorId,
+                                    supervisorName: widget.supervisorName,
+                                    sites: sitesList,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.attach_money,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Salary Management',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Sub Contractor Config Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SubContractorManagementScreen(
+                                        supervisorId: widget.supervisorId,
+                                        supervisorName: widget.supervisorName,
+                                      ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.engineering,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Sub Contractor Management',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Assigned Contractors Section
+                        const Text(
+                          "Assigned Sub-Contractors",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (assignedContractors.isEmpty)
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Center(
+                                child: Text(
+                                  'No sub-contractors assigned yet',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ...assignedContractors.map((contractor) {
+                            final data =
+                                contractor.data() as Map<String, dynamic>;
+                            final contractorId =
+                                data['contractorId'] as String? ?? '';
+                            final contractorName =
+                                data['contractorName'] as String? ?? 'Unknown';
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListTile(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ContractorDashboard(
+                                        contractorId: contractorId,
+                                        contractorName: contractorName,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                leading: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.engineering,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                                title: Text(
+                                  contractorName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(data['contractorField'] ?? ''),
+                                    Text('Contact: ${data['contactNo'] ?? ''}'),
+                                  ],
+                                ),
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
-                ),
-                ...groupedItems.entries.map((entry) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSectionHeader(entry.key),
-                      _buildItemList(entry.value),
-                    ],
-                  );
-                }),
-                const SizedBox(height: 40),
-              ],
-            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 26, bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          letterSpacing: 0.4,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildItemList(List<DashboardItem> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: AnimationConfiguration.toStaggeredList(
-        duration: const Duration(milliseconds: 400),
-        childAnimationBuilder: (widget) => SlideAnimation(
-          verticalOffset: 50.0,
-          child: FadeInAnimation(child: widget),
-        ),
-        children: items.map((item) => _buildColorfulCard(item)).toList(),
-      ),
-    );
-  }
-
-  Widget _buildColorfulCard(DashboardItem item) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
-      elevation: 5,
-      margin: const EdgeInsets.only(bottom: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      color: Colors.white,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: item.onTap,
-        splashColor: primaryColor.withOpacity(0.2),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              flex: 2,
+              child: Container(
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(item.icon, color: primaryColor, size: 28),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF333333),
-                  ),
+            ),
+            const SizedBox(height: 4),
+            Flexible(
+              flex: 2,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF222222),
                 ),
               ),
-              Icon(Icons.chevron_right, color: primaryColor),
-            ],
-          ),
+            ),
+            const SizedBox(height: 2),
+            Flexible(
+              flex: 2,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-class DashboardItem {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  DashboardItem(this.title, this.icon, this.color, this.onTap);
 }

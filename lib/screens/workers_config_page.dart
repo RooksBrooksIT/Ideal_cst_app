@@ -3,7 +3,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class WorkersConfigPage extends StatefulWidget {
-  const WorkersConfigPage({super.key});
+  final String? supervisorId;
+  final String? supervisorName;
+  final String? contractorId;
+  final String? contractorName;
+
+  const WorkersConfigPage({
+    super.key,
+    this.supervisorId,
+    this.supervisorName,
+    this.contractorId,
+    this.contractorName,
+  });
 
   @override
   _WorkersConfigPageState createState() => _WorkersConfigPageState();
@@ -21,6 +32,7 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
   final TextEditingController _joiningDateController = TextEditingController();
   final TextEditingController _salaryController = TextEditingController();
   String? _selectedDesignation;
+  String? _selectedContractor;
   bool _isSalaryEditable = false;
 
   // Editing controllers for Workers List tab
@@ -28,15 +40,52 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
   final Map<String, bool> _isEditing = {};
 
   List<Map<String, dynamic>> _designations = [];
+  List<Map<String, dynamic>> _contractors = [];
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _contractorsStream {
+    if (widget.supervisorId != null) {
+      return _firestore
+          .collection('contractors')
+          .where('supervisorId', isEqualTo: widget.supervisorId)
+          .snapshots();
+    }
+    if (widget.supervisorName != null) {
+      return _firestore
+          .collection('contractors')
+          .where('supervisorName', isEqualTo: widget.supervisorName)
+          .snapshots();
+    }
+    return _firestore.collection('contractors').snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> get _workersStream {
+    Query query = _firestore.collection('workersConfig');
+    if (widget.contractorId != null) {
+      query = query.where('contractorId', isEqualTo: widget.contractorId);
+    } else if (widget.supervisorId != null) {
+      query = query.where('supervisorId', isEqualTo: widget.supervisorId);
+    } else if (widget.supervisorName != null) {
+      query = query.where('supervisorName', isEqualTo: widget.supervisorName);
+    }
+    return query.orderBy('workerId').snapshots()
+        as Stream<QuerySnapshot<Map<String, dynamic>>>;
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadDesignations();
+    _loadContractors();
     _joiningDateController.text = DateFormat(
       'yyyy-MM-dd',
     ).format(DateTime.now());
+    // If contractorId/contractorName is provided, set selected contractor by default
+    if (widget.contractorId != null || widget.contractorName != null) {
+      setState(() {
+        _selectedContractor = widget.contractorId;
+      });
+    }
   }
 
   @override
@@ -71,6 +120,24 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
     }
   }
 
+  Future<void> _loadContractors() async {
+    try {
+      final snapshot = await _contractorsStream.first;
+      setState(() {
+        _contractors = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'contractorId': doc.id,
+            'contractorName':
+                data['contractorName']?.split('_').first ?? doc.id,
+          };
+        }).toList();
+      });
+    } catch (e) {
+      print('Error loading contractors: $e');
+    }
+  }
+
   Future<String> _getNextWorkerId() async {
     try {
       final querySnapshot = await _firestore
@@ -101,7 +168,8 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
     if (_nameController.text.isEmpty ||
         _phoneController.text.isEmpty ||
         _selectedDesignation == null ||
-        _salaryController.text.isEmpty) {
+        _salaryController.text.isEmpty ||
+        (widget.contractorId == null && _selectedContractor == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all required fields')),
       );
@@ -111,6 +179,16 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
     try {
       final workerId = await _getNextWorkerId();
 
+      // Find contractor name from contractorId
+      String? contractorName = widget.contractorName;
+      if (contractorName == null && _selectedContractor != null) {
+        final contractorDoc = _contractors.firstWhere(
+          (c) => c['contractorId'] == _selectedContractor,
+          orElse: () => {},
+        );
+        contractorName = contractorDoc['contractorName'] as String?;
+      }
+
       await _firestore.collection('workersConfig').doc(workerId).set({
         'workerId': workerId,
         'name': _nameController.text,
@@ -119,6 +197,10 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
         'salary': _salaryController.text,
         'joiningDate': _joiningDateController.text,
         'address': _addressController.text,
+        'contractorId': widget.contractorId ?? _selectedContractor,
+        'contractorName': contractorName,
+        'supervisorId': widget.supervisorId,
+        'supervisorName': widget.supervisorName,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -133,6 +215,9 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
       setState(() {
         _selectedDesignation = null;
         _isSalaryEditable = false;
+        if (widget.contractorId == null) {
+          _selectedContractor = null;
+        }
       });
 
       ScaffoldMessenger.of(
@@ -319,6 +404,73 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
                     icon: Icons.phone,
                     keyboardType: TextInputType.phone,
                   ),
+                  SizedBox(height: 16),
+                  if (widget.contractorId == null)
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedContractor,
+                          decoration: InputDecoration(
+                            labelText: 'Sub-Contractor *',
+                            border: InputBorder.none,
+                            icon: Icon(
+                              Icons.person_outline,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          items: _contractors.isNotEmpty
+                              ? _contractors.map<DropdownMenuItem<String>>((
+                                  contractor,
+                                ) {
+                                  final contractorId =
+                                      contractor['contractorId'] as String?;
+                                  final contractorName =
+                                      contractor['contractorName'] as String?;
+                                  return DropdownMenuItem<String>(
+                                    value: contractorId,
+                                    child: Text(
+                                      contractorName ?? contractorId ?? '',
+                                    ),
+                                  );
+                                }).toList()
+                              : [],
+                          onChanged: (String? value) {
+                            setState(() {
+                              _selectedContractor = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  if (widget.contractorId != null)
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            color: Colors.grey.shade600,
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Contractor: ${widget.contractorName ?? widget.contractorId}',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   SizedBox(height: 16),
                   Container(
                     decoration: BoxDecoration(
@@ -518,11 +670,8 @@ class _WorkersConfigPageState extends State<WorkersConfigPage>
   }
 
   Widget _buildWorkersListTab() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('workersConfig')
-          .orderBy('workerId')
-          .snapshots(),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _workersStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));

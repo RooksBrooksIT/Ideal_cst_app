@@ -219,9 +219,14 @@ class _DailySitePaymentReportScreenState
   }
 
   Future<void> _onPrint() async {
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
+    final pdfTheme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
+        theme: pdfTheme,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
