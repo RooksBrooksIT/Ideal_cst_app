@@ -14,6 +14,7 @@ import 'package:excel_community/excel_community.dart' as excel;
 import 'package:ideal_cst/utils/web_download_stub.dart'
     if (dart.library.html) 'package:ideal_cst/utils/web_download.dart';
 import 'package:ideal_cst/screens/organization/components/custom_dropdown.dart';
+import 'package:ideal_cst/screens/organization/components/custom_table.dart';
 
 class _ReportTotals {
   final int totalRecords;
@@ -1546,131 +1547,142 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   Widget _buildDetailsTable(List<Map<String, dynamic>> rows) {
     final totals = _ReportTotals.fromRows(rows);
 
-    // ── Highlight color constants ──────────────────────────────────────────
-    const Color otHighlightBg    = Color(0xFFFFF3E0); // amber-50
-    const Color otHighlightFg    = Color(0xFFE65100); // deep-orange
-    const Color mealsHighlightBg = Color(0xFFE0F7FA); // cyan-50
-    const Color mealsHighlightFg = Color(0xFF00838F); // cyan-800
-    const Color busHighlightBg   = Color(0xFFEDE7F6); // deep-purple-50
-    const Color busHighlightFg   = Color(0xFF4527A0); // deep-purple-800
-    const Color earnedBg         = Color(0xFFE8F5E9); // green-50
-    const Color earnedFg         = Color(0xFF1B5E20); // green-900
+    const Color otHighlightBg    = Color(0xFFFFF3E0);
+    const Color otHighlightFg    = Color(0xFFE65100);
+    const Color mealsHighlightBg = Color(0xFFE0F7FA);
+    const Color mealsHighlightFg = Color(0xFF00838F);
+    const Color busHighlightBg   = Color(0xFFEDE7F6);
+    const Color busHighlightFg   = Color(0xFF4527A0);
+    const Color earnedBg         = Color(0xFFE8F5E9);
+    const Color earnedFg         = Color(0xFF1B5E20);
 
-    // Helper: highlighted DataCell
-    DataCell _hCell(String text, Color bg, Color fg, {bool bold = false}) {
-      return DataCell(
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(
-              color: fg,
-              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-              fontSize: 12,
-            ),
+    Widget _hCell(String text, Color bg, Color fg, {bool bold = false}) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: fg,
+            fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+            fontSize: 12,
           ),
         ),
       );
     }
 
-    final List<DataRow> dataRows = List.generate(rows.length, (index) {
-      final r = rows[index];
-      return DataRow(cells: [
-        DataCell(Text('${index + 1}')),
-        DataCell(Text(_formatDate(r['date']?.toString()))),
-        DataCell(Text(r['coordinatorName']?.toString() ?? '-')),
-        DataCell(Text(r['siteId']?.toString() ?? '-')),
-        DataCell(Text(r['siteName']?.toString() ?? '-')),
-        DataCell(Text(r['supervisorName']?.toString() ?? '-')),
-        DataCell(Text(r['subContractor']?.toString() ?? '-')),
-        DataCell(Text(r['workerName']?.toString() ?? '-')),
-        DataCell(Text(r['group']?.toString() ?? '-')),
-        DataCell(Text(r['category']?.toString() ?? '-')),
-        DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
-        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
-        DataCell(Text('₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}')),
-        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
-        // OT Amount — amber highlight
-        _hCell('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}', otHighlightBg, otHighlightFg),
-        DataCell(Text('₹${(r['mealsExpense'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('${r['mealsCount']}')),
-        // Meals Total — cyan highlight
-        _hCell('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg),
-        DataCell(Text('₹${(r['busFare'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('${r['busCount']}')),
-        // Bus Total — purple highlight
-        _hCell('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}', busHighlightBg, busHighlightFg),
-        // Total Earned Amount — green highlight
-        _hCell('₹${(r['totalSalary'] as double).toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
-      ]);
-    });
-
-    if (rows.isNotEmpty) {
-      dataRows.add(
-        DataRow(
-          color: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
-          cells: [
-            DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-            DataCell(Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-            DataCell(Text('${totals.totalSubContractors} Subs', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-            DataCell(Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            // OT Amount total — amber bold
-            _hCell('₹${totals.totalOtAmount.toStringAsFixed(2)}', otHighlightBg, otHighlightFg, bold: true),
-            DataCell(Text('₹${totals.totalMealsExpense.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('${totals.totalMealsCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            // Meals Total total — cyan bold
-            _hCell('₹${totals.totalMealsAmount.toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg, bold: true),
-            DataCell(Text('₹${totals.totalBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('${totals.totalBusCount}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            // Bus Total total — purple bold
-            _hCell('₹${totals.totalBusAmount.toStringAsFixed(2)}', busHighlightBg, busHighlightFg, bold: true),
-            // Grand Total Earned — green bold
-            _hCell('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
-          ],
+    return CustomTable<Map<String, dynamic>>(
+      data: rows,
+      mainColor: primaryColor,
+      showTotalsRow: true,
+      columns: [
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'SI',
+          cellBuilder: (r, index) => Text('${index + 1}'),
+          totalCellBuilder: () => Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
         ),
-      );
-    }
-
-    // All column headers use the same plain white style — highlights are data-cells only
-    List<DataColumn> _buildColumns() {
-      const headerStyle = TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 11);
-      DataColumn plain(String h) => DataColumn(label: Text(h, style: headerStyle));
-
-      return [
-        plain('SI'), plain('Date'), plain('Coordinator'), plain('Site Code'), plain('Site Name'),
-        plain('Supervisor'), plain('Contractor'), plain('Worker Name'), plain('Group'),
-        plain('Category'), plain('Basic Wage'), plain('Hrs'), plain('OT Rate'),
-        plain('OT Hrs'), plain('OT Amount'), plain('Meals Exp'), plain('Meals Count'),
-        plain('Meals Total'), plain('Bus Fare'), plain('Bus Count'), plain('Bus Total'),
-        plain('Total Earned Amount'),
-      ];
-    }
-
-    return Container(
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columnSpacing: 12,
-          headingRowColor: WidgetStateProperty.all(primaryColor),
-          columns: _buildColumns(),
-          rows: dataRows,
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Date',
+          cellBuilder: (r, index) => Text(_formatDate(r['date']?.toString())),
         ),
-      ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Coordinator',
+          cellBuilder: (r, index) => Text(r['coordinatorName']?.toString() ?? '-'),
+          totalCellBuilder: () => Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Site Code',
+          cellBuilder: (r, index) => Text(r['siteId']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Site Name',
+          cellBuilder: (r, index) => Text(r['siteName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Supervisor',
+          cellBuilder: (r, index) => Text(r['supervisorName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Contractor',
+          cellBuilder: (r, index) => Text(r['subContractor']?.toString() ?? '-'),
+          totalCellBuilder: () => Text('${totals.totalSubContractors} Subs', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Worker Name',
+          cellBuilder: (r, index) => Text(r['workerName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Group',
+          cellBuilder: (r, index) => Text(r['group']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Category',
+          cellBuilder: (r, index) => Text(r['category']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Basic Wage',
+          cellBuilder: (r, index) => Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Hrs',
+          cellBuilder: (r, index) => Text((r['hours'] as double).toStringAsFixed(1)),
+          totalCellBuilder: () => Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'OT Rate',
+          cellBuilder: (r, index) => Text('₹${(r['otSalaryBasic'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalOtSalaryBasic.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'OT Hrs',
+          cellBuilder: (r, index) => Text((r['otHours'] as double).toStringAsFixed(1)),
+          totalCellBuilder: () => Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'OT Amount',
+          cellBuilder: (r, index) => _hCell('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}', otHighlightBg, otHighlightFg),
+          totalCellBuilder: () => _hCell('₹${totals.totalOtAmount.toStringAsFixed(2)}', otHighlightBg, otHighlightFg, bold: true),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Meals Exp',
+          cellBuilder: (r, index) => Text('₹${(r['mealsExpense'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalMealsExpense.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Meals Count',
+          cellBuilder: (r, index) => Text('${r['mealsCount']}'),
+          totalCellBuilder: () => Text('${totals.totalMealsCount}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Meals Total',
+          cellBuilder: (r, index) => _hCell('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg),
+          totalCellBuilder: () => _hCell('₹${totals.totalMealsAmount.toStringAsFixed(2)}', mealsHighlightBg, mealsHighlightFg, bold: true),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Bus Fare',
+          cellBuilder: (r, index) => Text('₹${(r['busFare'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalBusFare.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Bus Count',
+          cellBuilder: (r, index) => Text('${r['busCount']}'),
+          totalCellBuilder: () => Text('${totals.totalBusCount}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Bus Total',
+          cellBuilder: (r, index) => _hCell('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}', busHighlightBg, busHighlightFg),
+          totalCellBuilder: () => _hCell('₹${totals.totalBusAmount.toStringAsFixed(2)}', busHighlightBg, busHighlightFg, bold: true),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Total Earned Amount',
+          cellBuilder: (r, index) => _hCell('₹${(r['totalSalary'] as double).toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
+          totalCellBuilder: () => _hCell('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', earnedBg, earnedFg, bold: true),
+        ),
+      ],
     );
   }
 
@@ -1688,134 +1700,167 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   // ── 3. Daily Wage Table Layout ───────────────────────────────────────────
   Widget _buildDailyWageTable(List<Map<String, dynamic>> rows) {
     final totals = _ReportTotals.fromRows(rows);
-    final List<DataRow> dataRows = List.generate(rows.length, (index) {
-      final r = rows[index];
-      return DataRow(cells: [
-        DataCell(Text('${index + 1}')),
-        DataCell(Text(r['date']?.toString() ?? '-')),
-        DataCell(Text(r['siteName']?.toString() ?? '-')),
-        DataCell(Text(r['workerName']?.toString() ?? '-')),
-        DataCell(Text(r['category']?.toString() ?? '-')),
-        DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
-        DataCell(Text(r['attendanceType']?.toString() ?? '-')),
-        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
-        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
-        DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
-        DataCell(Text(r['supervisorName']?.toString() ?? '-')),
-        DataCell(Text(r['remarks']?.toString() ?? '-')),
-      ]);
-    });
-
-    if (rows.isNotEmpty) {
-      dataRows.add(
-        DataRow(
-          color: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
-          cells: [
-            DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
-            DataCell(Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-            DataCell(Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(const Text('-')),
-            DataCell(Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalMealsAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-          ],
+    return CustomTable<Map<String, dynamic>>(
+      data: rows,
+      mainColor: primaryColor,
+      showTotalsRow: true,
+      columns: [
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Sl',
+          cellBuilder: (r, index) => Text('${index + 1}'),
+          totalCellBuilder: () => Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
         ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columnSpacing: 12,
-          headingRowColor: WidgetStateProperty.all(primaryColor),
-          columns: _headersToColumns([
-            'Sl', 'Date', 'Site Name', 'Worker Name', 'Category', 'Basic Rate',
-            'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Wages', 'Supervisor', 'Remarks'
-          ]),
-          rows: dataRows,
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Date',
+          cellBuilder: (r, index) => Text(_formatDate(r['date']?.toString())),
+          totalCellBuilder: () => Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
-      ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Site Name',
+          cellBuilder: (r, index) => Text(r['siteName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Worker Name',
+          cellBuilder: (r, index) => Text(r['workerName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Category',
+          cellBuilder: (r, index) => Text(r['category']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Basic Rate',
+          cellBuilder: (r, index) => Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Attendance',
+          cellBuilder: (r, index) => Text(r['attendanceType']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Hours',
+          cellBuilder: (r, index) => Text((r['hours'] as double).toStringAsFixed(1)),
+          totalCellBuilder: () => Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'OT Hours',
+          cellBuilder: (r, index) => Text((r['otHours'] as double).toStringAsFixed(1)),
+          totalCellBuilder: () => Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'OT Amount',
+          cellBuilder: (r, index) => Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Meals',
+          cellBuilder: (r, index) => Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalMealsAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Bus',
+          cellBuilder: (r, index) => Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Total Wages',
+          cellBuilder: (r, index) => Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Supervisor',
+          cellBuilder: (r, index) => Text(r['supervisorName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Remarks',
+          cellBuilder: (r, index) => Text(r['remarks']?.toString() ?? '-'),
+        ),
+      ],
     );
   }
 
   // ── 4. Sub Contractor Table Layout ───────────────────────────────────────
   Widget _buildSubContractorTable(List<Map<String, dynamic>> rows) {
     final totals = _ReportTotals.fromRows(rows);
-    final List<DataRow> dataRows = List.generate(rows.length, (index) {
-      final r = rows[index];
-      return DataRow(cells: [
-        DataCell(Text('${index + 1}')),
-        DataCell(Text(r['date']?.toString() ?? '-')),
-        DataCell(Text(r['siteName']?.toString() ?? '-')),
-        DataCell(Text(r['subContractor']?.toString() ?? '-')),
-        DataCell(Text(r['workerName']?.toString() ?? '-')),
-        DataCell(Text(r['category']?.toString() ?? '-')),
-        DataCell(Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}')),
-        DataCell(Text(r['attendanceType']?.toString() ?? '-')),
-        DataCell(Text((r['hours'] as double).toStringAsFixed(1))),
-        DataCell(Text((r['otHours'] as double).toStringAsFixed(1))),
-        DataCell(Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}')),
-        DataCell(Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}')),
-        DataCell(Text(r['supervisorName']?.toString() ?? '-')),
-        DataCell(Text(r['remarks']?.toString() ?? '-')),
-      ]);
-    });
-
-    if (rows.isNotEmpty) {
-      dataRows.add(
-        DataRow(
-          color: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.12)),
-          cells: [
-            DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor))),
-            DataCell(Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(const Text('-')),
-            DataCell(Text('${totals.totalSubContractors} Subs', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-            DataCell(Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(const Text('-')),
-            DataCell(Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalMealsAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold))),
-            DataCell(Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
-            DataCell(const Text('-')),
-            DataCell(const Text('-')),
-          ],
+    return CustomTable<Map<String, dynamic>>(
+      data: rows,
+      mainColor: primaryColor,
+      showTotalsRow: true,
+      columns: [
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Sl',
+          cellBuilder: (r, index) => Text('${index + 1}'),
+          totalCellBuilder: () => Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
         ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columnSpacing: 12,
-          headingRowColor: WidgetStateProperty.all(primaryColor),
-          columns: _headersToColumns([
-            'Sl', 'Date', 'Site Name', 'Sub Contractor', 'Worker Name', 'Category', 'Basic Rate',
-            'Attendance', 'Hours', 'OT Hours', 'OT Amount', 'Meals', 'Bus', 'Total Amount', 'Supervisor', 'Remarks'
-          ]),
-          rows: dataRows,
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Date',
+          cellBuilder: (r, index) => Text(_formatDate(r['date']?.toString())),
+          totalCellBuilder: () => Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
-      ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Site Name',
+          cellBuilder: (r, index) => Text(r['siteName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Sub Contractor',
+          cellBuilder: (r, index) => Text(r['subContractor']?.toString() ?? '-'),
+          totalCellBuilder: () => Text('${totals.totalSubContractors} Subs', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Worker Name',
+          cellBuilder: (r, index) => Text(r['workerName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Category',
+          cellBuilder: (r, index) => Text(r['category']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Basic Rate',
+          cellBuilder: (r, index) => Text('₹${(r['salaryBasic'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalBasicSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Attendance',
+          cellBuilder: (r, index) => Text(r['attendanceType']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Hours',
+          cellBuilder: (r, index) => Text((r['hours'] as double).toStringAsFixed(1)),
+          totalCellBuilder: () => Text(totals.totalHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'OT Hours',
+          cellBuilder: (r, index) => Text((r['otHours'] as double).toStringAsFixed(1)),
+          totalCellBuilder: () => Text(totals.totalOtHours.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'OT Amount',
+          cellBuilder: (r, index) => Text('₹${(r['otTotalAmount'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalOtAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Meals',
+          cellBuilder: (r, index) => Text('₹${(r['totalMealsAmount'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalMealsAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Bus',
+          cellBuilder: (r, index) => Text('₹${(r['totalBusAmount'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalBusAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Total Amount',
+          cellBuilder: (r, index) => Text('₹${(r['totalSalary'] as double).toStringAsFixed(2)}'),
+          totalCellBuilder: () => Text('₹${totals.totalEarnedSalary.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Supervisor',
+          cellBuilder: (r, index) => Text(r['supervisorName']?.toString() ?? '-'),
+        ),
+        CustomTableColumn<Map<String, dynamic>>(
+          header: 'Remarks',
+          cellBuilder: (r, index) => Text(r['remarks']?.toString() ?? '-'),
+        ),
+      ],
     );
   }
 
