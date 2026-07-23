@@ -124,6 +124,11 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
           data['id'] = d.id;
           return data;
         }).toList();
+        workersList.sort((a, b) {
+          final nameA = (a['workerName'] ?? a['name'] ?? '').toString().trim().toLowerCase();
+          final nameB = (b['workerName'] ?? b['name'] ?? '').toString().trim().toLowerCase();
+          return nameA.compareTo(nameB);
+        });
       });
       
     } catch (e) {

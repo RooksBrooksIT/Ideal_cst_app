@@ -40,9 +40,10 @@ class WorkforceService {
         .where('supervisorId', isEqualTo: supervisorId)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
+          (snapshot) => (snapshot.docs
               .map((doc) => SubContractor.fromJson(doc.id, doc.data()))
-              .toList(),
+              .toList())
+            ..sort((a, b) => a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase())),
         );
   }
 
@@ -51,9 +52,10 @@ class WorkforceService {
         .collection('sub_contractors')
         .where('supervisorId', isEqualTo: supervisorId)
         .get();
-    return snapshot.docs
+    return (snapshot.docs
         .map((doc) => SubContractor.fromJson(doc.id, doc.data()))
-        .toList();
+        .toList())
+      ..sort((a, b) => a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase()));
   }
 
   Future<String> generateSubContractorId() async {
@@ -110,12 +112,12 @@ class WorkforceService {
         .collection('workers')
         .where('subContractorId', isEqualTo: subContractorId)
         .where('isDeleted', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
+          (snapshot) => (snapshot.docs
               .map((doc) => Worker.fromJson(doc.id, doc.data()))
-              .toList(),
+              .toList())
+            ..sort((a, b) => a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase())),
         );
   }
 

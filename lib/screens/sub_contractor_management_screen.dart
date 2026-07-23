@@ -369,7 +369,8 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
 
       final uniqueLabours = uniqueDesignations.entries
           .map((entry) => {'designation': entry.key, 'salary': entry.value})
-          .toList();
+          .toList()
+        ..sort((a, b) => (a['designation'] ?? '').toString().trim().toLowerCase().compareTo((b['designation'] ?? '').toString().trim().toLowerCase()));
 
       setState(() {
         _labours = uniqueLabours;

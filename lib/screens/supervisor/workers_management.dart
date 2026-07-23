@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/models/sub_contractor.dart';
 import 'package:ideal_cst/services/workforce_service.dart';
 import 'package:ideal_cst/screens/supervisor/sub_contractor_workers_screen.dart';
+import 'package:ideal_cst/screens/organization/components/custom_dropdown.dart';
 
 final WorkforceService _workforceService = WorkforceService();
 
@@ -212,7 +213,8 @@ class _WorkersManagementScreenState extends State<WorkersManagementScreen> {
                               ),
                             );
                           }
-                          final contractors = snapshot.data!;
+                          final contractors = List<SubContractor>.from(snapshot.data!)
+                            ..sort((a, b) => a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase()));
                           return ListView.builder(
                             itemCount: contractors.length,
                             padding: const EdgeInsets.only(bottom: 24),
@@ -527,7 +529,8 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
 
       final uniqueLabours = uniqueDesignations.entries
           .map((entry) => {'designation': entry.key, 'salary': entry.value})
-          .toList();
+          .toList()
+        ..sort((a, b) => (a['designation'] ?? '').toString().trim().toLowerCase().compareTo((b['designation'] ?? '').toString().trim().toLowerCase()));
 
       setState(() {
         _labours = uniqueLabours;
@@ -616,17 +619,19 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
                 const SizedBox(height: 16),
                 _isLoadingLabours
                     ? const Center(child: CircularProgressIndicator())
-                    : DropdownButtonFormField<String>(
-                        initialValue: _selectedCategory,
-                        items: _labours.map<DropdownMenuItem<String>>((labour) {
-                          return DropdownMenuItem(
-                            value: labour['designation'],
-                            child: Text(labour['designation']),
+                    : CustomDropdown<String>(
+                        value: _selectedCategory,
+                        hintText: 'Category *',
+                        mainColor: primaryColor,
+                        items: (_labours.map<String>((l) => l['designation'].toString()).toSet().toList()
+                          ..sort((a, b) => a.trim().toLowerCase().compareTo(b.trim().toLowerCase())))
+                            .map((designation) {
+                          return DropdownMenuItem<String>(
+                            value: designation,
+                            child: Text(designation),
                           );
                         }).toList(),
                         onChanged: _onCategoryChanged,
-                        decoration: _buildInputDecoration('Category *'),
-                        validator: (value) => (value == null || value.isEmpty) ? 'Please select a category' : null,
                       ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -650,13 +655,14 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
                   decoration: _buildInputDecoration('Address'),
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedSalaryType,
+                CustomDropdown<String>(
+                  value: _selectedSalaryType,
+                  hintText: 'Group *',
+                  mainColor: primaryColor,
                   items: const ['Daily Wages', 'Sub Contract']
                       .map((type) => DropdownMenuItem(value: type, child: Text(type)))
                       .toList(),
                   onChanged: (value) => setState(() => _selectedSalaryType = value!),
-                  decoration: _buildInputDecoration('Group *'),
                 ),
                 const SizedBox(height: 16),
                 Row(

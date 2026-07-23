@@ -5,6 +5,7 @@ import 'package:ideal_cst/models/worker.dart';
 import 'package:ideal_cst/models/worker_transfer.dart';
 import 'package:ideal_cst/services/workforce_service.dart';
 import 'worker_details_screen.dart';
+import 'package:ideal_cst/screens/organization/components/custom_dropdown.dart';
 
 
 final WorkforceService _workforceService = WorkforceService();
@@ -268,7 +269,8 @@ class _SubContractorWorkersScreenState
                                 worker.workerType.toLowerCase().contains(searchQuery);
 
                             return matchesSearch;
-                          }).toList();
+                          }).toList()
+                            ..sort((a, b) => a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase()));
 
                           if (workers.isEmpty) {
                             return Center(
@@ -760,22 +762,19 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                 const SizedBox(height: 12),
                 _isLoadingLabours
                     ? const Center(child: CircularProgressIndicator())
-                    : DropdownButtonFormField<String>(
-                        initialValue: _selectedCategory,
-                        items: _labours.map<DropdownMenuItem<String>>((labour) {
-                          return DropdownMenuItem(
-                            value: labour['designation'],
-                            child: Text(labour['designation']),
+                    : CustomDropdown<String>(
+                        value: _selectedCategory,
+                        hintText: 'Category *',
+                        mainColor: primaryColor,
+                        items: (_labours.map<String>((l) => l['designation'].toString()).toSet().toList()
+                          ..sort((a, b) => a.trim().toLowerCase().compareTo(b.trim().toLowerCase())))
+                            .map((designation) {
+                          return DropdownMenuItem<String>(
+                            value: designation,
+                            child: Text(designation),
                           );
                         }).toList(),
                         onChanged: _onCategoryChanged,
-                        decoration: _buildInputDecoration('Category *'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a category';
-                          }
-                          return null;
-                        },
                       ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -807,8 +806,10 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                   },
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedLabourType,
+                CustomDropdown<String>(
+                  value: _selectedLabourType,
+                  hintText: 'Labour Type *',
+                  mainColor: primaryColor,
                   items: const ['Daily Wage', 'Sub contract']
                       .map(
                         (type) =>
@@ -818,10 +819,6 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                   onChanged: (value) => setState(() {
                     _selectedLabourType = value!;
                   }),
-                  decoration: _buildInputDecoration('Labour Type *'),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Please select a labour type'
-                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ideal_cst/screens/organization/components/custom_dropdown.dart';
 
 class AddLabourEntryModal extends StatefulWidget {
   final String siteId;
@@ -49,6 +50,10 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
   List<DocumentSnapshot> contractors = [];
   List<DocumentSnapshot> filteredContractors = [];
   DocumentSnapshot? selectedWorker;
+
+  Set<String> selectedWorkerIds = {};
+  Map<String, DocumentSnapshot> selectedWorkerDocs = {};
+  bool isMultiSelectMode = false;
 
   final List<String> categories = [
     'Mason',
@@ -188,7 +193,8 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
               'defaultHours': entry.value['defaultHours'],
             },
           )
-          .toList();
+          .toList()
+        ..sort((a, b) => (a['designation'] ?? '').toString().trim().toLowerCase().compareTo((b['designation'] ?? '').toString().trim().toLowerCase()));
 
       if (!mounted) return;
       setState(() {
@@ -262,7 +268,16 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           seenNames.add(name);
           return true;
         }).toList();
-        filteredContractors = contractors;
+
+        contractors.sort((a, b) {
+          final dataA = a.data() as Map<String, dynamic>;
+          final dataB = b.data() as Map<String, dynamic>;
+          final nameA = (dataA['contractorName'] ?? dataA['name'] ?? '').toString().trim().toLowerCase();
+          final nameB = (dataB['contractorName'] ?? dataB['name'] ?? '').toString().trim().toLowerCase();
+          return nameA.compareTo(nameB);
+        });
+
+        filteredContractors = List.from(contractors);
 
         // Set initial selection only if valid
         if (contractors.isNotEmpty) {
@@ -321,7 +336,16 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
           }
           return true;
         }).toList();
-        filteredWorkers = workers;
+
+        workers.sort((a, b) {
+          final dataA = a.data() as Map<String, dynamic>;
+          final dataB = b.data() as Map<String, dynamic>;
+          final nameA = (dataA['workerName'] ?? dataA['name'] ?? '').toString().trim().toLowerCase();
+          final nameB = (dataB['workerName'] ?? dataB['name'] ?? '').toString().trim().toLowerCase();
+          return nameA.compareTo(nameB);
+        });
+
+        filteredWorkers = List.from(workers);
         filterWorkers();
       });
     } catch (e) {
@@ -350,21 +374,61 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         
         // Find the document snapshot in the loaded lists
         final workerId = w['workerId'];
-        if (isContractor) {
-          try {
-            selectedWorker = contractors.firstWhere((doc) => doc.id == workerId);
-          } catch (_) {
-            // Not found
-          }
-        } else {
-          try {
-            selectedWorker = workers.firstWhere((doc) => doc.id == workerId);
-          } catch (_) {
-            // Not found
-          }
+        if (selectedWorker != null) {
+          selectedWorkerIds = {selectedWorker!.id};
+          selectedWorkerDocs = {selectedWorker!.id: selectedWorker!};
         }
       });
     }
+  }
+
+  void _toggleWorkerSelection(DocumentSnapshot doc) {
+    final id = doc.id;
+    setState(() {
+      if (selectedWorkerIds.contains(id)) {
+        selectedWorkerIds.remove(id);
+        selectedWorkerDocs.remove(id);
+        if (selectedWorkerIds.isEmpty) {
+          isMultiSelectMode = false;
+          selectedWorker = null;
+        } else {
+          selectedWorker = selectedWorkerDocs.values.last;
+        }
+      } else {
+        isMultiSelectMode = true;
+        selectedWorkerIds.add(id);
+        selectedWorkerDocs[id] = doc;
+        selectedWorker = doc;
+      }
+    });
+    _recalculateOtHours();
+  }
+
+  void _selectAllVisibleWorkers() {
+    setState(() {
+      isMultiSelectMode = true;
+      for (final doc in filteredWorkers) {
+        selectedWorkerIds.add(doc.id);
+        selectedWorkerDocs[doc.id] = doc;
+      }
+      for (final doc in filteredContractors) {
+        selectedWorkerIds.add(doc.id);
+        selectedWorkerDocs[doc.id] = doc;
+      }
+      if (selectedWorkerDocs.isNotEmpty) {
+        selectedWorker = selectedWorkerDocs.values.first;
+      }
+    });
+    _recalculateOtHours();
+  }
+
+  void _clearWorkerSelection() {
+    setState(() {
+      selectedWorkerIds.clear();
+      selectedWorkerDocs.clear();
+      selectedWorker = null;
+      isMultiSelectMode = false;
+    });
   }
 
   void filterWorkers() {
@@ -405,6 +469,22 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         if (_isBlockedOnAnotherSiteToday(doc.id)) return false;
         return true;
       }).toList();
+
+      filteredWorkers.sort((a, b) {
+        final dataA = a.data() as Map<String, dynamic>;
+        final dataB = b.data() as Map<String, dynamic>;
+        final nameA = (dataA['workerName'] ?? dataA['name'] ?? '').toString().trim().toLowerCase();
+        final nameB = (dataB['workerName'] ?? dataB['name'] ?? '').toString().trim().toLowerCase();
+        return nameA.compareTo(nameB);
+      });
+
+      filteredContractors.sort((a, b) {
+        final dataA = a.data() as Map<String, dynamic>;
+        final dataB = b.data() as Map<String, dynamic>;
+        final nameA = (dataA['contractorName'] ?? dataA['name'] ?? '').toString().trim().toLowerCase();
+        final nameB = (dataB['contractorName'] ?? dataB['name'] ?? '').toString().trim().toLowerCase();
+        return nameA.compareTo(nameB);
+      });
     });
   }
 
@@ -570,32 +650,29 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
   }
 
   Future<void> addWorkerEntry() async {
-    Map<String, dynamic>? workerData;
-    DocumentSnapshot? selectedContractorDoc;
-    double basicSalary = 0.0;
-    double defaultHours = 8.0;
-    double overtimeRate = 0.0;
+    final otHoursInput = otHoursController.text.trim();
+    final otHoursValue = otHoursInput.isEmpty
+        ? "0 Hours"
+        : "$otHoursInput Hours";
+    final otHoursNumber = double.tryParse(otHoursInput) ?? 0.0;
 
-    if (selectedContractor != null) {
-      // Find the contractor document
-      final contractorQuery = await FirebaseFirestore.instance
-          .collection('contractors')
-          .where('contractorName', isEqualTo: selectedContractor)
-          .limit(1)
-          .get();
-      if (contractorQuery.docs.isNotEmpty) {
-        selectedContractorDoc = contractorQuery.docs.first;
-      } else {
-        final subContractorQuery = await FirebaseFirestore.instance
-            .collection('sub_contractors')
-            .where('name', isEqualTo: selectedContractor)
-            .limit(1)
-            .get();
-        if (subContractorQuery.docs.isNotEmpty) {
-          selectedContractorDoc = subContractorQuery.docs.first;
-        }
-      }
+    final inTime = inTimeController.text.trim();
+    final outTime = outTimeController.text.trim();
+    final remarks = remarksController.text.trim();
+
+    double hoursWorked = 0.0;
+    if (inTime.isNotEmpty && outTime.isNotEmpty) {
+      hoursWorked = calculateHoursWorked(inTime, outTime);
     }
+
+    final docId = '${widget.siteId}_${widget.date}';
+    final attendanceDocRef = FirebaseFirestore.instance
+        .collection('daily_labour_entries')
+        .doc(docId);
+
+    final batch = FirebaseFirestore.instance.batch();
+    final List<Map<String, dynamic>> createdEntries = [];
+    final List<Map<String, dynamic>> updatedList = List.from(widget.existingEntries);
 
     if (isAddingNewWorker) {
       if (workerNameController.text.trim().isEmpty ||
@@ -606,19 +683,39 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         return;
       }
 
-      // Get basic salary and default hours from labours collection for category
+      DocumentSnapshot? selectedContractorDoc;
+      if (selectedContractor != null) {
+        final contractorQuery = await FirebaseFirestore.instance
+            .collection('contractors')
+            .where('contractorName', isEqualTo: selectedContractor)
+            .limit(1)
+            .get();
+        if (contractorQuery.docs.isNotEmpty) {
+          selectedContractorDoc = contractorQuery.docs.first;
+        } else {
+          final subContractorQuery = await FirebaseFirestore.instance
+              .collection('sub_contractors')
+              .where('name', isEqualTo: selectedContractor)
+              .limit(1)
+              .get();
+          if (subContractorQuery.docs.isNotEmpty) {
+            selectedContractorDoc = subContractorQuery.docs.first;
+          }
+        }
+      }
+
       final selectedLabour = _labours.firstWhere(
         (labour) => labour['designation'] == selectedCategory,
         orElse: () => {'salary': 0, 'defaultHours': 8.0},
       );
-      basicSalary = (selectedLabour['salary'] is num)
+      final basicSalary = (selectedLabour['salary'] is num)
           ? selectedLabour['salary'].toDouble()
           : 0.0;
-      defaultHours = (selectedLabour['defaultHours'] is num)
+      final defaultHours = (selectedLabour['defaultHours'] is num)
           ? selectedLabour['defaultHours'].toDouble()
           : 8.0;
 
-      workerData = {
+      final workerData = {
         'workerName': workerNameController.text.trim(),
         'mobile': mobileController.text.trim(),
         'aadhaar': aadhaarController.text.trim(),
@@ -638,203 +735,204 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
             .collection('workers')
             .add(workerData);
         workerData['workerId'] = docRef.id;
+
+        final salaryData = calculateSalary(
+          basicSalary: basicSalary,
+          defaultHours: defaultHours,
+          hoursWorked: hoursWorked,
+          otHours: otHoursNumber,
+          overtimeRate: 0.0,
+        );
+
+        final entry = <String, dynamic>{
+          ...workerData,
+          'attendanceType': selectedAttendanceType,
+          'inTime': inTime,
+          'outTime': outTime,
+          'otHours': otHoursValue,
+          'dayValue': calculateDayValue(),
+          'remarks': remarks,
+          'siteId': widget.siteId,
+          'siteName': widget.siteName,
+          'supervisorId': widget.supervisorId,
+          'supervisorName': widget.supervisorName,
+          'date': widget.date,
+          'savedAt': FieldValue.serverTimestamp(),
+          'mealsCount': widget.initialWorker?['mealsCount'] ?? 0,
+          'mealsAmount': widget.initialWorker?['mealsAmount'] ?? 0,
+          'busCount': widget.initialWorker?['busCount'] ?? 0,
+          'busAmount': widget.initialWorker?['busAmount'] ?? 0,
+          'basicSalary': salaryData['basicSalary'],
+          'defaultHours': salaryData['defaultHours'],
+          'hoursWorked': salaryData['hoursWorked'],
+          'overtimeHours': salaryData['overtimeHours'],
+          'overtimeRate': salaryData['overtimeRate'],
+          'overtimeAmount': salaryData['overtimeAmount'],
+          'totalSalary': salaryData['totalSalary'],
+        };
+
+        batch.set(attendanceDocRef.collection('workers').doc(docRef.id), entry, SetOptions(merge: true));
+        createdEntries.add(entry);
+
+        final existingIndex = updatedList.indexWhere((w) => w['workerId'] == docRef.id);
+        if (existingIndex >= 0) {
+          updatedList[existingIndex] = entry;
+        } else {
+          updatedList.add(entry);
+        }
       } catch (e) {
-        debugPrint('Error adding worker: $e');
+        debugPrint('Error adding new worker: $e');
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error adding worker: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding worker: $e')));
         }
         return;
       }
     } else {
-      if (selectedWorker == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Please select a worker')));
+      if (selectedWorkerDocs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select at least one worker')),
+        );
         return;
       }
 
-      final data = selectedWorker!.data() as Map<String, dynamic>;
-      final isContractor =
-          selectedWorker!.reference.parent.id == 'contractors' ||
-          selectedWorker!.reference.parent.id == 'sub_contractors';
+      for (final doc in selectedWorkerDocs.values) {
+        final data = doc.data() as Map<String, dynamic>;
+        final isContractor =
+            doc.reference.parent.id == 'contractors' ||
+            doc.reference.parent.id == 'sub_contractors';
 
-      if (isContractor) {
-        workerData = {
-          'workerId': selectedWorker!.id,
-          'workerName': data['contractorName'] ?? data['name'] ?? 'Unknown',
-          'mobile': data['mobileNumber'] ?? data['mobile'] ?? '',
-          'category': data['category'] ?? '',
-          'contractorName': data['contractorName'] ?? data['name'] ?? '',
-          'contractorId': selectedWorker!.id,
-          'supervisorName': data['supervisorName'] ?? widget.supervisorName,
-          'supervisorId': data['supervisorId'] ?? widget.supervisorId,
-          'labourType': 'Sub Contractor',
-          'isContractor': true,
-        };
-        basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
-            (data['salaryRate'] as num?)?.toDouble() ??
-            (data['rate'] as num?)?.toDouble() ??
-            (data['salary'] as num?)?.toDouble() ??
-            0.0;
-        defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
-        overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
-      } else {
-        workerData = {
-          'workerId': selectedWorker!.id,
-          'workerName': data['workerName'] ?? data['name'] ?? 'Unknown',
-          'mobile': data['mobile'] ?? data['mobileNumber'] ?? '',
-          'category': data['workerType'] ?? data['category'] ?? '',
-          'contractorName':
-              data['contractorName'] ??
-              data['subContractorName'] ??
-              data['contractor'] ??
-              '',
-          'contractorId': data['contractorId'] ?? data['subContractorId'] ?? '',
-          'supervisorName': data['supervisorName'] ?? widget.supervisorName,
-          'supervisorId': data['supervisorId'] ?? widget.supervisorId,
-          'labourType': data['labourType'] ?? 'Daily Wage',
-          'isContractor': false,
-        };
-        basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
-            (data['salaryRate'] as num?)?.toDouble() ??
-            (data['rate'] as num?)?.toDouble() ??
-            (data['salary'] as num?)?.toDouble() ??
-            0.0;
-        defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
-        overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
-      }
-    }
+        Map<String, dynamic> workerData;
+        double basicSalary = 0.0;
+        double defaultHours = 8.0;
+        double overtimeRate = 0.0;
 
-    final workerId = (workerData['workerId'] as String?)?.isNotEmpty == true
-        ? workerData['workerId'] as String
-        : DateTime.now().millisecondsSinceEpoch.toString();
-
-    final otHoursInput = otHoursController.text.trim();
-    final otHoursValue = otHoursInput.isEmpty
-        ? "0 Hours"
-        : "$otHoursInput Hours";
-    final otHoursNumber = double.tryParse(otHoursInput) ?? 0.0;
-
-    final inTime = inTimeController.text.trim();
-    final outTime = outTimeController.text.trim();
-    double hoursWorked = 0.0;
-    if (inTime.isNotEmpty && outTime.isNotEmpty) {
-      hoursWorked = calculateHoursWorked(inTime, outTime);
-    }
-
-    // Fetch subcontractor overtime rate & basic salary rate if missing
-    final subContractorId = workerData['contractorId']?.toString() ?? selectedContractorDoc?.id ?? '';
-    if (subContractorId.isNotEmpty) {
-      try {
-        DocumentSnapshot? subContractorDoc;
-        if (selectedContractorDoc != null && selectedContractorDoc!.id == subContractorId) {
-          subContractorDoc = selectedContractorDoc;
+        if (isContractor) {
+          workerData = {
+            'workerId': doc.id,
+            'workerName': data['contractorName'] ?? data['name'] ?? 'Unknown',
+            'mobile': data['mobileNumber'] ?? data['mobile'] ?? '',
+            'category': data['category'] ?? '',
+            'contractorName': data['contractorName'] ?? data['name'] ?? '',
+            'contractorId': doc.id,
+            'supervisorName': data['supervisorName'] ?? widget.supervisorName,
+            'supervisorId': data['supervisorId'] ?? widget.supervisorId,
+            'labourType': 'Sub Contractor',
+            'isContractor': true,
+          };
+          basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
+              (data['salaryRate'] as num?)?.toDouble() ??
+              (data['rate'] as num?)?.toDouble() ??
+              (data['salary'] as num?)?.toDouble() ??
+              0.0;
+          defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
+          overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
         } else {
-          final doc = await FirebaseFirestore.instance
-              .collection('sub_contractors')
-              .doc(subContractorId)
-              .get();
-          if (doc.exists) {
-            subContractorDoc = doc;
-          } else {
-            final cDoc = await FirebaseFirestore.instance
-                .collection('contractors')
+          workerData = {
+            'workerId': doc.id,
+            'workerName': data['workerName'] ?? data['name'] ?? 'Unknown',
+            'mobile': data['mobile'] ?? data['mobileNumber'] ?? '',
+            'category': data['workerType'] ?? data['category'] ?? '',
+            'contractorName':
+                data['contractorName'] ??
+                data['subContractorName'] ??
+                data['contractor'] ??
+                '',
+            'contractorId': data['contractorId'] ?? data['subContractorId'] ?? '',
+            'supervisorName': data['supervisorName'] ?? widget.supervisorName,
+            'supervisorId': data['supervisorId'] ?? widget.supervisorId,
+            'labourType': data['labourType'] ?? 'Daily Wage',
+            'isContractor': false,
+          };
+          basicSalary = (data['basicSalary'] as num?)?.toDouble() ??
+              (data['salaryRate'] as num?)?.toDouble() ??
+              (data['rate'] as num?)?.toDouble() ??
+              (data['salary'] as num?)?.toDouble() ??
+              0.0;
+          defaultHours = (data['defaultHours'] as num?)?.toDouble() ?? 8.0;
+          overtimeRate = (data['overtimeRate'] as num?)?.toDouble() ?? 0.0;
+        }
+
+        final workerId = doc.id;
+
+        final subContractorId = workerData['contractorId']?.toString() ?? '';
+        if (subContractorId.isNotEmpty) {
+          try {
+            final scDoc = await FirebaseFirestore.instance
+                .collection('sub_contractors')
                 .doc(subContractorId)
                 .get();
-            if (cDoc.exists) subContractorDoc = cDoc;
-          }
-        }
-
-        if (subContractorDoc != null && subContractorDoc.exists) {
-          final scData = subContractorDoc.data() as Map<String, dynamic>?;
-          if (scData != null) {
-            final otR = (scData['overtimeRate'] as num?)?.toDouble();
-            if (otR != null && otR > 0) {
-              overtimeRate = otR;
-            }
-            if (basicSalary == 0.0) {
-              final rate = scData['salaryRate'] ?? scData['basicSalary'] ?? scData['rate'] ?? scData['salary'];
-              if (rate is num) {
-                basicSalary = rate.toDouble();
-              } else if (rate is String) {
-                basicSalary = double.tryParse(rate) ?? 0.0;
+            if (scDoc.exists) {
+              final scData = scDoc.data();
+              if (scData != null) {
+                final otR = (scData['overtimeRate'] as num?)?.toDouble();
+                if (otR != null && otR > 0) overtimeRate = otR;
+                if (basicSalary == 0.0) {
+                  final rate = scData['salaryRate'] ?? scData['basicSalary'] ?? scData['rate'] ?? scData['salary'];
+                  if (rate is num) basicSalary = rate.toDouble();
+                  else if (rate is String) basicSalary = double.tryParse(rate) ?? 0.0;
+                }
               }
             }
+          } catch (e) {
+            debugPrint('Error fetching subcontractor details: $e');
           }
         }
-      } catch (e) {
-        debugPrint('Error fetching subcontractor details: $e');
+
+        final salaryData = calculateSalary(
+          basicSalary: basicSalary,
+          defaultHours: defaultHours,
+          hoursWorked: hoursWorked,
+          otHours: otHoursNumber,
+          overtimeRate: overtimeRate,
+        );
+
+        final entry = <String, dynamic>{
+          ...workerData,
+          'workerId': workerId,
+          'attendanceType': selectedAttendanceType,
+          'inTime': inTime,
+          'outTime': outTime,
+          'otHours': otHoursValue,
+          'dayValue': calculateDayValue(),
+          'remarks': remarks,
+          'siteId': widget.siteId,
+          'siteName': widget.siteName,
+          'supervisorId': widget.supervisorId,
+          'supervisorName': widget.supervisorName,
+          'date': widget.date,
+          'savedAt': FieldValue.serverTimestamp(),
+          'mealsCount': widget.initialWorker?['mealsCount'] ?? 0,
+          'mealsAmount': widget.initialWorker?['mealsAmount'] ?? 0,
+          'busCount': widget.initialWorker?['busCount'] ?? 0,
+          'busAmount': widget.initialWorker?['busAmount'] ?? 0,
+          'basicSalary': salaryData['basicSalary'],
+          'defaultHours': salaryData['defaultHours'],
+          'hoursWorked': salaryData['hoursWorked'],
+          'overtimeHours': salaryData['overtimeHours'],
+          'overtimeRate': salaryData['overtimeRate'],
+          'overtimeAmount': salaryData['overtimeAmount'],
+          'totalSalary': salaryData['totalSalary'],
+        };
+
+        batch.set(attendanceDocRef.collection('workers').doc(workerId), entry, SetOptions(merge: true));
+        batch.update(doc.reference, {
+          'assignedSiteIds': [widget.siteId],
+        });
+
+        createdEntries.add(entry);
+
+        final existingIndex = updatedList.indexWhere((w) => w['workerId'] == workerId);
+        if (existingIndex >= 0) {
+          updatedList[existingIndex] = entry;
+        } else {
+          updatedList.add(entry);
+        }
       }
     }
-
-    final salaryData = calculateSalary(
-      basicSalary: basicSalary,
-      defaultHours: defaultHours,
-      hoursWorked: hoursWorked,
-      otHours: otHoursNumber,
-      overtimeRate: overtimeRate,
-    );
-
-    final entry = <String, dynamic>{
-      ...workerData,
-      'workerId': workerId,
-      'attendanceType': selectedAttendanceType,
-      'inTime': inTime,
-      'outTime': outTime,
-      'otHours': otHoursValue,
-      'dayValue': calculateDayValue(),
-      'remarks': remarksController.text.trim(),
-      'siteId': widget.siteId,
-      'siteName': widget.siteName,
-      'supervisorId': widget.supervisorId,
-      'supervisorName': widget.supervisorName,
-      'date': widget.date,
-      'savedAt': FieldValue.serverTimestamp(),
-      // New fields for meals and bus fare with defaults
-      'mealsCount': widget.initialWorker?['mealsCount'] ?? 0,
-      'mealsAmount': widget.initialWorker?['mealsAmount'] ?? 0,
-      'busCount': widget.initialWorker?['busCount'] ?? 0,
-      'busAmount': widget.initialWorker?['busAmount'] ?? 0,
-      // New salary calculation fields
-      'basicSalary': salaryData['basicSalary'],
-      'defaultHours': salaryData['defaultHours'],
-      'hoursWorked': salaryData['hoursWorked'],
-      'overtimeHours': salaryData['overtimeHours'],
-      'overtimeRate': salaryData['overtimeRate'],
-      'overtimeAmount': salaryData['overtimeAmount'],
-      'totalSalary': salaryData['totalSalary'],
-    };
 
     setState(() => _isSaving = true);
 
     try {
-      final docId = '${widget.siteId}_${widget.date}';
-      final attendanceDocRef = FirebaseFirestore.instance
-          .collection('daily_labour_entries')
-          .doc(docId);
-
-      final batch = FirebaseFirestore.instance.batch();
-
-      // 1. Save to attendance/{docId}/workers subcollection
-      batch.set(attendanceDocRef.collection('workers').doc(workerId), entry, SetOptions(merge: true));
-
-      // Assign worker / sub-contractor to this site (single-site assignment)
-      if (!isAddingNewWorker && selectedWorker != null) {
-        batch.update(selectedWorker!.reference, {
-          'assignedSiteIds': [widget.siteId],
-        });
-      }
-
-      // 3. Compute updated summary and touch parent attendance doc
-      // Filter out existing entry for this worker if it was already added to prevent duplicates in count
-      final updatedList =
-          widget.existingEntries
-              .where((w) => w['workerId'] != workerId)
-              .toList()
-            ..add(entry);
-
       int fullDay = 0;
       int halfDay = 0;
       int earlyOut = 0;
@@ -893,8 +991,12 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
       await batch.commit();
 
       if (mounted) setState(() => _isSaving = false);
-
       if (!mounted) return;
+
+      final count = createdEntries.length;
+      final msg = count > 1
+          ? '$count Labour entries saved successfully.'
+          : 'Labour entry saved successfully.';
 
       await showDialog(
         context: context,
@@ -910,9 +1012,9 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
               children: [
                 const Icon(Icons.check_circle, color: Colors.green, size: 64),
                 const SizedBox(height: 20),
-                const Text(
-                  'Labour entry saved successfully.',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  msg,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -926,7 +1028,9 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         ),
       );
 
-      widget.onWorkerAdded(entry);
+      for (final entry in createdEntries) {
+        widget.onWorkerAdded(entry);
+      }
       if (mounted) Navigator.pop(context);
     } catch (e) {
       debugPrint('Error saving labour entry: $e');
@@ -999,7 +1103,12 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                   ),
                   child: _isSaving
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Save Entry', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(
+                          (!isAddingNewWorker && selectedWorkerDocs.length > 1)
+                              ? 'Save ${selectedWorkerDocs.length} Entries'
+                              : 'Save Entry',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
             ),
@@ -1102,6 +1211,9 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
   }
 
   Widget _buildSelectWorkerSection() {
+    final hasSelection = selectedWorkerIds.isNotEmpty;
+    final selectionCount = selectedWorkerIds.length;
+
     return Card(
       elevation: 0,
       color: Colors.white,
@@ -1111,10 +1223,50 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (hasSelection || isMultiSelectMode) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: primaryColor, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$selectionCount ${selectionCount == 1 ? "Person" : "People"} Selected',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 13),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: _selectAllVisibleWorkers,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Text('Select All', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: _clearWorkerSelection,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Text('Clear', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             TextField(
               controller: searchController,
               decoration: InputDecoration(
                 labelText: 'Search Worker / Contractor',
+                helperText: 'Tip: Long-press any person to select multiple',
+                helperStyle: TextStyle(fontSize: 11, color: Colors.indigo.shade600, fontWeight: FontWeight.w500),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -1168,12 +1320,12 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         ? (data['category'] ?? data['workerType'] ?? 'Uncategorized')
         : 'Sub Contractor';
         
-    final isSelected = selectedWorker?.id == doc.id;
+    final isSelected = selectedWorkerIds.contains(doc.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSelected ? primaryColor.withValues(alpha: 0.05) : Colors.white,
+        color: isSelected ? primaryColor.withValues(alpha: 0.08) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade200, width: isSelected ? 1.5 : 1),
       ),
@@ -1181,31 +1333,42 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         color: Colors.transparent,
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        title: Row(
-          children: [
-            Expanded(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? primaryColor : Colors.black87))),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isWorker ? Colors.blue.shade50 : Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(6),
+          title: Row(
+            children: [
+              Expanded(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? primaryColor : Colors.black87))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isWorker ? Colors.blue.shade50 : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isWorker ? 'Worker' : 'Sub',
+                  style: TextStyle(color: isWorker ? Colors.blue.shade700 : Colors.orange.shade700, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
               ),
-              child: Text(
-                isWorker ? 'Worker' : 'Sub',
-                style: TextStyle(color: isWorker ? Colors.blue.shade700 : Colors.orange.shade700, fontSize: 10, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+            ],
+          ),
+          subtitle: Text('$category • Sub: $subContractor', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+          trailing: isSelected
+              ? Icon(isMultiSelectMode ? Icons.check_box_rounded : Icons.check_circle, color: primaryColor)
+              : Icon(isMultiSelectMode ? Icons.check_box_outline_blank_rounded : Icons.radio_button_unchecked, color: Colors.grey),
+          onLongPress: () {
+            _toggleWorkerSelection(doc);
+          },
+          onTap: () {
+            if (isMultiSelectMode) {
+              _toggleWorkerSelection(doc);
+            } else {
+              setState(() {
+                selectedWorker = doc;
+                selectedWorkerIds = {doc.id};
+                selectedWorkerDocs = {doc.id: doc};
+              });
+              _recalculateOtHours();
+            }
+          },
         ),
-        subtitle: Text('$category • Sub: $subContractor', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-        trailing: isSelected ? Icon(Icons.check_circle, color: primaryColor) : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
-        onTap: () {
-          setState(() {
-            selectedWorker = doc;
-          });
-          _recalculateOtHours();
-        },
-      ),
       ),
     );
   }
@@ -1339,21 +1502,20 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
     required String label,
     required void Function(String?) onChanged,
   }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      items: items.toSet().map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14)))).toList(),
+    final sortedItems = List<String>.from(items.toSet())
+      ..sort((a, b) => a.trim().toLowerCase().compareTo(b.trim().toLowerCase()));
+
+    return CustomDropdown<String>(
+      value: value,
+      hintText: label,
+      mainColor: primaryColor,
+      items: sortedItems.map((t) {
+        return DropdownMenuItem<String>(
+          value: t,
+          child: Text(t, style: const TextStyle(fontSize: 14)),
+        );
+      }).toList(),
       onChanged: onChanged,
-      icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
     );
   }
 }
