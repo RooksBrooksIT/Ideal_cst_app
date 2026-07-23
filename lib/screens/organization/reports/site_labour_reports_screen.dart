@@ -13,6 +13,7 @@ import 'package:open_file/open_file.dart';
 import 'package:excel_community/excel_community.dart' as excel;
 import 'package:ideal_cst/utils/web_download_stub.dart'
     if (dart.library.html) 'package:ideal_cst/utils/web_download.dart';
+import 'package:ideal_cst/screens/organization/components/custom_dropdown.dart';
 
 class _ReportTotals {
   final int totalRecords;
@@ -1075,48 +1076,24 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   }
 
   Widget _buildReportSelector() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          )
-        ],
-      ),
-      child: DropdownButtonFormField<String>(
-        initialValue: selectedReportType,
-        dropdownColor: cardColor,
-        isExpanded: true,
-        style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold),
-        decoration: InputDecoration(
-          labelText: 'Report Type',
-          labelStyle: TextStyle(color: mutedColor, fontSize: 12, fontWeight: FontWeight.normal),
-          filled: true,
-          fillColor: bgColor,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        ),
-        items: reportTypes.map((type) {
-          return DropdownMenuItem<String>(
-            value: type,
-            child: Text(type),
-          );
-        }).toList(),
-        onChanged: (type) {
-          if (type != null) {
-            setState(() {
-              selectedReportType = type;
-              reportGenerated = false;
-            });
-            _generateReport();
-          }
-        },
-      ),
+    return CustomDropdown<String>(
+      value: selectedReportType,
+      hintText: 'Select Report Type',
+      items: reportTypes.map((type) {
+        return DropdownMenuItem<String>(
+          value: type,
+          child: Text(type),
+        );
+      }).toList(),
+      onChanged: (type) {
+        if (type != null) {
+          setState(() {
+            selectedReportType = type;
+            reportGenerated = false;
+          });
+          _generateReport();
+        }
+      },
     );
   }
 
@@ -1161,14 +1138,12 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     required ValueChanged<_DropdownOption?> onChanged,
   }) {
     if (isLoadingFilters) {
-      return InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(fontSize: 12, color: mutedColor),
-          filled: true,
-          fillColor: bgColor,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: primaryColor.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -1186,24 +1161,13 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
 
     final validValue = options.any((o) => o.id == value) ? value : null;
 
-    return DropdownButtonFormField<String>(
-      initialValue: validValue,
-      isExpanded: true,
-      dropdownColor: cardColor,
-      style: TextStyle(color: textColor, fontSize: 13),
-      hint: Text('Select $label', style: TextStyle(color: mutedColor, fontSize: 12)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(fontSize: 12, color: mutedColor),
-        filled: true,
-        fillColor: bgColor,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-      ),
+    return CustomDropdown<String>(
+      value: validValue,
+      hintText: 'All $label',
       items: [
         DropdownMenuItem<String>(
           value: null,
-          child: Text('All', style: TextStyle(color: mutedColor)),
+          child: Text('All $label', style: TextStyle(color: mutedColor)),
         ),
         ...options.map((opt) => DropdownMenuItem<String>(
               value: opt.id,
@@ -1240,19 +1204,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: selectedDateFilter,
-                  isExpanded: true,
-                  dropdownColor: cardColor,
-                  style: TextStyle(color: textColor, fontSize: 13),
-                  decoration: InputDecoration(
-                    labelText: 'Date Filter',
-                    labelStyle: TextStyle(fontSize: 12, color: mutedColor),
-                    filled: true,
-                    fillColor: bgColor,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                  ),
+                child: CustomDropdown<String>(
+                  value: selectedDateFilter,
+                  hintText: 'Date Filter',
                   items: ['Today', 'Yesterday', 'This Week', 'This Month', 'This Year', 'Custom'].map((preset) {
                     return DropdownMenuItem<String>(
                       value: preset,
@@ -1270,10 +1224,10 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
                     decoration: BoxDecoration(
                       color: bgColor.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       _dateRangeText(),
@@ -1315,19 +1269,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: selectedLabourType,
-                  isExpanded: true,
-                  dropdownColor: cardColor,
-                  style: TextStyle(color: textColor, fontSize: 13),
-                  decoration: InputDecoration(
-                    labelText: 'Labour Type',
-                    labelStyle: TextStyle(fontSize: 12, color: mutedColor),
-                    filled: true,
-                    fillColor: bgColor,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                  ),
+                child: CustomDropdown<String>(
+                  value: selectedLabourType,
+                  hintText: 'Labour Type',
                   items: ['All', 'Daily Wage (DW)', 'Sub Contractor (SC)'].map((type) {
                     return DropdownMenuItem<String>(
                       value: type,
@@ -1525,17 +1469,20 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildKpiBadge('Total Subs', '${totals.totalSubContractors}', Icons.badge_outlined, Colors.indigo),
-                _buildKpiBadge('Total Workers', '${totals.totalWorkers}', Icons.people_outline, Colors.blue),
-                _buildKpiBadge('Total Hours', '${(totals.totalHours + totals.totalOtHours).toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
-                _buildKpiBadge('OT Amount', '₹${totals.totalOtAmount.toStringAsFixed(2)}', Icons.more_time, Colors.deepOrange),
-                _buildKpiBadge('Meals & Bus', '₹${(totals.totalMealsAmount + totals.totalBusAmount).toStringAsFixed(2)}', Icons.directions_bus_outlined, Colors.teal),
-                _buildKpiBadge('Grand Total', '₹${totals.totalEarnedSalary.toStringAsFixed(2)}', Icons.account_balance_wallet_outlined, Colors.green, isBold: true),
-              ],
+          Center(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildKpiBadge('Total Subs', '${totals.totalSubContractors}', Icons.badge_outlined, Colors.indigo),
+                  _buildKpiBadge('Total Workers', '${totals.totalWorkers}', Icons.people_outline, Colors.blue),
+                  _buildKpiBadge('Total Hours', '${(totals.totalHours + totals.totalOtHours).toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
+                  _buildKpiBadge('OT Amount', '₹${totals.totalOtAmount.toStringAsFixed(2)}', Icons.more_time, Colors.deepOrange),
+                  _buildKpiBadge('Meals & Bus', '₹${(totals.totalMealsAmount + totals.totalBusAmount).toStringAsFixed(2)}', Icons.directions_bus_outlined, Colors.teal),
+                  _buildKpiBadge('Grand Total', '₹${totals.totalEarnedSalary.toStringAsFixed(2)}', Icons.account_balance_wallet_outlined, Colors.green, isBold: true),
+                ],
+              ),
             ),
           ),
         ],
