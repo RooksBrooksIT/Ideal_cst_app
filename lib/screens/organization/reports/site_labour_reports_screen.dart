@@ -491,13 +491,30 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             .get();
 
         if (workersSnap.docs.isEmpty) {
-          // Fallback: if no workers subcollection exists, treat the parent
-          // document itself as a single worker entry (backward compatibility).
+          // Fallback: if no workers subcollection exists yet, preserve the coordinator/parent document
           flatWorkerEntries.add({
-            ...parentData,
+            'siteId':          parentSiteId,
+            'siteName':        parentSiteName,
+            'date':            parentDate,
             'coordinatorName': parentCoordinator,
-            '_docId': parentDocId,
-            '_parentDocId': parentDocId,
+            'supervisorName':  parentSupervisor,
+            'workerName':      '(No labour entries)',
+            'contractorName':  '-',
+            'category':        '-',
+            'labourType':      'DW',
+            'basicSalary':     0.0,
+            'hoursWorked':     0.0,
+            'otHours':         0.0,
+            'overtimeAmount':  0.0,
+            'mealsCount':      0,
+            'mealsAmount':     0.0,
+            'busCount':        0,
+            'busAmount':       0.0,
+            'attendanceType':  'Full Day',
+            'remarks':         parentData['notes'] ?? '',
+            'isHeaderOnly':    true,
+            '_docId':          parentDocId,
+            '_parentDocId':    parentDocId,
           });
           return;
         }
@@ -670,7 +687,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           : double.tryParse(rawDefaultHrs?.toString() ?? '') ?? 8.0;
 
       double basicHours;
-      if (hoursWorked > doubleOtHours) {
+      if (e['isHeaderOnly'] == true) {
+        basicHours = 0.0;
+      } else if (hoursWorked > doubleOtHours) {
         basicHours = hoursWorked - doubleOtHours;
       } else if (hoursWorked > 0) {
         basicHours = hoursWorked;
@@ -738,7 +757,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         'workerName':      workerName,
         'group':           group,
         'category':        category,
-        'labourCount':     1,
+        'labourCount':     e['isHeaderOnly'] == true ? 0 : 1,
         'salaryBasic':     salaryBasic,
         'totalSalary':     totalSalary,
         'hours':           basicHours,
@@ -756,26 +775,28 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         'inTime':          e['inTime']?.toString() ?? '',
         'outTime':         e['outTime']?.toString() ?? '',
         'remarks':         e['remarks']?.toString() ?? '',
+        'isHeaderOnly':    e['isHeaderOnly'] == true,
       });
     }
 
     // ── Filter rows by report type ────────────────────────────────────────
     if (selectedReportType == 'Daily Wage Report') {
-      reportData = rows.where((r) => r['group'] == 'DW').toList();
+      reportData = rows.where((r) => r['group'] == 'DW' || r['isHeaderOnly'] == true).toList();
     } else if (selectedReportType == 'Sub Contractor Report') {
-      reportData = rows.where((r) => r['group'] == 'SC').toList();
+      reportData = rows.where((r) => r['group'] == 'SC' || r['isHeaderOnly'] == true).toList();
     } else if (selectedReportType == 'Worker on Site Report') {
       reportData = rows
           .where((r) =>
-              r['attendanceType'] != 'Absent' &&
-              r['attendanceType'] != 'Leave')
+              r['isHeaderOnly'] == true ||
+              (r['attendanceType'] != 'Absent' &&
+              r['attendanceType'] != 'Leave'))
           .toList();
     } else {
       reportData = rows;
     }
 
     // ── Update summary totals ─────────────────────────────────────────────
-    totalWorkers    = reportData.length;
+    totalWorkers    = reportData.where((r) => r['isHeaderOnly'] != true).length;
     totalLabourCost = reportData.fold(
         0.0, (sum, r) => sum + (r['totalSalary'] as double));
     totalMealsAmount = reportData.fold(

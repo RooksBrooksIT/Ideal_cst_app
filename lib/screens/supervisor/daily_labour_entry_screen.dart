@@ -265,6 +265,45 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
         'supervisorId': widget.supervisorId,
         'supervisorName': widget.supervisorName,
       }, SetOptions(merge: true));
+
+      if (coordinator.isNotEmpty) {
+        try {
+          final scQuery = await FirebaseFirestore.instance
+              .collection('Site_Co-ordinator')
+              .where('siteName', isEqualTo: widget.siteName)
+              .get();
+
+          if (scQuery.docs.isNotEmpty) {
+            await scQuery.docs.first.reference.update({
+              'coordinatorName': coordinator,
+              'siteId': widget.siteId,
+              'supervisorName': widget.supervisorName,
+              'coordinatorDate': FieldValue.serverTimestamp(),
+            });
+          } else {
+            await FirebaseFirestore.instance.collection('Site_Co-ordinator').add({
+              'siteName': widget.siteName,
+              'siteId': widget.siteId,
+              'supervisorName': widget.supervisorName,
+              'coordinatorName': coordinator,
+              'coordinatorDate': FieldValue.serverTimestamp(),
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+          }
+
+          if (widget.supervisorId.isNotEmpty) {
+            await FirebaseFirestore.instance
+                .collection('supervisor')
+                .doc(widget.supervisorId)
+                .set({
+              'CoordinatorName': coordinator,
+              'CoordinatorDate': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+          }
+        } catch (e) {
+          debugPrint('Error syncing coordinator: $e');
+        }
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -830,38 +869,51 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
-              'Labour Entries',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            const Flexible(
+              child: Text(
+                'Labour Entries',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 8),
             if (isAttendanceCompleted || (totalAssignedSiteWorkers > 0 && workersList.length >= totalAssignedSiteWorkers))
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF86EFAC)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle_rounded, color: Color(0xFF15803D), size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Attendance Recorded (${workersList.length}/$totalAssignedSiteWorkers)',
-                      style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                  ],
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: Color(0xFF15803D), size: 16),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'Recorded (${workersList.length}/$totalAssignedSiteWorkers)',
+                          style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               )
             else
               ElevatedButton.icon(
                 onPressed: openAddLabourModal,
-                icon: const Icon(Icons.add, size: 20, color: Colors.white),
-                label: const Text('Add Entry', style: TextStyle(color: Colors.white)),
+                icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                label: const Text('Add Entry', style: TextStyle(color: Colors.white, fontSize: 13)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
