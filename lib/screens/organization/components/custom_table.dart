@@ -246,96 +246,100 @@ class _CustomTableState<T> extends State<CustomTable<T>> {
                     ),
 
                     // Controls (Rows per page + Page Nav)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Rows per page dropdown
-                        Text(
-                          'Rows per page:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              value: _rowsPerPage,
-                              isDense: true,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: widget.mainColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              items: widget.availableRowsPerPage.map((count) {
-                                return DropdownMenuItem<int>(
-                                  value: count,
-                                  child: Text('$count'),
-                                );
-                              }).toList(),
-                              onChanged: (newCount) {
-                                if (newCount != null && newCount != _rowsPerPage) {
-                                  setState(() {
-                                    _rowsPerPage = newCount;
-                                    _currentPage = 0;
-                                  });
-                                }
-                              },
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Rows per page dropdown
+                          Text(
+                            'Rows per page:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-
-                        // Navigation Buttons
-                        _buildNavButton(
-                          icon: Icons.first_page_rounded,
-                          onPressed: _currentPage > 0 ? () => _goToPage(0) : null,
-                          tooltip: 'First Page',
-                        ),
-                        _buildNavButton(
-                          icon: Icons.chevron_left_rounded,
-                          onPressed: _currentPage > 0 ? () => _goToPage(_currentPage - 1) : null,
-                          tooltip: 'Previous Page',
-                        ),
-
-                        // Page indicator
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: widget.mainColor.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
                             ),
-                            child: Text(
-                              '${_currentPage + 1} / ${maxP + 1}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: widget.mainColor,
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                value: _rowsPerPage,
+                                isDense: true,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: widget.mainColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                items: widget.availableRowsPerPage.map((count) {
+                                  return DropdownMenuItem<int>(
+                                    value: count,
+                                    child: Text('$count'),
+                                  );
+                                }).toList(),
+                                onChanged: (newCount) {
+                                  if (newCount != null && newCount != _rowsPerPage) {
+                                    setState(() {
+                                      _rowsPerPage = newCount;
+                                      _currentPage = 0;
+                                    });
+                                  }
+                                },
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
 
-                        _buildNavButton(
-                          icon: Icons.chevron_right_rounded,
-                          onPressed: _currentPage < maxP ? () => _goToPage(_currentPage + 1) : null,
-                          tooltip: 'Next Page',
-                        ),
-                        _buildNavButton(
-                          icon: Icons.last_page_rounded,
-                          onPressed: _currentPage < maxP ? () => _goToPage(maxP) : null,
-                          tooltip: 'Last Page',
-                        ),
-                      ],
+                          // Navigation Buttons
+                          _buildNavButton(
+                            icon: Icons.first_page_rounded,
+                            onPressed: _currentPage > 0 ? () => _goToPage(0) : null,
+                            tooltip: 'First Page',
+                          ),
+                          _buildNavButton(
+                            icon: Icons.chevron_left_rounded,
+                            onPressed: _currentPage > 0 ? () => _goToPage(_currentPage - 1) : null,
+                            tooltip: 'Previous Page',
+                          ),
+
+                          // Page indicator
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: widget.mainColor.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${_currentPage + 1} / ${maxP + 1}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: widget.mainColor,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          _buildNavButton(
+                            icon: Icons.chevron_right_rounded,
+                            onPressed: _currentPage < maxP ? () => _goToPage(_currentPage + 1) : null,
+                            tooltip: 'Next Page',
+                          ),
+                          _buildNavButton(
+                            icon: Icons.last_page_rounded,
+                            onPressed: _currentPage < maxP ? () => _goToPage(maxP) : null,
+                            tooltip: 'Last Page',
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
