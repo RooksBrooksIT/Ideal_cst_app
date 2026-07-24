@@ -491,31 +491,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             .get();
 
         if (workersSnap.docs.isEmpty) {
-          // Fallback: if no workers subcollection exists yet, preserve the coordinator/parent document
-          flatWorkerEntries.add({
-            'siteId':          parentSiteId,
-            'siteName':        parentSiteName,
-            'date':            parentDate,
-            'coordinatorName': parentCoordinator,
-            'supervisorName':  parentSupervisor,
-            'workerName':      '(No labour entries)',
-            'contractorName':  '-',
-            'category':        '-',
-            'labourType':      'DW',
-            'basicSalary':     0.0,
-            'hoursWorked':     0.0,
-            'otHours':         0.0,
-            'overtimeAmount':  0.0,
-            'mealsCount':      0,
-            'mealsAmount':     0.0,
-            'busCount':        0,
-            'busAmount':       0.0,
-            'attendanceType':  'Full Day',
-            'remarks':         parentData['notes'] ?? '',
-            'isHeaderOnly':    true,
-            '_docId':          parentDocId,
-            '_parentDocId':    parentDocId,
-          });
+          // If no workers exist for this daily entry document, do not render dummy rows
           return;
         }
 
@@ -775,28 +751,26 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         'inTime':          e['inTime']?.toString() ?? '',
         'outTime':         e['outTime']?.toString() ?? '',
         'remarks':         e['remarks']?.toString() ?? '',
-        'isHeaderOnly':    e['isHeaderOnly'] == true,
       });
     }
 
     // ── Filter rows by report type ────────────────────────────────────────
     if (selectedReportType == 'Daily Wage Report') {
-      reportData = rows.where((r) => r['group'] == 'DW' || r['isHeaderOnly'] == true).toList();
+      reportData = rows.where((r) => r['group'] == 'DW').toList();
     } else if (selectedReportType == 'Sub Contractor Report') {
-      reportData = rows.where((r) => r['group'] == 'SC' || r['isHeaderOnly'] == true).toList();
+      reportData = rows.where((r) => r['group'] == 'SC').toList();
     } else if (selectedReportType == 'Worker on Site Report') {
       reportData = rows
           .where((r) =>
-              r['isHeaderOnly'] == true ||
-              (r['attendanceType'] != 'Absent' &&
-              r['attendanceType'] != 'Leave'))
+              r['attendanceType'] != 'Absent' &&
+              r['attendanceType'] != 'Leave')
           .toList();
     } else {
       reportData = rows;
     }
 
     // ── Update summary totals ─────────────────────────────────────────────
-    totalWorkers    = reportData.where((r) => r['isHeaderOnly'] != true).length;
+    totalWorkers    = reportData.length;
     totalLabourCost = reportData.fold(
         0.0, (sum, r) => sum + (r['totalSalary'] as double));
     totalMealsAmount = reportData.fold(

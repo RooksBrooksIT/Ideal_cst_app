@@ -100,252 +100,285 @@ class _CustomTableState<T> extends State<CustomTable<T>> {
     final endItem = totalItems == 0 ? 0 : min((_currentPage + 1) * _rowsPerPage, totalItems);
     final maxP = _maxPage();
 
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Media Query responsive breakpoints
+    final isSmallScreen = screenWidth < 360;
+    final isCompactMobile = screenWidth < 400;
+
+    final double horizontalPadding = isSmallScreen ? 8.0 : (isCompactMobile ? 12.0 : 16.0);
+    final double columnSpacing = isSmallScreen ? 10.0 : (isCompactMobile ? 12.0 : 16.0);
+    final double headingRowHeight = isSmallScreen ? 40.0 : 44.0;
+    final double dataRowMinHeight = isSmallScreen ? 44.0 : 48.0;
+    final double dataRowMaxHeight = isSmallScreen ? 52.0 : 56.0;
+    final double headerFontSize = isSmallScreen ? 11.0 : 12.0;
+
     return Padding(
       padding: widget.padding,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: widget.mainColor.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(color: widget.mainColor.withValues(alpha: 0.12)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Table content area with horizontal scroll
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: MediaQuery.of(context).size.width - 64,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final parentWidth = constraints.maxWidth;
+
+          return Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.mainColor.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: DataTable(
-                  columnSpacing: 16,
-                  horizontalMargin: 16,
-                  headingRowHeight: 44,
-                  dataRowMinHeight: 48,
-                  dataRowMaxHeight: 56,
-                  headingRowColor: WidgetStateProperty.all(widget.headerBgColor),
-                  columns: widget.columns.map((col) {
-                    return DataColumn(
-                      label: Container(
-                        width: col.width,
-                        alignment: col.alignment,
-                        child: Text(
-                          col.header,
+              ],
+              border: Border.all(color: widget.mainColor.withValues(alpha: 0.12)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Table content area with responsive horizontal scroll
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: parentWidth,
+                      ),
+                      child: DataTable(
+                        columnSpacing: columnSpacing,
+                        horizontalMargin: horizontalPadding,
+                        headingRowHeight: headingRowHeight,
+                        dataRowMinHeight: dataRowMinHeight,
+                        dataRowMaxHeight: dataRowMaxHeight,
+                        clipBehavior: Clip.antiAlias,
+                        headingRowColor: WidgetStateProperty.all(widget.headerBgColor),
+                        columns: widget.columns.map((col) {
+                          return DataColumn(
+                            label: Container(
+                              width: col.width,
+                              alignment: col.alignment,
+                              child: Text(
+                                col.header,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: widget.headerTextColor,
+                                  fontSize: headerFontSize,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        rows: [
+                          ...List.generate(pageData.length, (pageIdx) {
+                            final globalIndex = (_currentPage * _rowsPerPage) + pageIdx;
+                            final item = pageData[pageIdx];
+                            return DataRow(
+                              cells: widget.columns.map((col) {
+                                return DataCell(
+                                  Container(
+                                    width: col.width,
+                                    alignment: col.alignment,
+                                    child: col.cellBuilder(item, globalIndex),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          }),
+                          if (widget.showTotalsRow && widget.data.isNotEmpty)
+                            DataRow(
+                              color: WidgetStateProperty.all(
+                                widget.mainColor.withValues(alpha: 0.08),
+                              ),
+                              cells: widget.columns.map((col) {
+                                return DataCell(
+                                  Container(
+                                    width: col.width,
+                                    alignment: col.alignment,
+                                    child: col.totalCellBuilder != null
+                                        ? col.totalCellBuilder!()
+                                        : const Text('-'),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Empty state fallback
+                if (widget.data.isEmpty)
+                  widget.emptyWidget ??
+                      Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.inbox_rounded,
+                              size: 48,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No records found',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                // Bottom Pagination Controls Bar
+                if (widget.showPagination && totalItems > 0)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 10 : 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(15),
+                        bottomRight: Radius.circular(15),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: widget.mainColor.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 10,
+                      children: [
+                        // Entry summary text
+                        Text(
+                          'Showing $startItem to $endItem of $totalItems entries',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: widget.headerTextColor,
-                            fontSize: 12,
+                            fontSize: isSmallScreen ? 11 : 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade700,
                           ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                  rows: [
-                    ...List.generate(pageData.length, (pageIdx) {
-                      final globalIndex = (_currentPage * _rowsPerPage) + pageIdx;
-                      final item = pageData[pageIdx];
-                      return DataRow(
-                        cells: widget.columns.map((col) {
-                          return DataCell(
-                            Container(
-                              width: col.width,
-                              alignment: col.alignment,
-                              child: col.cellBuilder(item, globalIndex),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    }),
-                    if (widget.showTotalsRow && widget.data.isNotEmpty)
-                      DataRow(
-                        color: WidgetStateProperty.all(
-                          widget.mainColor.withValues(alpha: 0.08),
-                        ),
-                        cells: widget.columns.map((col) {
-                          return DataCell(
-                            Container(
-                              width: col.width,
-                              alignment: col.alignment,
-                              child: col.totalCellBuilder != null
-                                  ? col.totalCellBuilder!()
-                                  : const Text('-'),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                  ],
-                ),
-              ),
-            ),
 
-            // Empty state fallback
-            if (widget.data.isEmpty)
-              widget.emptyWidget ??
-                  Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.inbox_rounded,
-                          size: 48,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No records found',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
+                        // Controls (Rows per page + Page Nav)
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Rows per page dropdown
+                              Text(
+                                'Rows per page:',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 11 : 12,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: _rowsPerPage,
+                                    isDense: true,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 11 : 12,
+                                      color: widget.mainColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    items: widget.availableRowsPerPage.map((count) {
+                                      return DropdownMenuItem<int>(
+                                        value: count,
+                                        child: Text('$count'),
+                                      );
+                                    }).toList(),
+                                    onChanged: (newCount) {
+                                      if (newCount != null && newCount != _rowsPerPage) {
+                                        setState(() {
+                                          _rowsPerPage = newCount;
+                                          _currentPage = 0;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Navigation Buttons
+                              _buildNavButton(
+                                icon: Icons.first_page_rounded,
+                                onPressed: _currentPage > 0 ? () => _goToPage(0) : null,
+                                tooltip: 'First Page',
+                                isCompact: isSmallScreen,
+                              ),
+                              _buildNavButton(
+                                icon: Icons.chevron_left_rounded,
+                                onPressed: _currentPage > 0 ? () => _goToPage(_currentPage - 1) : null,
+                                tooltip: 'Previous Page',
+                                isCompact: isSmallScreen,
+                              ),
+
+                              // Page indicator
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: widget.mainColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '${_currentPage + 1} / ${maxP + 1}',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 11 : 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: widget.mainColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              _buildNavButton(
+                                icon: Icons.chevron_right_rounded,
+                                onPressed: _currentPage < maxP ? () => _goToPage(_currentPage + 1) : null,
+                                tooltip: 'Next Page',
+                                isCompact: isSmallScreen,
+                              ),
+                              _buildNavButton(
+                                icon: Icons.last_page_rounded,
+                                onPressed: _currentPage < maxP ? () => _goToPage(maxP) : null,
+                                tooltip: 'Last Page',
+                                isCompact: isSmallScreen,
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-
-            // Bottom Pagination Controls Bar
-            if (widget.showPagination && totalItems > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
-                  ),
-                  border: Border(
-                    top: BorderSide(
-                      color: widget.mainColor.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ),
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: [
-                    // Entry summary text
-                    Text(
-                      'Showing $startItem to $endItem of $totalItems entries',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-
-                    // Controls (Rows per page + Page Nav)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Rows per page dropdown
-                          Text(
-                            'Rows per page:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<int>(
-                                value: _rowsPerPage,
-                                isDense: true,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: widget.mainColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                items: widget.availableRowsPerPage.map((count) {
-                                  return DropdownMenuItem<int>(
-                                    value: count,
-                                    child: Text('$count'),
-                                  );
-                                }).toList(),
-                                onChanged: (newCount) {
-                                  if (newCount != null && newCount != _rowsPerPage) {
-                                    setState(() {
-                                      _rowsPerPage = newCount;
-                                      _currentPage = 0;
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // Navigation Buttons
-                          _buildNavButton(
-                            icon: Icons.first_page_rounded,
-                            onPressed: _currentPage > 0 ? () => _goToPage(0) : null,
-                            tooltip: 'First Page',
-                          ),
-                          _buildNavButton(
-                            icon: Icons.chevron_left_rounded,
-                            onPressed: _currentPage > 0 ? () => _goToPage(_currentPage - 1) : null,
-                            tooltip: 'Previous Page',
-                          ),
-
-                          // Page indicator
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: widget.mainColor.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '${_currentPage + 1} / ${maxP + 1}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.mainColor,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          _buildNavButton(
-                            icon: Icons.chevron_right_rounded,
-                            onPressed: _currentPage < maxP ? () => _goToPage(_currentPage + 1) : null,
-                            tooltip: 'Next Page',
-                          ),
-                          _buildNavButton(
-                            icon: Icons.last_page_rounded,
-                            onPressed: _currentPage < maxP ? () => _goToPage(maxP) : null,
-                            tooltip: 'Last Page',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -354,6 +387,7 @@ class _CustomTableState<T> extends State<CustomTable<T>> {
     required IconData icon,
     required VoidCallback? onPressed,
     required String tooltip,
+    bool isCompact = false,
   }) {
     final enabled = onPressed != null;
     return Tooltip(
@@ -362,7 +396,7 @@ class _CustomTableState<T> extends State<CustomTable<T>> {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.all(4),
+          padding: EdgeInsets.all(isCompact ? 3 : 4),
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
             color: enabled ? Colors.white : Colors.grey.shade100,
@@ -373,7 +407,7 @@ class _CustomTableState<T> extends State<CustomTable<T>> {
           ),
           child: Icon(
             icon,
-            size: 18,
+            size: isCompact ? 16 : 18,
             color: enabled ? widget.mainColor : Colors.grey.shade400,
           ),
         ),
