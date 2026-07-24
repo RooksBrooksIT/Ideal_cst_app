@@ -369,6 +369,37 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
     );
   }
 
+  Future<void> confirmAndDeleteWorker(int index) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Delete Entry'),
+          content: const Text('Are you sure you want to delete this entry?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('No', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Yes', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await deleteWorker(index);
+    }
+  }
+
   Future<void> deleteWorker(int index) async {
     final worker = workersList[index];
     final workerId = worker['workerId'] ?? worker['id'];
@@ -379,13 +410,17 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
       final docRef = FirebaseFirestore.instance
           .collection('attendance')
           .doc(docId);
+      final dailyEntriesDocRef = FirebaseFirestore.instance
+          .collection('daily_labour_entries')
+          .doc(docId);
 
       final batch = FirebaseFirestore.instance.batch();
 
-      // 1. Delete from nested subcollection
+      // 1. Delete from nested subcollections
       batch.delete(docRef.collection('workers').doc(workerId));
+      batch.delete(dailyEntriesDocRef.collection('workers').doc(workerId));
 
-      // 2. Delete from flat daily_labour_entries collection
+      // 2. Delete from flat daily_labour_entries collection if present
       batch.delete(
         FirebaseFirestore.instance
             .collection('daily_labour_entries')
@@ -831,12 +866,21 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
   }
 
   Widget _buildLabourEntryCard(int index, Map<String, dynamic> worker, bool isContractor) {
+    final String labourTypeLabel = worker['labourType']?.toString() ?? (isContractor ? 'Sub Contractor' : 'Daily Wage');
+    final String attendanceLabel = worker['attendanceType']?.toString() ?? '';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -845,12 +889,13 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
           borderRadius: BorderRadius.circular(16),
           onTap: () => editWorker(index),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: isContractor ? Colors.orange.shade50 : Colors.blue.shade50,
                     shape: BoxShape.circle,
@@ -859,26 +904,34 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                     child: Icon(
                       isContractor ? Icons.engineering : Icons.person,
                       color: isContractor ? Colors.orange.shade700 : Colors.blue.shade700,
+                      size: 22,
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
+                      Text(
+                        worker['workerName'] ?? 'Unknown',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Expanded(
-                            child: Text(
-                              worker['workerName'] ?? 'Unknown',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: (worker['labourType'] == 'Sub Contractor' || isContractor)
                                   ? Colors.orange.shade50
@@ -886,7 +939,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              worker['labourType']?.toString() ?? (isContractor ? 'Sub Contractor' : 'Daily Wage'),
+                              labourTypeLabel,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -896,22 +949,22 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: worker['attendanceType'] == 'Full Day' ? Colors.green.shade50 : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              worker['attendanceType']?.toString() ?? '',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: worker['attendanceType'] == 'Full Day' ? Colors.green.shade700 : Colors.grey.shade700,
+                          if (attendanceLabel.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: attendanceLabel == 'Full Day' ? Colors.green.shade50 : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                attendanceLabel,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: attendanceLabel == 'Full Day' ? Colors.green.shade700 : Colors.grey.shade700,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -919,18 +972,33 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
                         isContractor
                             ? '${worker['category'] ?? worker['workerType'] ?? ''} • ${worker['labourType'] ?? 'Sub Contractor'} • Self'
                             : '${worker['category'] ?? worker['workerType'] ?? ''} • ${worker['labourType'] ?? 'Daily Wage'} • Sub: ${worker['contractorName'] ?? worker['contractor'] ?? 'None'}',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  onPressed: () => deleteWorker(index),
-                  tooltip: 'Delete Entry',
+                const SizedBox(width: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, color: Color(0xFF0b3470), size: 20),
+                      onPressed: () => editWorker(index),
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Edit Entry',
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                      onPressed: () => confirmAndDeleteWorker(index),
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Delete Entry',
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -964,53 +1032,150 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
   }
 
   Widget _buildSummarySection() {
-    return Card(
-      elevation: 0,
-      color: primaryColor.withValues(alpha: 0.04),
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.analytics_outlined, color: primaryColor),
-                const SizedBox(width: 8),
-                const Text(
-                  'Daily Summary',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _buildSummaryRow('Effective Labour', summary['effectiveLabour'].toString(), primaryColor, isBold: true, isLarge: true),
-            const Divider(height: 32),
-            _buildSummaryRow('Full Day', summary['fullDay'].toString(), Colors.green),
-            _buildSummaryRow('Half Day', summary['halfDay'].toString(), Colors.orange),
-            _buildSummaryRow('Early Out', summary['earlyOut'].toString(), Colors.purple),
-            _buildSummaryRow('Absent', summary['absent'].toString(), Colors.red),
-            _buildSummaryRow('Leave', summary['leave'].toString(), Colors.grey),
-            _buildSummaryRow('Total OT Hours', summary['totalOT'].toString(), Colors.teal),
-            const Divider(height: 32),
-            _buildSummaryRow('Total Additional Expense', '₹${summary['totalAdditionalExpense'].toStringAsFixed(2)}', Colors.red, isBold: true, isLarge: true),
-            const SizedBox(height: 12),
-            _buildSummaryRow('Meals (Count)', summary['totalMealsCount'].toString(), Colors.orange),
-            _buildSummaryRow('Meals (Expense)', '₹${summary['totalMealsExpense'].toStringAsFixed(2)}', Colors.orange),
-            _buildSummaryRow('Bus Fare (Trips)', summary['totalBusCount'].toString(), Colors.blue),
-            _buildSummaryRow('Bus Fare (Expense)', '₹${summary['totalBusExpense'].toStringAsFixed(2)}', Colors.blue),
-          ],
-        ),
+                child: Icon(Icons.analytics_rounded, color: primaryColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Daily Summary',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Key KPI Highlight Block: Effective Labour & Additional Expenses
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFC7D2FE)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Effective Labour',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF3730A3),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        summary['effectiveLabour'].toString(),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E1B4B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Total Expenses',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF991B1B),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${summary['totalAdditionalExpense'].toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFDC2626),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+
+          // Attendance & OT Breakdown Rows
+          _buildSummaryRow('Full Day', summary['fullDay'].toString(), const Color(0xFF15803D), bgTint: const Color(0xFFDCFCE7)),
+          _buildSummaryRow('Half Day', summary['halfDay'].toString(), const Color(0xFFB45309), bgTint: const Color(0xFFFEF3C7)),
+          _buildSummaryRow('Early Out', summary['earlyOut'].toString(), const Color(0xFF7E22CE), bgTint: const Color(0xFFF3E8FF)),
+          _buildSummaryRow('Absent', summary['absent'].toString(), const Color(0xFFB91C1C), bgTint: const Color(0xFFFEE2E2)),
+          _buildSummaryRow('Leave', summary['leave'].toString(), const Color(0xFF475569), bgTint: const Color(0xFFF1F5F9)),
+          _buildSummaryRow('Total OT Hours', summary['totalOT'].toString(), const Color(0xFF0D9488), bgTint: const Color(0xFFCCFBF1)),
+
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+
+          // Expenses Breakdown Rows
+          _buildSummaryRow('Meals (Count)', summary['totalMealsCount'].toString(), const Color(0xFFC2410C), bgTint: const Color(0xFFFFEDD5)),
+          _buildSummaryRow('Meals (Expense)', '₹${summary['totalMealsExpense'].toStringAsFixed(2)}', const Color(0xFFC2410C), bgTint: const Color(0xFFFFEDD5)),
+          _buildSummaryRow('Bus Fare (Trips)', summary['totalBusCount'].toString(), const Color(0xFF1D4ED8), bgTint: const Color(0xFFDBEAFE)),
+          _buildSummaryRow('Bus Fare (Expense)', '₹${summary['totalBusExpense'].toStringAsFixed(2)}', const Color(0xFF1D4ED8), bgTint: const Color(0xFFDBEAFE)),
+        ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, Color color, {bool isBold = false, bool isLarge = false}) {
+  Widget _buildSummaryRow(String label, String value, Color color, {Color? bgTint, bool isBold = false, bool isLarge = false}) {
+    final Color actualBgTint = bgTint ?? color.withValues(alpha: 0.12);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1018,9 +1183,9 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: isLarge ? 16 : 14,
-                fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-                color: isBold ? Colors.black87 : Colors.grey[700],
+                fontSize: isLarge ? 15 : 14,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+                color: const Color(0xFF1E293B),
               ),
             ),
           ),
@@ -1028,15 +1193,15 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: actualBgTint,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               value,
               style: TextStyle(
                 color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: isLarge ? 18 : 14,
+                fontWeight: FontWeight.w700,
+                fontSize: isLarge ? 16 : 14,
               ),
             ),
           ),
@@ -1449,15 +1614,75 @@ class __MealsEntryInlineSectionState extends State<_MealsEntryInlineSection> {
                     child: ElevatedButton(
                       onPressed: _isSaving ? null : () async {
                         if (_selectedWorkerId != null) {
+                          final mealsCountStr = _mealsCountController.text.trim();
+                          final mealsAmountStr = _mealsAmountController.text.trim();
+                          final busCountStr = _busCountController.text.trim();
+                          final busAmountStr = _busAmountController.text.trim();
+
+                          final mealsCount = int.tryParse(mealsCountStr) ?? 0;
+                          final mealsAmount = double.tryParse(mealsAmountStr) ?? 0.0;
+                          final busCount = int.tryParse(busCountStr) ?? 0;
+                          final busAmount = double.tryParse(busAmountStr) ?? 0.0;
+
+                          if (mealsCount <= 0 && mealsAmount <= 0 && busCount <= 0 && busAmount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter at least one expense entry (Meals or Bus Fare) before saving.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (mealsAmount > 0 && mealsCount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter No of Meals when specifying Meals Amount.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (mealsCount > 0 && mealsAmount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter Meals Amount when specifying No of Meals.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (busAmount > 0 && busCount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter No of Trips when specifying Bus Fare Amount.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (busCount > 0 && busAmount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter Bus Fare Amount when specifying No of Trips.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           setState(() => _isSaving = true);
                           final index = _updatedWorkers.indexWhere((w) => w['workerId'] == _selectedWorkerId);
                           if (index != -1) {
                             _updatedWorkers[index] = {
                               ..._updatedWorkers[index],
-                              'mealsCount': int.tryParse(_mealsCountController.text) ?? 0,
-                              'mealsAmount': double.tryParse(_mealsAmountController.text) ?? 0,
-                              'busCount': int.tryParse(_busCountController.text) ?? 0,
-                              'busAmount': double.tryParse(_busAmountController.text) ?? 0,
+                              'mealsCount': mealsCount,
+                              'mealsAmount': mealsAmount,
+                              'busCount': busCount,
+                              'busAmount': busAmount,
                             };
                             widget.onUpdate(_updatedWorkers);
                             _selectedWorkerId = null;

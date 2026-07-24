@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/sub_contractor.dart';
 import '../models/worker.dart';
 import '../services/workforce_service.dart';
-import 'sub_contractor_workers_screen.dart';
+import 'supervisor/sub_contractor_workers_screen.dart';
 
 final WorkforceService _workforceService = WorkforceService();
 

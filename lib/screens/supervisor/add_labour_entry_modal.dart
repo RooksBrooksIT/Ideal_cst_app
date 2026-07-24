@@ -372,11 +372,15 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
                     
         isAddingNewWorker = false;
         
-        // Find the document snapshot in the loaded lists
-        final workerId = w['workerId'];
-        if (selectedWorker != null) {
-          selectedWorkerIds = {selectedWorker!.id};
-          selectedWorkerDocs = {selectedWorker!.id: selectedWorker!};
+        final workerId = w['workerId']?.toString();
+        if (workerId != null && workerId.isNotEmpty) {
+          final allAvailable = [...workers, ...contractors];
+          final index = allAvailable.indexWhere((doc) => doc.id == workerId);
+          if (index != -1) {
+            selectedWorker = allAvailable[index];
+            selectedWorkerIds = {workerId};
+            selectedWorkerDocs = {workerId: allAvailable[index]};
+          }
         }
       });
     }
@@ -643,21 +647,55 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
         final hour = picked.hourOfPeriod.toString().padLeft(2, '0');
         final minute = picked.minute.toString().padLeft(2, '0');
         final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
-        controller.text = "$hour:$minute $period";
-        _recalculateOtHours();
+        setState(() {
+          controller.text = "$hour:$minute $period";
+          _recalculateOtHours();
+        });
       }
     }
   }
 
   Future<void> addWorkerEntry() async {
+    if (!isAddingNewWorker && selectedWorkerDocs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one person.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (isAddingNewWorker &&
+        (workerNameController.text.trim().isEmpty ||
+            mobileController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill required worker details (Name & Mobile).'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final inTime = inTimeController.text.trim();
+    final outTime = outTimeController.text.trim();
+
+    if (inTime.isEmpty || outTime.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter both In Time and Out Time for all selected people before saving.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final otHoursInput = otHoursController.text.trim();
     final otHoursValue = otHoursInput.isEmpty
         ? "0 Hours"
         : "$otHoursInput Hours";
     final otHoursNumber = double.tryParse(otHoursInput) ?? 0.0;
-
-    final inTime = inTimeController.text.trim();
-    final outTime = outTimeController.text.trim();
     final remarks = remarksController.text.trim();
 
     double hoursWorked = 0.0;
@@ -1086,30 +1124,40 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: Container(
-                padding: EdgeInsets.only(left: 20, right: 20, bottom: MediaQuery.of(context).padding.bottom + 16, top: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), offset: const Offset(0, -4), blurRadius: 10)],
-                ),
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : addWorkerEntry,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  child: _isSaving
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text(
-                          (!isAddingNewWorker && selectedWorkerDocs.length > 1)
-                              ? 'Save ${selectedWorkerDocs.length} Entries'
-                              : 'Save Entry',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                ),
+              child: Builder(
+                builder: (context) {
+                  final bool hasSelectedPerson = isAddingNewWorker
+                      ? (workerNameController.text.trim().isNotEmpty && mobileController.text.trim().isNotEmpty)
+                      : selectedWorkerDocs.isNotEmpty;
+                  final bool hasTimeEntered = inTimeController.text.trim().isNotEmpty && outTimeController.text.trim().isNotEmpty;
+                  final bool isFormComplete = hasSelectedPerson && hasTimeEntered;
+
+                  return Container(
+                    padding: EdgeInsets.only(left: 20, right: 20, bottom: MediaQuery.of(context).padding.bottom + 16, top: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), offset: const Offset(0, -4), blurRadius: 10)],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : addWorkerEntry,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isFormComplete ? primaryColor : primaryColor.withValues(alpha: 0.5),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : Text(
+                              (!isAddingNewWorker && selectedWorkerDocs.length > 1)
+                                  ? 'Save ${selectedWorkerDocs.length} Entries'
+                                  : 'Save Entry',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
