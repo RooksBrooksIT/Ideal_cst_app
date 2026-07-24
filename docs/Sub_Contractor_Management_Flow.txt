@@ -1,0 +1,531 @@
+
+================================================================================
+SUB CONTRACTOR MANAGEMENT FLOW
+================================================================================
+
+Table of Contents:
+1. OVERVIEW
+2. SUB CONTRACTOR REGISTRATION
+3. CATEGORY/DESIGNATION MANAGEMENT
+4. WORKER ASSIGNMENT
+5. DAILY ATTENDANCE AND WORK ENTRY
+6. WORKING HOURS AND OVERTIME CALCULATION
+7. SALARY CALCULATION BASED ON HOURS
+8. PAYMENT PROCESSING
+9. REPORTS AND EXPORT (PDF/EXCEL/CSV)
+10. FIRESTORE DATA FLOW
+11. COMPLETE END-TO-END PROCESS FLOW
+
+
+================================================================================
+1. OVERVIEW
+================================================================================
+This document details the complete Sub Contractor Management workflow in the Ideal CST
+(Construct Pro) Flutter application. The system manages sub-contractor registration,
+category/designation configuration, worker assignments, daily attendance, working hours
+and overtime calculation, salary computation, payment processing, and report generation,
+with Firebase Cloud Firestore as the primary data store.
+
+
+================================================================================
+2. SUB CONTRACTOR REGISTRATION
+================================================================================
+
+2.1. Prerequisites
+   - Supervisor must be logged in and assigned to at least one site
+   - Labour categories/designations must be pre-configured in the `labours` collection
+
+2.2. Registration Flow
+   a. Open the Sub Contractor Management screen
+      (lib/screens/sub_contractor_management_screen.dart)
+   b. Click the "Add Sub Contractor" button
+   c. Fill out the registration form with the following required fields:
+      - Sub Contractor Name
+      - Contractor ID (auto-generated, e.g., IC001, IC002)
+      - Category/Designation (selected from `labours` collection)
+      - Mobile Number
+      - Labour Type
+      - Salary Type
+      - Salary Rate (auto-filled from selected labour category)
+      - Assigned Sites (multi-select from supervisor's assigned sites)
+      - Joining Date
+      - Address (optional)
+      - Notes (optional)
+   d. Save the sub contractor
+   e. The new record is stored in Firestore `sub_contractors` collection
+
+2.3. Sub Contractor Record Structure (Firestore)
+   Collection: `sub_contractors`
+   Fields:
+   - id: Firestore document ID
+   - name: Sub Contractor name
+   - contractorId: Unique identifier (ICxxx format)
+   - category: Labour category/designation
+   - mobileNumber: Contact number
+   - address: Physical address
+   - labourType: Labour type (e.g., Sub Contractor)
+   - salaryType: Salary type (e.g., Sub Contractor, Daily Wage, Monthly Wage)
+   - salaryRate: Base salary rate
+   - assignedSiteIds: List of assigned site IDs
+   - isActive: Boolean status (true/false)
+   - joiningDate: Date of joining
+   - notes: Additional notes
+   - supervisorId: ID of supervisor who created the record
+   - supervisorName: Name of supervisor who created the record
+   - createdAt: Timestamp of creation
+   - updatedAt: Timestamp of last update
+
+2.4. Status Management
+   - Sub contractors can be marked active or inactive
+   - Only active sub contractors appear in dropdowns for new attendance entries
+
+
+================================================================================
+3. CATEGORY/DESIGNATION MANAGEMENT
+================================================================================
+
+3.1. Master Data Source
+   - Labour categories and designations are stored in Firestore `labours` collection
+   - Each category includes:
+     - Category name
+     - Designation
+     - Salary rate
+     - Default working hours
+
+3.2. Usage in Sub Contractor Management
+   - When creating/editing a sub contractor:
+     a. Select a labour category/designation
+     b. The system auto-fills the salary rate from the selected category
+   - When creating/editing a worker:
+     a. Select a labour category/designation
+     b. The system auto-fills basic salary and default working hours
+
+3.3. Management Access
+   - Category/designation configuration is done via Manager/Config user role
+   - Manager configures labour categories in the Labour Config screen
+
+
+================================================================================
+4. WORKER ASSIGNMENT
+================================================================================
+
+4.1. Worker Creation Flow
+   a. Open the Sub Contractor Workers screen for a specific sub contractor
+      (lib/screens/sub_contractor_workers_screen.dart)
+   b. Click "Add Worker"
+   c. Fill out worker form:
+      - Worker Name
+      - Worker ID (auto-generated, e.g., W001, W002)
+      - Worker Type/Category (selected from `labours` collection)
+      - Salary Type (Daily Wage / Monthly Wage)
+      - Basic Salary (auto-filled from category)
+      - Overtime Rate (optional)
+      - Default Working Hours (auto-filled from category)
+      - Mobile Number
+      - Assigned Sites (at least one site required)
+   d. Save the worker
+   e. Record stored in Firestore `workers` collection
+
+4.2. Worker Record Structure (Firestore)
+   Collection: `workers`
+   Fields:
+   - id: Firestore document ID
+   - name: Worker name
+   - workerId: Unique identifier (Wxxx format)
+   - workerType: Worker type/category
+   - salaryType: Salary type (Daily Wage / Monthly Wage)
+   - basicSalary: Base salary amount
+   - overtimeRate: Overtime rate per hour
+   - defaultHours: Default working hours per day
+   - mobileNumber: Contact number
+   - subContractorId: ID of parent sub contractor
+   - subContractorName: Name of parent sub contractor
+   - supervisorId: ID of supervisor who created the record
+   - supervisorName: Name of supervisor who created the record
+   - assignedSiteIds: List of assigned site IDs
+   - isDeleted: Soft delete flag
+   - deletedAt: Timestamp of soft delete
+   - deletedBy: User who soft-deleted the record
+   - createdAt: Timestamp of creation
+   - updatedAt: Timestamp of last update
+
+4.3. Worker Assignment Rules
+   - Each worker must be assigned to at least one site
+   - Workers are linked to exactly one sub contractor
+   - Workers inherit sub contractor's site assignments as options
+   - Workers can be transferred between sites (worker_transfers collection)
+
+
+================================================================================
+5. DAILY ATTENDANCE AND WORK ENTRY
+================================================================================
+
+5.1. Attendance Entry Flow
+   a. Supervisor opens Daily Labour Entry screen for a specific site and date
+      (lib/screens/daily_labour_entry_screen.dart)
+   b. Click "Add Labour Entry"
+   c. Select or create worker/sub contractor:
+      - Option 1: Select existing worker from dropdown (linked to sub contractor)
+      - Option 2: Create new worker on the fly
+   d. Enter attendance details:
+      - Attendance Type: Full Day, Half Day, Early Out, Overtime, Absent, Leave, Night Shift
+      - In Time
+      - Out Time
+      - Overtime Hours (optional, auto-calculated if in/out time provided)
+      - Remarks (optional)
+      - Meals Count (optional, default 0)
+      - Meals Amount (optional, default 0)
+      - Bus Count (optional, default 0)
+      - Bus Amount (optional, default 0)
+   e. System automatically calculates:
+      - Hours worked
+      - Day value (1.0 for full day/night shift, 0.5 for half day/early out, 0 for absent/leave)
+      - Regular hours (capped at 8 hours)
+      - Overtime hours (hours above 8)
+      - Overtime amount
+      - Total salary
+   f. Save attendance entry
+   g. System writes to two locations in Firestore:
+      - Nested: `attendance/{siteId_date}/workers/{workerId}`
+      - Flat: `daily_labour_entries/{siteId_date_workerId}`
+   h. Parent attendance summary is updated at `attendance/{siteId_date}`
+
+5.2. Attendance Entry Record Structure
+   Collection Path: `attendance/{siteId_date}/workers/{workerId}` and `daily_labour_entries/{siteId_date_workerId}`
+   Fields:
+   - workerId: Worker unique ID
+   - workerName: Worker name
+   - category: Labour category
+   - contractorName: Sub contractor name
+   - labourType: Labour type
+   - attendanceType: Attendance type (Full Day, Half Day, etc.)
+   - inTime: Check-in time (e.g., 09:00 AM)
+   - outTime: Check-out time (e.g., 06:00 PM)
+   - otHours: Overtime hours (string, e.g., "1 Hours")
+   - dayValue: Numeric day value (1.0, 0.5, 0.0)
+   - siteId: Site ID
+   - siteName: Site name
+   - date: Attendance date (YYYY-MM-DD)
+   - mealsCount: Number of meals
+   - mealsAmount: Cost per meal
+   - busCount: Number of bus trips
+   - busAmount: Cost per bus trip
+   - basicSalary: Base salary
+   - hoursWorked: Total hours worked
+   - overtimeHours: Overtime hours (numeric)
+   - overtimeAmount: Overtime amount
+   - totalSalary: Total salary for the day
+   - supervisorId: Supervisor ID
+   - supervisorName: Supervisor name
+   - createdAt: Timestamp
+   - updatedAt: Timestamp
+
+5.3. Attendance Summary (Parent Document)
+   Document Path: `attendance/{siteId_date}`
+   Fields:
+   - siteId: Site ID
+   - siteName: Site name
+   - supervisorId: Supervisor ID
+   - supervisorName: Supervisor name
+   - date: Attendance date
+   - totalWorkers: Total number of workers marked present
+   - summary: Object containing counts for each attendance type
+     - fullDay: Count of Full Day entries
+     - halfDay: Count of Half Day entries
+     - earlyOut: Count of Early Out entries
+     - absent: Count of Absent entries
+     - leave: Count of Leave entries
+     - totalOvertimeHours: Total overtime hours
+     - effectiveLabourCount: Effective labour count (sum of day values)
+   - updatedAt: Timestamp
+
+
+================================================================================
+6. WORKING HOURS AND OVERTIME CALCULATION
+================================================================================
+
+6.1. Time Input Options
+   Workers' working time can be recorded in two ways:
+   - Option 1: By entering in-time and out-time
+   - Option 2: By directly entering overtime hours
+
+6.2. Hours Worked Calculation
+   If in-time and out-time are provided:
+   - Convert in-time and out-time to 24-hour format
+   - Calculate total hours worked = out-time - in-time
+   - Include break time deduction if configured
+
+6.3. Regular Hours vs Overtime Hours
+   - Regular Hours: Maximum 8 hours per day (capped)
+   - Overtime Hours: Hours worked beyond 8 hours
+   - Formula:
+     totalHoursWorked = outTime - inTime
+     regularHours = min(totalHoursWorked, 8)
+     overtimeHours = max(0, totalHoursWorked - 8)
+
+6.4. Overtime Amount Calculation
+   Overtime is calculated based on the worker's overtime rate:
+   - overtimeAmount = overtimeHours * overtimeRate
+   - If overtime rate not configured, system may use a default multiplier (e.g., 1.5x basic hourly rate)
+
+6.5. Day Value Assignment
+   Day value represents the effective labour count for the day:
+   - Full Day: 1.0
+   - Half Day: 0.5
+   - Early Out: 0.5
+   - Overtime: 1.0 (plus overtime amount)
+   - Night Shift: 1.0
+   - Absent: 0.0
+   - Leave: 0.0
+
+
+================================================================================
+7. SALARY CALCULATION BASED ON HOURS
+================================================================================
+
+7.1. Salary Components
+   Daily salary is calculated with the following components:
+   - Basic Salary: Based on attendance type and worker's base salary
+   - Overtime Amount: Calculated from overtime hours
+   - Meals Deduction (if applicable): mealsCount * mealsAmount
+   - Bus Fare Deduction (if applicable): busCount * busAmount
+
+7.2. Daily Salary Calculation (Daily Wage Workers)
+   Formula:
+   baseDailySalary = worker.basicSalary * dayValue
+   totalSalary = baseDailySalary + overtimeAmount - (mealsCount * mealsAmount) - (busCount * busAmount)
+
+7.3. Monthly Salary Calculation (Monthly Wage Workers)
+   For monthly wage workers:
+   - Base monthly salary divided by working days in month
+   - Applied per day based on attendance
+   - Overtime added on top of daily base
+   - Formula similar to daily wage, but base daily salary = monthlySalary / workingDays
+
+7.4. Salary Calculation Methods
+   The system provides helper methods in WorkerAttendance model (lib/models/worker_attendance.dart):
+   - calculateRegularHours(): Returns regular hours (capped at 8)
+   - calculateOvertimeHours(): Returns overtime hours
+   - calculateTotalSalary(): Computes total daily salary
+
+7.5. Salary Records
+   Generated salary records are stored in `salary_records` collection:
+   - workerId: Worker ID
+   - startDate: Salary period start
+   - endDate: Salary period end
+   - attendanceDays: Number of days attended
+   - regularHours: Total regular hours
+   - overtimeHours: Total overtime hours
+   - basicSalary: Total basic salary
+   - overtimeSalary: Total overtime salary
+   - advances: Total advances/loans
+   - deductions: Total deductions
+   - netSalary: Net payable salary
+   - status: Status (generated, approved, paid, cancelled)
+
+
+================================================================================
+8. PAYMENT PROCESSING
+================================================================================
+
+8.1. Payment Workflow
+   a. Generate salary records for desired period (week/month)
+   b. Review salary details including:
+      - Attendance summary
+      - Basic salary
+      - Overtime
+      - Advances
+      - Deductions
+      - Net salary
+   c. Approve salary records
+   d. Process payments
+   e. Mark salary records as paid
+   f. Generate payment receipts and reports
+
+8.2. Worker Advances and Deductions
+   - Worker advances: Stored in `worker_advances` collection
+     - Fields: workerId, type, amount, description, date, status, createdBy
+   - Worker deductions: Stored in `worker_deductions` collection
+     - Fields: workerId, type, amount, description, date, createdBy
+   - Advances and deductions are automatically applied during salary generation
+
+8.3. Payment Records
+   Payment transactions can be tracked in Firestore for audit purposes
+   - Links to salary records
+   - Records payment date, amount, method, and reference
+
+
+================================================================================
+9. REPORTS AND EXPORT (PDF/EXCEL/CSV)
+================================================================================
+
+9.1. Available Reports
+
+   9.1.1. Labour Attendance Report
+      - Purpose: Daily/weekly/monthly attendance register
+      - Source: `daily_labour_entries` collection
+      - Filter Options:
+        - Date range
+        - Site
+        - Supervisor
+        - Sub contractor
+        - Labour type/category
+      - Grouping Options:
+        - Site
+        - Supervisor
+        - Sub contractor
+        - Labour category
+        - Date
+      - Metrics:
+        - Labour count
+        - Total hours
+        - Overtime hours
+        - Night shift hours
+      - Export: PDF, Excel
+
+   9.1.2. Labour Details Report
+      - Purpose: Detailed labour cost report
+      - Source: `daily_labour_entries` collection
+      - Grouping: Site, Sub contractor, Group, Category
+      - Metrics:
+        - Labour count
+        - Basic salary
+        - Total salary
+        - Hours worked
+        - Overtime hours and amount
+        - Meals count and amount
+        - Bus fare count and amount
+      - Export: PDF, Excel, CSV
+
+9.2. Report Generation Flow
+   a. Open desired report screen (Organization Dashboard > Reports)
+   b. Select filter criteria (date range, site, etc.)
+   c. System queries Firestore for matching `daily_labour_entries`
+   d. Applies client-side filtering and grouping
+   e. Displays report in table/card format
+   f. User can export report:
+      - PDF: Generate PDF document and preview/share/download
+      - Excel: Generate .xlsx file and download/share
+      - CSV: Generate .csv file and share
+
+9.3. Export File Storage and Sharing
+   - Mobile/Desktop: Files saved to device storage using path_provider
+   - Web: Download via browser using web download utilities
+   - Share: Use share_plus package to share files via email, WhatsApp, etc.
+
+
+================================================================================
+10. FIRESTORE DATA FLOW
+================================================================================
+
+10.1. Core Collections (Sub Contractor Management)
+   - `sub_contractors`: Stores sub contractor records
+   - `workers`: Stores worker records
+   - `labours`: Labour category/designation master data
+
+10.2. Attendance Collections
+   - `attendance/{siteId_date}`: Parent attendance summary per site/date
+   - `attendance/{siteId_date}/workers/{workerId}`: Nested worker attendance entries
+   - `daily_labour_entries`: Flat attendance entries for reporting (duplicate of nested for easier querying)
+
+10.3. Salary and Payment Collections
+   - `worker_attendance`: Service-layer typed attendance records
+   - `attendance_summary`: Per-worker daily summary
+   - `salary_records`: Generated salary records
+   - `worker_advances`: Worker advance/loan records
+   - `worker_deductions`: Worker deduction records
+   - `overtime_records`: Overtime records
+
+10.4. Data Relationships
+   - Supervisor creates Sub Contractors (1:N)
+   - Sub Contractor has Workers (1:N)
+   - Worker has Attendance Entries (1:N)
+   - Site has Attendance Summaries (1:N)
+   - Worker has Salary Records (1:N)
+
+10.5. Write Flow for Attendance
+   When saving an attendance entry:
+   1. Supervisor opens Add Labour Entry modal
+   2. System reads existing daily_labour_entries to prevent duplicates
+   3. User enters attendance details
+   4. System calculates hours, overtime, salary
+   5. Batch write to:
+      - attendance/{siteId_date}/workers/{workerId} (nested)
+      - daily_labour_entries/{siteId_date_workerId} (flat)
+   6. Merge update to attendance/{siteId_date} (summary)
+
+10.6. Query Flow for Reports
+   1. User selects date range and filters in report screen
+   2. System queries daily_labour_entries collection by date/site
+   3. System applies additional client-side filters (supervisor, contractor, etc.)
+   4. System groups data and calculates totals
+   5. Report is displayed and available for export
+
+
+================================================================================
+11. COMPLETE END-TO-END PROCESS FLOW
+================================================================================
+
+Phase 1: System Setup & Configuration
+   1. Manager logs in
+   2. Manager configures Site(s) in Site Management
+   3. Manager configures Project(s) in Project Management
+   4. Manager configures Supervisor(s) in Supervisor Config
+   5. Manager assigns Supervisor(s) to Site(s) in Site Supervisor Map
+   6. Manager configures Labour Categories/Designations in Labour Config
+
+Phase 2: Sub Contractor & Worker Onboarding
+   7. Supervisor logs in
+   8. Supervisor opens Sub Contractor Management
+   9. Supervisor creates new Sub Contractor:
+      - Enters sub contractor details
+      - Selects category (auto-fills salary)
+      - Assigns to site(s)
+      - Saves to sub_contractors collection
+   10. Supervisor opens Sub Contractor Workers for the new sub contractor
+   11. Supervisor creates Worker(s):
+       - Enters worker details
+       - Selects category (auto-fills salary & hours)
+       - Assigns to site(s)
+       - Saves to workers collection
+
+Phase 3: Daily Attendance
+   12. Supervisor selects Site and Date in Daily Labour Entry
+   13. Supervisor adds Labour Entry:
+       - Selects Worker/Sub Contractor
+       - Enters attendance type (Full Day, Half Day, etc.)
+       - Enters in-time/out-time or direct overtime
+       - Enters meals/bus details (if applicable)
+       - System auto-calculates hours, overtime, salary
+       - Saves entry to both nested attendance and daily_labour_entries
+   14. Supervisor can update/delete entries as needed
+   15. Attendance summary is automatically updated
+
+Phase 4: Salary Calculation
+   16. At end of salary period (week/month):
+       - System aggregates attendance entries
+       - Calculates total regular hours and overtime hours
+       - Computes basic salary and overtime salary
+       - Applies worker advances and deductions
+       - Generates salary records in salary_records collection
+
+Phase 5: Payment Processing
+   17. Review generated salary records
+   18. Approve salary records
+   19. Process payments to workers/sub contractors
+   20. Mark salary records as Paid
+   21. Generate payment receipts
+
+Phase 6: Reporting & Analysis
+   22. Organization user logs in
+   23. Opens Labour Attendance Report or Labour Details Report
+   24. Applies filters (date range, site, supervisor, contractor, etc.)
+   25. Views report with grouped data and totals
+   26. Exports report to PDF/Excel/CSV as needed
+   27. Shares or saves exported report files
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+

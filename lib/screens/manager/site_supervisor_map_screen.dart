@@ -1,0 +1,1030 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:ideal_cst/screens/manager/manager_theme.dart';
+import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
+
+class SiteSupervisorMapScreen extends StatefulWidget {
+  const SiteSupervisorMapScreen({super.key});
+
+  @override
+  _SiteSupervisorMapScreenState createState() =>
+      _SiteSupervisorMapScreenState();
+}
+
+class _SiteSupervisorMapScreenState extends State<SiteSupervisorMapScreen> {
+  bool isEntrySelected = true;
+
+  List<String> selectedSites = []; // Now multiple sites
+  String? selectedSupervisor;
+  String? selectedSupervisorId;
+  String? selectedProjectStage;
+  String? projectName;
+  DateTime? joinedDate;
+  DateTime? startDate;
+  DateTime? endDate;
+
+  final locationController = TextEditingController();
+  final commentsController = TextEditingController();
+
+  List<String> siteList = [];
+  List<String> supervisorList = [];
+  List<String> supervisorIdList = [];
+  List<String> projectStageList = [];
+
+  final Color primaryColor = ManagerTheme.primaryColor;
+  final Color mutedColor = Colors.grey;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchSiteList();
+    fetchSupervisorList();
+    fetchProjectStageList();
+  }
+
+  void fetchSiteList() async {
+    try {
+      QuerySnapshot siteSnapshot = await FirebaseFirestore.instance
+          .collection('Site')
+          .get();
+      if (!mounted) return;
+      setState(() {
+        siteList = siteSnapshot.docs.map((doc) => doc.id).toList();
+      });
+    } catch (error) {
+      print('Error fetching site list: $error');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error fetching site list')));
+    }
+  }
+
+  void fetchSupervisorList() async {
+    try {
+      QuerySnapshot supervisorSnapshot = await FirebaseFirestore.instance
+          .collection('supervisor')
+          .get();
+      if (!mounted) return;
+      setState(() {
+        supervisorList = supervisorSnapshot.docs
+            .map((doc) => doc['UserName'] as String)
+            .toList();
+        supervisorIdList = supervisorSnapshot.docs
+            .map((doc) => doc.id)
+            .toList();
+      });
+    } catch (error) {
+      print('Error fetching supervisor list: $error');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error fetching supervisor list')));
+    }
+  }
+
+  void fetchProjectStageList() async {
+    try {
+      QuerySnapshot projectStageSnapshot = await FirebaseFirestore.instance
+          .collection('projectStages')
+          .get();
+      if (!mounted) return;
+      setState(() {
+        projectStageList = projectStageSnapshot.docs
+            .map((doc) => doc['projectStage'] as String)
+            .toSet()
+            .toList();
+      });
+    } catch (error) {
+      print('Error fetching project stage list: $error');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching project stage list')),
+      );
+    }
+  }
+
+  void fetchSiteData(String siteId) async {
+    try {
+      DocumentSnapshot siteSnapshot = await FirebaseFirestore.instance
+          .collection('Site')
+          .doc(siteId)
+          .get();
+      if (!mounted) return;
+      if (siteSnapshot.exists) {
+        final data = siteSnapshot.data() as Map<String, dynamic>? ?? {};
+
+        setState(() {
+          locationController.text = data.containsKey('location')
+              ? (data['location'] ?? '')
+              : '';
+          joinedDate = data.containsKey('startDate')
+              ? _parseDate(data['startDate'])
+              : null;
+          startDate = data.containsKey('startDate')
+              ? _parseDate(data['startDate'])
+              : null;
+          endDate = data.containsKey('endDate')
+              ? _parseDate(data['endDate'])
+              : null;
+          projectName = data.containsKey('siteName')
+              ? (data['siteName'] ?? '')
+              : '';
+        });
+
+        try {
+          final projQuery = await FirebaseFirestore.instance
+              .collection('projects')
+              .where('siteId', isEqualTo: siteId)
+              .limit(1)
+              .get();
+
+          if (!mounted) return;
+          if (projQuery.docs.isNotEmpty) {
+            final projectData = projQuery.docs.first.data();
+            final stage = projectData['projectStage']?.toString();
+            if (stage != null && stage.isNotEmpty) {
+              setState(() {
+                selectedProjectStage = stage;
+                if (!projectStageList.contains(stage)) {
+                  projectStageList = [...projectStageList, stage];
+                }
+              });
+            }
+          }
+        } catch (_) {
+          // Ignore errors for project stage autofill
+        }
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Site data not found')));
+      }
+    } catch (error) {
+      print('Error fetching site data: $error');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error fetching site data')));
+    }
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  void resetForm() {
+    setState(() {
+      selectedSites = [];
+      selectedSupervisor = null;
+      selectedProjectStage = null;
+      selectedSupervisorId = null;
+      projectName = null;
+      locationController.clear();
+      commentsController.clear();
+      joinedDate = null;
+      startDate = null;
+      endDate = null;
+    });
+  }
+
+  Future<Map<String, dynamic>?> fetchSiteDataFromFirestore(
+    String siteId,
+  ) async {
+    try {
+      DocumentSnapshot siteSnapshot = await FirebaseFirestore.instance
+          .collection('Site')
+          .doc(siteId)
+          .get();
+      if (siteSnapshot.exists) {
+        return siteSnapshot.data() as Map<String, dynamic>?;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void saveForm() async {
+    if (selectedSites.isEmpty ||
+        selectedSupervisor == null ||
+        selectedProjectStage == null ||
+        locationController.text.isEmpty ||
+        joinedDate == null ||
+        startDate == null ||
+        endDate == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please fill all required fields and select at least one site.',
+          ),
+        ),
+      );
+      return;
+    }
+    try {
+      for (String siteId in selectedSites) {
+        // Get site-specific data
+        Map<String, dynamic>? siteData = await fetchSiteDataFromFirestore(
+          siteId,
+        );
+        String projName = siteData?['siteName'] ?? '';
+        String loc = siteData?['location'] ?? locationController.text;
+
+        // Doc ID = siteId_supervisorId
+        String docId = '${siteId}_$selectedSupervisorId';
+
+        Map<String, dynamic> data = {
+          "joinedOn": joinedDate!.toIso8601String(),
+          "startDate": startDate!.toIso8601String(),
+          "endDate": endDate!.toIso8601String(),
+          "location": loc,
+          "projectStage": selectedProjectStage,
+          "siteId": siteId,
+          "site": siteId,
+          "projectName": projName,
+          "siteComments": commentsController.text,
+          "supervisor": selectedSupervisor,
+          "supervisorId": selectedSupervisorId,
+          "Supervisor ID": selectedSupervisorId,
+        };
+
+        DocumentReference docRef = FirebaseFirestore.instance
+            .collection('siteSupervisorMap')
+            .doc(docId);
+        DocumentSnapshot docSnapshot = await docRef.get();
+        if (docSnapshot.exists) {
+          await docRef.update(data);
+        } else {
+          await docRef.set(data);
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Assignments saved successfully!')),
+      );
+      resetForm();
+    } catch (e) {
+      print('Error saving form: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error saving assignments.')));
+    }
+  }
+
+  @override
+  void dispose() {
+    locationController.dispose();
+    commentsController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return ManagerTheme.buildHeader(
+      context,
+      category: 'Supervisor Management',
+      title: 'Site-Supervisor Mapping',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 218, 238, 220),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+          double horizontalPadding = constraints.maxWidth * 0.06; // 6%
+          double verticalPadding = constraints.maxHeight * 0.025; // 2.5%
+          double cardPadding = constraints.maxWidth < 500 ? 16 : 24;
+          double fontSize = constraints.maxWidth < 350 ? 13 : 16;
+          double titleFontSize = constraints.maxWidth < 400 ? 18 : 22;
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: 25,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildResponsiveButton('Entry', isEntrySelected, () {
+                      setState(() => isEntrySelected = true);
+                    }),
+                    SizedBox(width: constraints.maxWidth * 0.04),
+                    _buildResponsiveButton('Info', !isEntrySelected, () {
+                      setState(() => isEntrySelected = false);
+                    }),
+                  ],
+                ),
+                SizedBox(height: verticalPadding),
+                if (isEntrySelected)
+                  _buildEntrySection(
+                    context,
+                    cardPadding,
+                    fontSize,
+                    titleFontSize,
+                  )
+                else
+                  _buildInfoTableSection(context, fontSize),
+              ],
+            ),
+          );
+        },
+      ),
+    ),
+    );
+  }
+
+  Widget _buildResponsiveButton(
+    String text,
+    bool isSelected,
+    VoidCallback onPressed,
+  ) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? primaryColor : Colors.white,
+        foregroundColor: isSelected ? Colors.white : primaryColor,
+        side: BorderSide(color: primaryColor, width: isSelected ? 2.5 : 1.5),
+        padding: EdgeInsets.symmetric(vertical: 14, horizontal: 30),
+        textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        elevation: isSelected ? 6 : 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shadowColor: isSelected ? primaryColor.withValues(alpha: 0.4) : null,
+      ),
+      onPressed: onPressed,
+      child: Text(text),
+    );
+  }
+
+  Widget _buildEntrySection(
+    BuildContext context,
+    double cardPadding,
+    double fontSize,
+    double titleFontSize,
+  ) {
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: primaryColor, width: 1.8),
+    );
+    final filledBackground = Colors.white;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          elevation: 9,
+          shadowColor: primaryColor.withValues(alpha: 0.30),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(cardPadding),
+            child: Column(
+              children: [
+                Text(
+                  'Mapping Details',
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                SizedBox(height: 28),
+                // Multi-select for sites
+                InkWell(
+                  onTap: () async {
+                    final result = await showDialog<List<String>>(
+                      context: context,
+                      builder: (context) => MultiSelectDialog(
+                        items: siteList,
+                        initialSelected: selectedSites,
+                        title: 'Select Sites',
+                      ),
+                    );
+                    if (result != null) {
+                      setState(() {
+                        selectedSites = result;
+                      });
+                      // Fetch data for first selected site to fill common fields
+                      if (result.isNotEmpty) {
+                        fetchSiteData(result.first);
+                      }
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Sites (${selectedSites.length} selected)',
+                      prefixIcon: Icon(
+                        Icons.location_on_outlined,
+                        color: primaryColor,
+                      ),
+                      border: inputBorder,
+                      filled: true,
+                      fillColor: filledBackground,
+                      labelStyle: TextStyle(color: primaryColor),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 18,
+                      ),
+                    ),
+                    child: Text(
+                      selectedSites.isEmpty
+                          ? 'Tap to select sites'
+                          : selectedSites.join(', '),
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        color: selectedSites.isEmpty
+                            ? mutedColor
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Project Name',
+                    prefixIcon: Icon(
+                      Icons.business_outlined,
+                      color: primaryColor,
+                    ),
+                    border: inputBorder,
+                    filled: true,
+                    fillColor: filledBackground,
+                    labelStyle: TextStyle(color: primaryColor),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 18,
+                    ),
+                  ),
+                  controller: TextEditingController(text: projectName ?? ''),
+                  style: TextStyle(fontSize: fontSize, color: Colors.black87),
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Location',
+                    prefixIcon: Icon(Icons.place_outlined, color: primaryColor),
+                    border: inputBorder,
+                    filled: true,
+                    fillColor: filledBackground,
+                    labelStyle: TextStyle(color: primaryColor),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 18,
+                    ),
+                  ),
+                  style: TextStyle(fontSize: fontSize, color: Colors.black87),
+                ),
+                SizedBox(height: 20),
+                CustomDropdown<String>(
+                  value: selectedSupervisorId,
+                  labelText: 'Supervisor ID',
+                  hintText: 'Select Supervisor ID',
+                  prefixIcon: Icons.badge_outlined,
+                  items: supervisorIdList.map((id) {
+                    return DropdownMenuItem(
+                      value: id,
+                      child: Text(
+                        id,
+                        style: TextStyle(fontSize: fontSize),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedSupervisorId = value;
+                      int idx = supervisorIdList.indexOf(value ?? '');
+                      selectedSupervisor =
+                          (idx >= 0 && idx < supervisorList.length)
+                          ? supervisorList[idx]
+                          : null;
+                    });
+                  },
+                ),
+                SizedBox(height: 14),
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Supervisor',
+                    prefixIcon: Icon(Icons.person_outline, color: primaryColor),
+                    border: inputBorder,
+                    filled: true,
+                    fillColor: filledBackground,
+                    labelStyle: TextStyle(color: primaryColor),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 18,
+                    ),
+                  ),
+                  controller: TextEditingController(
+                    text: selectedSupervisor ?? '',
+                  ),
+                  style: TextStyle(fontSize: fontSize, color: Colors.black87),
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Project Stage',
+                    prefixIcon: Icon(Icons.work_outline, color: primaryColor),
+                    border: inputBorder,
+                    filled: true,
+                    fillColor: filledBackground,
+                    labelStyle: TextStyle(color: primaryColor),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 18,
+                    ),
+                  ),
+                  controller: TextEditingController(
+                    text: selectedProjectStage ?? '',
+                  ),
+                  style: TextStyle(fontSize: fontSize, color: Colors.black87),
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: commentsController,
+                  decoration: InputDecoration(
+                    labelText: 'Site Comments',
+                    prefixIcon: Icon(
+                      Icons.comment_outlined,
+                      color: primaryColor,
+                    ),
+                    border: inputBorder,
+                    filled: true,
+                    fillColor: filledBackground,
+                    labelStyle: TextStyle(color: primaryColor),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 18,
+                    ),
+                  ),
+                  maxLines: 4,
+                  style: TextStyle(fontSize: fontSize, color: Colors.black87),
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Start Date',
+                    hintText: 'Start Date',
+                    prefixIcon: Icon(
+                      Icons.calendar_today_outlined,
+                      color: primaryColor,
+                    ),
+                    border: inputBorder,
+                    filled: true,
+                    fillColor: filledBackground,
+                    labelStyle: TextStyle(color: primaryColor),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 18,
+                    ),
+                  ),
+                  controller: TextEditingController(
+                    text: startDate != null
+                        ? DateFormat('yyyy-MM-dd').format(startDate!)
+                        : '',
+                  ),
+                  style: TextStyle(fontSize: fontSize, color: Colors.black87),
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'End Date',
+                    hintText: 'End Date',
+                    prefixIcon: Icon(Icons.calendar_month, color: primaryColor),
+                    border: inputBorder,
+                    filled: true,
+                    fillColor: filledBackground,
+                    labelStyle: TextStyle(color: primaryColor),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 18,
+                    ),
+                  ),
+                  controller: TextEditingController(
+                    text: endDate != null
+                        ? DateFormat('yyyy-MM-dd').format(endDate!)
+                        : '',
+                  ),
+                  style: TextStyle(fontSize: fontSize, color: Colors.black87),
+                ),
+                SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () => _selectAnyDate(context, dateType: 'joined'),
+                  child: AbsorbPointer(
+                    child: TextFormField(
+                      decoration: InputDecoration(
+                        labelText: 'Joined On',
+                        hintText: 'Select Joined On Date',
+                        prefixIcon: Icon(
+                          Icons.calendar_today_outlined,
+                          color: primaryColor,
+                        ),
+                        border: inputBorder,
+                        filled: true,
+                        fillColor: filledBackground,
+                        labelStyle: TextStyle(color: primaryColor),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 18,
+                        ),
+                      ),
+                      controller: TextEditingController(
+                        text: joinedDate != null
+                            ? DateFormat('yyyy-MM-dd').format(joinedDate!)
+                            : '',
+                      ),
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 32),
+        _buildActionButtons(context, fontSize),
+      ],
+    );
+  }
+
+  Widget _buildInfoTableSection(BuildContext context, double fontSize) {
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32.0),
+              child: CircularProgressIndicator(
+                color: primaryColor,
+                strokeWidth: 3,
+              ),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32.0),
+              child: Text(
+                'Error loading mappings.',
+                style: TextStyle(color: primaryColor, fontSize: fontSize),
+              ),
+            ),
+          );
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32.0),
+              child: Text(
+                'No site-supervisor mappings available.',
+                style: TextStyle(color: primaryColor, fontSize: fontSize),
+              ),
+            ),
+          );
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(
+              primaryColor.withValues(alpha: 0.12),
+            ),
+            headingTextStyle: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: fontSize + 1,
+            ),
+            dataTextStyle: TextStyle(fontSize: fontSize),
+            columnSpacing: 20,
+            dividerThickness: 1.7,
+            columns: [
+              DataColumn(label: Text('Site ID')),
+              DataColumn(label: Text('Site Name')),
+              DataColumn(label: Text('Supervisor')),
+              DataColumn(label: Text('Project Stage')),
+              DataColumn(label: Text('Joined On')),
+            ],
+            rows: docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>? ?? {};
+              String siteId =
+                  data['siteId']?.toString() ?? data['site']?.toString() ?? '-';
+              String siteName = data['projectName']?.toString() ?? '-';
+              String supervisor = data['supervisor']?.toString() ?? '-';
+              String projectStage = data['projectStage']?.toString() ?? '-';
+
+              String joinedDateStr = '-';
+              final joinedRaw = data['joinedOn'];
+              if (joinedRaw != null) {
+                try {
+                  if (joinedRaw is String) {
+                    joinedDateStr = DateFormat(
+                      'yyyy-MM-dd',
+                    ).format(DateTime.parse(joinedRaw));
+                  }
+                } catch (_) {}
+              }
+
+              return DataRow(
+                cells: [
+                  DataCell(Text(siteId)),
+                  DataCell(Text(siteName)),
+                  DataCell(Text(supervisor)),
+                  DataCell(Text(projectStage)),
+                  DataCell(Text(joinedDateStr)),
+                ],
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  void _selectAnyDate(BuildContext context, {required String dateType}) async {
+    DateTime? initialDate;
+    if (dateType == 'start') {
+      initialDate = startDate ?? DateTime.now();
+    } else if (dateType == 'end') {
+      initialDate = endDate ?? DateTime.now();
+    } else if (dateType == 'joined') {
+      initialDate = joinedDate ?? DateTime.now();
+    }
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate!,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: primaryColor,
+            ),
+            dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (dateType == 'start') {
+          startDate = picked;
+        } else if (dateType == 'end') {
+          endDate = picked;
+        } else if (dateType == 'joined') {
+          joinedDate = picked;
+        }
+      });
+    }
+  }
+
+  Widget _buildActionButtons(BuildContext context, double fontSize) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Flexible(
+          child: _buildActionButton(
+            context,
+            icon: Icons.save,
+            label: 'Save',
+            color: primaryColor,
+            onPressed: () => _showSaveConfirmationDialog(context),
+            fontSize: fontSize,
+          ),
+        ),
+        SizedBox(width: 20),
+        Flexible(
+          child: _buildActionButton(
+            context,
+            icon: Icons.refresh,
+            label: 'Reset',
+            color: Colors.deepOrange,
+            onPressed: resetForm,
+            fontSize: fontSize,
+          ),
+        ),
+        SizedBox(width: 20),
+        Flexible(
+          child: _buildActionButton(
+            context,
+            icon: Icons.cancel,
+            label: 'Cancel',
+            color: Colors.redAccent,
+            onPressed: cancelAction,
+            fontSize: fontSize,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+    required double fontSize,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.25),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: Icon(icon, color: color, size: fontSize + 16),
+            onPressed: onPressed,
+            padding: EdgeInsets.all(14),
+            constraints: BoxConstraints(),
+            splashRadius: 26,
+          ),
+        ),
+        SizedBox(height: 8),
+        FittedBox(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: fontSize - 1,
+              color: color,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void cancelAction() {
+    Navigator.of(context).pop();
+  }
+
+  void _showSaveConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Confirm Save',
+            style: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              letterSpacing: 0.5,
+            ),
+          ),
+          content: Text(
+            'Assignments will be saved for selected sites. Do you want to continue?',
+            style: TextStyle(fontSize: 16),
+          ),
+          actionsPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          actions: [
+            TextButton(
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                padding: EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                saveForm();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class MultiSelectDialog extends StatefulWidget {
+  final List<String> items;
+  final List<String> initialSelected;
+  final String title;
+
+  const MultiSelectDialog({
+    super.key,
+    required this.items,
+    required this.initialSelected,
+    required this.title,
+  });
+
+  @override
+  State<MultiSelectDialog> createState() => _MultiSelectDialogState();
+}
+
+class _MultiSelectDialogState extends State<MultiSelectDialog> {
+  late List<String> selectedItems;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedItems = List.from(widget.initialSelected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: widget.items.length,
+          itemBuilder: (context, index) {
+            final item = widget.items[index];
+            final isSelected = selectedItems.contains(item);
+            return CheckboxListTile(
+              title: Text(item),
+              value: isSelected,
+              onChanged: (checked) {
+                setState(() {
+                  if (checked == true) {
+                    selectedItems.add(item);
+                  } else {
+                    selectedItems.remove(item);
+                  }
+                });
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, selectedItems),
+          child: const Text('OK'),
+        ),
+      ],
+    );
+  }
+}
