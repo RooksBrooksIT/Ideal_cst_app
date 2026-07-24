@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/models/sub_contractor.dart';
 import 'package:ideal_cst/models/worker.dart';
@@ -608,6 +609,8 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
   bool _isActive = true;
   bool _isLoadingLabours = true;
   List<Map<String, dynamic>> _labours = [];
+  String? _errorMessage;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -734,6 +737,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
           borderRadius: BorderRadius.circular(24),
         ),
         child: SingleChildScrollView(
+          controller: _scrollController,
           child: Form(
             key: _formKey,
             child: Column(
@@ -748,6 +752,38 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                     color: Color(0xFF1E1E2D),
                   ),
                 ),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() => _errorMessage = null),
+                          child: const Icon(Icons.close, color: Colors.red, size: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
@@ -780,7 +816,12 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                 TextFormField(
                   controller: _mobileController,
                   keyboardType: TextInputType.phone,
-                  decoration: _buildInputDecoration('Mobile Number *'),
+                  maxLength: 10,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  decoration: _buildInputDecoration('Mobile Number *').copyWith(counterText: ''),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter a mobile number';
@@ -795,7 +836,12 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
                 TextFormField(
                   controller: _emergencyContactController,
                   keyboardType: TextInputType.phone,
-                  decoration: _buildInputDecoration('Emergency Contact'),
+                  maxLength: 10,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  decoration: _buildInputDecoration('Emergency Contact').copyWith(counterText: ''),
                   validator: (value) {
                     if (value != null && value.trim().isNotEmpty) {
                       if (!RegExp(r'^\d{10}$').hasMatch(value.trim())) {
@@ -931,19 +977,59 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
     );
   }
 
+  void _setError(String message) {
+    setState(() => _errorMessage = message);
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   Future<void> _saveWorker() async {
+    setState(() => _errorMessage = null);
+
+    final name = _nameController.text.trim();
+    final mobileNumber = _mobileController.text.trim();
+    final emergency = _emergencyContactController.text.trim();
+
+    if (name.isEmpty) {
+      _setError('Please enter Worker Name.');
+      return;
+    }
+
+    if (_selectedCategory == null || _selectedCategory!.trim().isEmpty) {
+      _setError('Please select a Category.');
+      return;
+    }
+
+    if (mobileNumber.isEmpty) {
+      _setError('Please enter Mobile Number.');
+      return;
+    }
+
+    if (mobileNumber.length != 10 || !RegExp(r'^\d{10}$').hasMatch(mobileNumber)) {
+      _setError('Mobile number must be exactly 10 digits.');
+      return;
+    }
+
+    if (emergency.isNotEmpty && (emergency.length != 10 || !RegExp(r'^\d{10}$').hasMatch(emergency))) {
+      _setError('Emergency contact must be exactly 10 digits.');
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
+      _setError('Please fix the highlighted errors in the form.');
       return;
     }
 
     if (_selectedSiteIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one site!')),
-      );
+      _setError('Please select at least one assigned site!');
       return;
     }
 
-    final mobileNumber = _mobileController.text.trim();
     final duplicateQuery = await FirebaseFirestore.instance
         .collection('workers')
         .where('mobileNumber', isEqualTo: mobileNumber)
@@ -961,11 +1047,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
     }
 
     if (isDuplicate) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('A worker with this mobile number already exists!')),
-        );
-      }
+      _setError('A worker with this mobile number already exists!');
       return;
     }
 
@@ -1042,6 +1124,7 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameController.dispose();
     _mobileController.dispose();
     _emergencyContactController.dispose();

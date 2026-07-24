@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ideal_cst/models/sub_contractor.dart';
 import 'package:ideal_cst/services/workforce_service.dart';
@@ -483,6 +484,8 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
   DateTime _selectedDate = DateTime.now();
   bool _isLoadingLabours = true;
   List<Map<String, dynamic>> _labours = [];
+  String? _errorMessage;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -596,6 +599,7 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
           borderRadius: BorderRadius.circular(24),
         ),
         child: SingleChildScrollView(
+          controller: _scrollController,
           child: Form(
             key: _formKey,
             child: Column(
@@ -610,6 +614,38 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
                     color: Color(0xFF1E1E2D),
                   ),
                 ),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() => _errorMessage = null),
+                          child: const Icon(Icons.close, color: Colors.red, size: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
@@ -637,7 +673,12 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
                 TextFormField(
                   controller: _mobileController,
                   keyboardType: TextInputType.phone,
-                  decoration: _buildInputDecoration('Mobile Number *'),
+                  maxLength: 10,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  decoration: _buildInputDecoration('Mobile Number *').copyWith(counterText: ''),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter a mobile number';
@@ -802,12 +843,53 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
     );
   }
 
+  void _setError(String message) {
+    setState(() => _errorMessage = message);
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   Future<void> _saveContractor() async {
-    if (!_formKey.currentState!.validate()) {
+    setState(() => _errorMessage = null);
+
+    final name = _nameController.text.trim();
+    final mobileNumber = _mobileController.text.trim();
+
+    if (name.isEmpty) {
+      _setError('Please enter Contractor Name.');
       return;
     }
 
-    final mobileNumber = _mobileController.text.trim();
+    if (_selectedCategory == null || _selectedCategory!.trim().isEmpty) {
+      _setError('Please select a Category.');
+      return;
+    }
+
+    if (mobileNumber.isEmpty) {
+      _setError('Please enter Mobile Number.');
+      return;
+    }
+
+    if (mobileNumber.length != 10 || !RegExp(r'^\d{10}$').hasMatch(mobileNumber)) {
+      _setError('Mobile number must be exactly 10 digits.');
+      return;
+    }
+
+    if (_overtimeRateController.text.trim().isEmpty || double.tryParse(_overtimeRateController.text.trim()) == null) {
+      _setError('Please enter a valid OT Rate/hr.');
+      return;
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      _setError('Please fix the highlighted errors in the form.');
+      return;
+    }
+
     final duplicateQuery = await FirebaseFirestore.instance
         .collection('sub_contractors')
         .where('mobileNumber', isEqualTo: mobileNumber)
@@ -825,11 +907,7 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
     }
 
     if (isDuplicate) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('A sub contractor with this mobile number already exists!')),
-        );
-      }
+      _setError('A sub contractor with this mobile number already exists!');
       return;
     }
 
@@ -903,6 +981,7 @@ class _WorkersManagementFormDialogState extends State<_WorkersManagementFormDial
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameController.dispose();
     _mobileController.dispose();
     _addressController.dispose();

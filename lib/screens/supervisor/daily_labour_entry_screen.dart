@@ -77,6 +77,9 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
     });
   }
 
+  int totalAssignedSiteWorkers = 0;
+  bool isAttendanceCompleted = false;
+
   Future<void> loadAttendance() async {
     try {
       final docId = '${widget.siteId}_$today';
@@ -94,7 +97,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
          notesController.text = data['notes'] ?? '';
       }
 
-      // Try fetching workers from daily_labour_entries first
+      // Fetch workers from daily_labour_entries first
       var workersSnapshot = await FirebaseFirestore.instance
           .collection('daily_labour_entries')
           .doc(docId)
@@ -109,7 +112,6 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
             .collection('workers')
             .get();
             
-        // Load fallback weather/notes if needed
         final attendanceDoc = await FirebaseFirestore.instance.collection('attendance').doc(docId).get();
         if (attendanceDoc.exists) {
             final attendanceData = attendanceDoc.data()!;
@@ -118,7 +120,38 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
         }
       }
 
+      // Fetch total assigned site workers
+      int siteWorkersCount = 0;
+      try {
+        final workersSnap = await FirebaseFirestore.instance.collection('workers').get();
+        final activeWorkersOnSite = workersSnap.docs.where((doc) {
+          final data = doc.data();
+          if (data['isDeleted'] == true || data['isActive'] == false) return false;
+          final assigned = data['assignedSiteIds'];
+          if (assigned is List && assigned.map((e) => e.toString()).contains(widget.siteId)) {
+            return true;
+          }
+          return data['siteId']?.toString() == widget.siteId;
+        }).toList();
+
+        final scSnap = await FirebaseFirestore.instance.collection('sub_contractors').get();
+        final activeScOnSite = scSnap.docs.where((doc) {
+          final data = doc.data();
+          if (data['isDeleted'] == true || data['isActive'] == false) return false;
+          final assigned = data['assignedSiteIds'];
+          if (assigned is List && assigned.map((e) => e.toString()).contains(widget.siteId)) {
+            return true;
+          }
+          return data['siteId']?.toString() == widget.siteId;
+        }).toList();
+
+        siteWorkersCount = activeWorkersOnSite.length + activeScOnSite.length;
+      } catch (e) {
+        debugPrint('Error loading site workers count: $e');
+      }
+
       setState(() {
+        totalAssignedSiteWorkers = siteWorkersCount;
         workersList = workersSnapshot.docs.map((d) {
           final data = d.data();
           data['id'] = d.id;
@@ -129,6 +162,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
           final nameB = (b['workerName'] ?? b['name'] ?? '').toString().trim().toLowerCase();
           return nameA.compareTo(nameB);
         });
+        isAttendanceCompleted = (totalAssignedSiteWorkers > 0 && workersList.length >= totalAssignedSiteWorkers);
       });
       
     } catch (e) {
@@ -279,6 +313,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
             } else {
               workersList.add(worker);
             }
+            isAttendanceCompleted = (totalAssignedSiteWorkers > 0 && workersList.length >= totalAssignedSiteWorkers);
           });
           calculateSummary();
         },
@@ -485,6 +520,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
 
       setState(() {
         workersList.removeAt(index);
+        isAttendanceCompleted = (totalAssignedSiteWorkers > 0 && workersList.length >= totalAssignedSiteWorkers);
       });
       calculateSummary();
 
@@ -799,16 +835,36 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
               'Labour Entries',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            ElevatedButton.icon(
-              onPressed: openAddLabourModal,
-              icon: const Icon(Icons.add, size: 20, color: Colors.white),
-              label: const Text('Add Entry', style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            if (isAttendanceCompleted || (totalAssignedSiteWorkers > 0 && workersList.length >= totalAssignedSiteWorkers))
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF86EFAC)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF15803D), size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Attendance Recorded (${workersList.length}/$totalAssignedSiteWorkers)',
+                      style: const TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ElevatedButton.icon(
+                onPressed: openAddLabourModal,
+                icon: const Icon(Icons.add, size: 20, color: Colors.white),
+                label: const Text('Add Entry', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 16),

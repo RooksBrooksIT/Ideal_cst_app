@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/sub_contractor.dart';
 import '../models/worker.dart';
@@ -313,6 +314,8 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoadingLabours = true;
   List<Map<String, dynamic>> _labours = [];
+  String? _errorMessage;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -410,19 +413,52 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
             : 'Edit Sub Contractor',
       ),
       content: SingleChildScrollView(
+        controller: _scrollController,
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_errorMessage != null) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => setState(() => _errorMessage = null),
+                        child: const Icon(Icons.close, color: Colors.red, size: 18),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Contractor Name *',
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Please enter a name';
                   }
                   return null;
@@ -454,10 +490,21 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
               TextFormField(
                 controller: _mobileController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Mobile Number *'),
+                maxLength: 10,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Mobile Number *',
+                  counterText: '',
+                ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Please enter a mobile number';
+                  }
+                  if (!RegExp(r'^\d{10}$').hasMatch(value.trim())) {
+                    return 'Mobile number must be exactly 10 digits';
                   }
                   return null;
                 },
@@ -563,8 +610,45 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
     );
   }
 
+  void _setError(String message) {
+    setState(() => _errorMessage = message);
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   Future<void> _saveContractor() async {
+    setState(() => _errorMessage = null);
+
+    final name = _nameController.text.trim();
+    final mobileNumber = _mobileController.text.trim();
+
+    if (name.isEmpty) {
+      _setError('Please enter Contractor Name.');
+      return;
+    }
+
+    if (_selectedCategory == null || _selectedCategory!.trim().isEmpty) {
+      _setError('Please select a Category.');
+      return;
+    }
+
+    if (mobileNumber.isEmpty) {
+      _setError('Please enter Mobile Number.');
+      return;
+    }
+
+    if (mobileNumber.length != 10 || !RegExp(r'^\d{10}$').hasMatch(mobileNumber)) {
+      _setError('Mobile number must be exactly 10 digits.');
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
+      _setError('Please fix the highlighted errors in the form.');
       return;
     }
 
@@ -610,6 +694,7 @@ class __SubContractorFormDialogState extends State<_SubContractorFormDialog> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameController.dispose();
     _mobileController.dispose();
     _addressController.dispose();
