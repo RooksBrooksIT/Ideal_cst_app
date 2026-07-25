@@ -553,10 +553,7 @@ class _SubContractorWorkersScreenState
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              await _workforceService.softDeleteWorker(
-                id,
-                widget.supervisorName,
-              );
+              await _workforceService.deleteWorker(id);
               Navigator.pop(context, true);
             },
             child: const Text('Delete'),
@@ -1030,23 +1027,43 @@ class __WorkerFormDialogState extends State<_WorkerFormDialog> {
       return;
     }
 
+    // 1. Check for duplicate worker name for this sub-contractor (case-insensitive)
+    final existingWorkersSnap = await FirebaseFirestore.instance
+        .collection('workers')
+        .where('subContractorId', isEqualTo: widget.subContractor.id!)
+        .get();
+
+    for (var doc in existingWorkersSnap.docs) {
+      if (widget.worker == null || doc.id != widget.worker!.id) {
+        final data = doc.data();
+        if (data['isDeleted'] != true) {
+          final existingName = (data['name'] ?? '').toString().trim().toLowerCase();
+          if (existingName == name.toLowerCase()) {
+            _setError('A worker with the name "$name" already exists for ${widget.subContractor.name}!');
+            return;
+          }
+        }
+      }
+    }
+
+    // 2. Check for duplicate mobile number across active workers
     final duplicateQuery = await FirebaseFirestore.instance
         .collection('workers')
         .where('mobileNumber', isEqualTo: mobileNumber)
         .get();
         
-    bool isDuplicate = false;
+    bool isDuplicateMobile = false;
     for (var doc in duplicateQuery.docs) {
       if (widget.worker == null || doc.id != widget.worker!.id) {
         final data = doc.data();
         if (data['isDeleted'] != true) {
-           isDuplicate = true;
+           isDuplicateMobile = true;
            break;
         }
       }
     }
 
-    if (isDuplicate) {
+    if (isDuplicateMobile) {
       _setError('A worker with this mobile number already exists!');
       return;
     }

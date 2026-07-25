@@ -383,6 +383,50 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     _generateReport();
   }
 
+  DateTime? _parseAnyDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is DateTime) return raw;
+    final str = raw.toString().trim();
+    if (str.isEmpty || str == '-') return null;
+    final tryIso = DateTime.tryParse(str);
+    if (tryIso != null) return tryIso;
+    if (RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(str)) {
+      try {
+        final parts = str.split('/');
+        return DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+      } catch (_) {}
+    }
+    if (RegExp(r'^\d{2}-\d{2}-\d{4}$').hasMatch(str)) {
+      try {
+        final parts = str.split('-');
+        return DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+      } catch (_) {}
+    }
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(str)) {
+      try {
+        final parts = str.split('-');
+        return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  bool _isDateInRange(dynamic rawDate, DateTime? start, DateTime? end) {
+    if (start == null && end == null) return true;
+    final dt = _parseAnyDate(rawDate);
+    if (dt == null) return true;
+
+    final dayStart = start != null
+        ? DateTime(start.year, start.month, start.day, 0, 0, 0)
+        : DateTime(2000);
+    final dayEnd = end != null
+        ? DateTime(end.year, end.month, end.day, 23, 59, 59, 999)
+        : DateTime(2100);
+
+    return !dt.isBefore(dayStart) && !dt.isAfter(dayEnd);
+  }
+
   // Unified Query logic — new structure: workers subcollection
   Future<void> _generateReport() async {
     setState(() {
@@ -391,33 +435,31 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     });
 
     try {
-      final startStr = startDate != null ? DateFormat('yyyy-MM-dd').format(startDate!) : null;
-      final endStr = endDate != null ? DateFormat('yyyy-MM-dd').format(endDate!) : null;
-
-      // ── Step 1: Query parent daily_labour_entries documents ──────────────
-      Query<Map<String, dynamic>> query =
-          FirebaseFirestore.instance.collection('daily_labour_entries');
-
-      if (selectedSiteId != null) {
-        query = query.where('siteId', isEqualTo: selectedSiteId);
-      }
-      if (startStr != null) {
-        query = query.where('date', isGreaterThanOrEqualTo: startStr);
-      }
-      if (endStr != null) {
-        query = query.where('date', isLessThanOrEqualTo: endStr);
-      }
-
+      // ── Step 1: Query parent documents from daily_labour_entries & attendance ──────
       final results = await Future.wait([
-        query.get(),
+        FirebaseFirestore.instance.collection('daily_labour_entries').get(),
+        FirebaseFirestore.instance.collection('attendance').get(),
         FirebaseFirestore.instance.collection('Site_Co-ordinator').get(),
         FirebaseFirestore.instance.collection('supervisor').get(),
         FirebaseFirestore.instance.collection('siteSupervisorMap').get(),
       ]);
-      final parentSnap = results[0];
-      final siteCoordinatorSnap = results[1];
-      final supervisorSnap = results[2];
-      final siteSupervisorMapSnap = results[3];
+
+      final dailyEntriesSnap = results[0];
+      final attendanceSnap = results[1];
+      final siteCoordinatorSnap = results[2];
+      final supervisorSnap = results[3];
+      final siteSupervisorMapSnap = results[4];
+
+      // Merge parent documents by document ID
+      final parentDocsMap = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final doc in dailyEntriesSnap.docs) {
+        parentDocsMap[doc.id] = doc;
+      }
+      for (final doc in attendanceSnap.docs) {
+        if (!parentDocsMap.containsKey(doc.id)) {
+          parentDocsMap[doc.id] = doc;
+        }
+      }
 
       // Build fallback lookup maps
       final siteToCoordinator = <String, String>{};
@@ -456,12 +498,21 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }
 
+      // Resolve selected site label if selectedSiteId is active
+      String? selectedSiteLabel;
+      if (selectedSiteId != null) {
+        final match = siteOptions.firstWhere(
+          (opt) => opt.id == selectedSiteId,
+          orElse: () => _DropdownOption(id: selectedSiteId!, label: selectedSiteId!),
+        );
+        selectedSiteLabel = match.label;
+      }
+
       // ── Step 2: For each parent doc fetch the workers subcollection ───────
-      // Fetch all workers subcollections in parallel.
       final List<Map<String, dynamic>> flatWorkerEntries = [];
 
-      await Future.wait(parentSnap.docs.map((parentDoc) async {
-        final parentData = Map<String, dynamic>.from(parentDoc.data());
+      await Future.wait(parentDocsMap.values.map((parentDoc) async {
+        final parentData = Map<String, dynamic>.from(parentDoc.data() ?? {});
         final parentDocId = parentDoc.id;
 
         // Shared metadata from the parent document
@@ -470,6 +521,27 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         final parentDate     = parentData['date']?.toString() ?? '-';
         final parentSupervisor =
             parentData['supervisorName']?.toString() ?? parentData['supervisor']?.toString() ?? '-';
+
+        // 1. Date Range Filter Check
+        if (!_isDateInRange(parentDate, startDate, endDate)) {
+          return;
+        }
+
+        // 2. Site Filter Check
+        if (selectedSiteId != null) {
+          final pSiteId = parentSiteId.toLowerCase().trim();
+          final pSiteName = parentSiteName.toLowerCase().trim();
+          final selId = selectedSiteId!.toLowerCase().trim();
+          final selLabel = (selectedSiteLabel ?? selectedSiteId!).toLowerCase().trim();
+
+          final matchesSite = pSiteId == selId ||
+                              pSiteName == selId ||
+                              pSiteId == selLabel ||
+                              pSiteName == selLabel ||
+                              pSiteName.contains(selId) ||
+                              pSiteName.contains(selLabel);
+          if (!matchesSite) return;
+        }
 
         final docCoord = parentData['coordinatorName']?.toString() ??
             parentData['coordinator']?.toString() ??
@@ -483,29 +555,62 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 supervisorToCoordinator[parentSupervisor.toLowerCase()] ??
                 '-');
 
-        // Fetch workers subcollection
-        final workersSnap = await FirebaseFirestore.instance
+        // Fetch workers subcollection from daily_labour_entries
+        var workersSnap = await FirebaseFirestore.instance
             .collection('daily_labour_entries')
             .doc(parentDocId)
             .collection('workers')
             .get();
 
+        // Fallback to attendance subcollection
         if (workersSnap.docs.isEmpty) {
-          // If no workers exist for this daily entry document, do not render dummy rows
+          workersSnap = await FirebaseFirestore.instance
+              .collection('attendance')
+              .doc(parentDocId)
+              .collection('workers')
+              .get();
+        }
+
+        if (workersSnap.docs.isEmpty) {
+          // Check if parentDoc itself is a flat entry document
+          final hasWorkerName = parentData.containsKey('workerName') || parentData.containsKey('name');
+          if (hasWorkerName) {
+            flatWorkerEntries.add({
+              'siteId':          parentSiteId,
+              'siteName':        parentSiteName,
+              'date':            parentDate,
+              'coordinatorName': parentCoordinator,
+              'workerName':      parentData['workerName']?.toString() ?? parentData['name']?.toString() ?? '-',
+              'contractorName':  parentData['contractor']?.toString() ?? parentData['contractorName']?.toString() ?? parentData['subContractor']?.toString() ?? '-',
+              'category':        parentData['category']?.toString() ?? '-',
+              'labourType':      parentData['labourType']?.toString() ?? parentData['salaryType']?.toString() ?? '',
+              'basicSalary':     parentData['basicSalary'] ?? parentData['salaryBasic'] ?? parentData['salary'] ?? parentData['rate'],
+              'hoursWorked':     parentData['hoursWorked'] ?? parentData['hours'],
+              'otHours':         parentData['overtimeHours'] ?? parentData['otHours'],
+              'overtimeAmount':  parentData['overtimeAmount'] ?? parentData['otAmount'],
+              'mealsCount':      parentData['mealsCount'],
+              'mealsAmount':     parentData['mealsAmount'] ?? parentData['mealsExpense'],
+              'busCount':        parentData['busCount'],
+              'busAmount':       parentData['busAmount'] ?? parentData['busFare'],
+              'attendanceType':  parentData['attendanceType'] ?? parentData['attendance'] ?? 'Full Day',
+              'supervisorName':  parentData['supervisorName']?.toString() ?? parentSupervisor,
+              'remarks':         parentData['remarks'] ?? '',
+              'defaultHours':    parentData['defaultHours'],
+              'contractorId':    parentData['contractorId'],
+              '_docId':          parentDocId,
+              '_parentDocId':    parentDocId,
+            });
+          }
           return;
         }
 
         for (final workerDoc in workersSnap.docs) {
           final wData = Map<String, dynamic>.from(workerDoc.data());
-          // Merge parent metadata + worker data.
-          // Worker-level fields take priority; parent fills gaps.
           flatWorkerEntries.add({
-            // Parent shared fields
             'siteId':          parentSiteId,
             'siteName':        parentSiteName,
             'date':            parentDate,
             'coordinatorName': parentCoordinator,
-            // Worker-specific fields from the subcollection document
             'workerName':         wData['workerName']?.toString() ?? wData['name']?.toString() ?? '-',
             'contractorName':     wData['contractor']?.toString() ?? wData['contractorName']?.toString() ?? wData['subContractor']?.toString() ?? '-',
             'category':           wData['category']?.toString() ?? '-',
@@ -523,7 +628,6 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
             'remarks':            wData['remarks'] ?? '',
             'defaultHours':       wData['defaultHours'] ?? parentData['defaultHours'],
             'contractorId':       wData['contractorId'],
-            // Doc identifiers
             '_docId':             workerDoc.id,
             '_parentDocId':       parentDocId,
           });
@@ -554,27 +658,31 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
       // ── Step 4: Client-side filtering ────────────────────────────────────
       List<Map<String, dynamic>> entries = flatWorkerEntries;
 
-      if (selectedSupervisorName != null) {
-        entries = entries
-            .where((e) => (e['supervisorName']?.toString() ?? '') == selectedSupervisorName)
-            .toList();
-      }
-      if (selectedCoordinatorName != null) {
+      if (selectedSupervisorName != null && selectedSupervisorName!.isNotEmpty) {
+        final selSup = selectedSupervisorName!.toLowerCase().trim();
         entries = entries.where((e) {
-          final c = (e['coordinatorName'] ?? e['coordinator'])?.toString().trim() ?? '-';
-          return c == selectedCoordinatorName;
+          final sup = (e['supervisorName'] ?? e['supervisor'] ?? '').toString().toLowerCase().trim();
+          return sup == selSup || sup.contains(selSup) || selSup.contains(sup);
         }).toList();
       }
-      if (selectedSubContractorName != null) {
+      if (selectedCoordinatorName != null && selectedCoordinatorName!.isNotEmpty) {
+        final selCoord = selectedCoordinatorName!.toLowerCase().trim();
         entries = entries.where((e) {
-          final sc = (e['contractorName'] ?? '').toString().trim();
-          return sc == selectedSubContractorName;
+          final c = (e['coordinatorName'] ?? e['coordinator'])?.toString().trim().toLowerCase() ?? '';
+          return c == selCoord || c.contains(selCoord) || selCoord.contains(c);
+        }).toList();
+      }
+      if (selectedSubContractorName != null && selectedSubContractorName!.isNotEmpty) {
+        final selSub = selectedSubContractorName!.toLowerCase().trim();
+        entries = entries.where((e) {
+          final sc = (e['contractorName'] ?? e['subContractor'] ?? '').toString().trim().toLowerCase();
+          return sc == selSub || sc.contains(selSub) || selSub.contains(sc);
         }).toList();
       }
       if (selectedLabourType != null && selectedLabourType != 'All') {
         entries = entries.where((e) {
           final lt = (e['labourType'])?.toString().trim().toLowerCase() ?? '';
-          final isDW = lt == 'dw' || lt.contains('daily');
+          final isDW = lt == 'dw' || lt.contains('daily') || lt == 'daily wage';
           if (selectedLabourType == 'Daily Wage (DW)') return isDW;
           if (selectedLabourType == 'Sub Contractor (SC)') return !isDW;
           return true;

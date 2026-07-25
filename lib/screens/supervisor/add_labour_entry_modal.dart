@@ -310,29 +310,52 @@ class _AddLabourEntryModalState extends State<AddLabourEntryModal> {
 
   Future<void> loadWorkers() async {
     try {
-      // First try by supervisorName
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('workers')
-          .where('supervisorName', isEqualTo: widget.supervisorName)
-          .get();
-
-      // If no results, try by supervisorId
-      if (querySnapshot.docs.isEmpty) {
-        querySnapshot = await FirebaseFirestore.instance
+      final results = await Future.wait([
+        FirebaseFirestore.instance
+            .collection('workers')
+            .where('supervisorName', isEqualTo: widget.supervisorName)
+            .get(),
+        FirebaseFirestore.instance
             .collection('workers')
             .where('supervisorId', isEqualTo: widget.supervisorId)
-            .get();
+            .get(),
+      ]);
+
+      final allDocsMap = <String, DocumentSnapshot>{};
+      for (final snap in results) {
+        for (final doc in snap.docs) {
+          allDocsMap[doc.id] = doc;
+        }
       }
 
       if (!mounted) return;
       setState(() {
-        workers = querySnapshot.docs.where((doc) {
+        final seenWorkerKeys = <String>{};
+        workers = allDocsMap.values.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
+          if (data['isDeleted'] == true) return false;
+
+          final name = (data['workerName'] ?? data['name'] ?? '').toString().trim().toLowerCase();
+          final subContractor = (data['subContractor'] ?? data['subContractorName'] ?? data['contractor'] ?? data['subContractorId'] ?? '').toString().trim().toLowerCase();
+          final workerKey = '$name|$subContractor';
+
+          if (name.isNotEmpty && seenWorkerKeys.contains(workerKey)) {
+            return false;
+          }
+
           if (!_isVisibleForCurrentSite(data)) return false;
           if (_isBlockedOnAnotherSiteToday(doc.id)) return false;
+
           // Filter out if already in existingEntries, unless it's the one we're editing
           if (widget.initialWorker == null || widget.initialWorker!['workerId'] != doc.id) {
-            if (widget.existingEntries.any((w) => w['workerId'] == doc.id)) return false;
+            if (widget.existingEntries.any((w) => w['workerId'] == doc.id ||
+                (w['workerName']?.toString().trim().toLowerCase() == name && name.isNotEmpty))) {
+              return false;
+            }
+          }
+
+          if (name.isNotEmpty) {
+            seenWorkerKeys.add(workerKey);
           }
           return true;
         }).toList();
