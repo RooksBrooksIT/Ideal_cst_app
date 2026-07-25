@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:ideal_cst/screens/manager/manager_theme.dart';
 import 'package:ideal_cst/screens/manager/components/custom_dropdown.dart';
+import 'package:ideal_cst/screens/organization/components/custom_table.dart';
 import 'project_screen.dart';
 
 class SiteScreen extends StatefulWidget {
@@ -423,7 +424,7 @@ class _SiteScreenState extends State<SiteScreen>
     );
   }
 
-  // Replace the existing _buildAllSiteTab() with this implementation
+  // Replace the existing _buildAllSiteTab() with this implementation using CustomTable
   Widget _buildAllSiteTab() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('Site').snapshots(),
@@ -438,43 +439,52 @@ class _SiteScreenState extends State<SiteScreen>
           return const Center(child: Text('No sites available.'));
         }
 
-        final sites = snapshot.data!.docs;
+        final siteDataList = snapshot.data!.docs.map((doc) {
+          final data = (doc.data() as Map<String, dynamic>?) ?? {};
+          return {
+            'docId': doc.id,
+            'siteId': (data['siteId'] as String?) ?? doc.id,
+            'siteName': (data['siteName'] as String?) ?? '',
+            'location': (data['location'] as String?) ?? '',
+            'status': (data['status'] as String?) ?? (data['projectStatus'] as String?) ?? 'In-Progress',
+          };
+        }).toList();
 
         return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 26,
-            headingRowColor: WidgetStateProperty.all(
-              primaryColor.withValues(alpha: 0.1),
-            ),
-            headingTextStyle: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: primaryColor,
-            ),
-            columns: const [
-              DataColumn(label: Text('Site ID')),
-              DataColumn(label: Text('Site Name')),
-              DataColumn(label: Text('Location')),
-            ],
-            rows: List<DataRow>.generate(sites.length, (index) {
-              final site = sites[index];
-              final data = (site.data() as Map<String, dynamic>?) ?? const {};
-              final siteId = (data['siteId'] as String?) ?? site.id;
-              final siteName = (data['siteName'] as String?) ?? '';
-              final location = (data['location'] as String?) ?? '';
-
-              return DataRow(
-                color: WidgetStateProperty.resolveWith<Color?>(
-                  (states) => index % 2 == 0 ? Colors.white : Colors.grey[50],
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: CustomTable<Map<String, dynamic>>(
+            data: siteDataList,
+            mainColor: primaryColor,
+            headerBgColor: primaryColor.withValues(alpha: 0.12),
+            headerTextColor: primaryColor,
+            showPagination: true,
+            defaultRowsPerPage: 10,
+            columns: [
+              CustomTableColumn<Map<String, dynamic>>(
+                header: 'Site ID',
+                width: 90,
+                cellBuilder: (item, index) => Text(
+                  item['siteId']?.toString() ?? '-',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                cells: [
-                  DataCell(Text(siteId)),
-                  DataCell(Text(siteName)),
-                  DataCell(Text(location)),
-                ],
-              );
-            }),
+              ),
+              CustomTableColumn<Map<String, dynamic>>(
+                header: 'Site Name',
+                width: 140,
+                cellBuilder: (item, index) => Text(
+                  item['siteName']?.toString() ?? '-',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              CustomTableColumn<Map<String, dynamic>>(
+                header: 'Location',
+                cellBuilder: (item, index) => Text(
+                  item['location']?.toString() ?? '-',
+                  style: TextStyle(color: Colors.grey.shade700),
+                ),
+              ),
+            ],
           ),
         );
       },

@@ -215,6 +215,19 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return raw;
   }
 
+  String _cleanSiteName(String? raw) {
+    if (raw == null || raw.trim().isEmpty || raw == '-') return '-';
+    var cleaned = raw.trim();
+
+    // 1. Remove STxxx_ prefix at the beginning (e.g. ST013_, ST061_, ST001_)
+    cleaned = cleaned.replaceFirst(RegExp(r'^ST\d+_', caseSensitive: false), '');
+
+    // 2. Remove _SPxxx_... suffix at the end (e.g. _SP004_Kanish, _SP021_KK)
+    cleaned = cleaned.replaceFirst(RegExp(r'_SP\d+.*$', caseSensitive: false), '');
+
+    return cleaned.isNotEmpty ? cleaned : raw;
+  }
+
   void _applyDatePreset(String preset, {bool triggerReport = true}) {
     final now = DateTime.now();
     DateTime? newStart;
@@ -272,26 +285,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     super.dispose();
   }
 
-  // Load Dropdown Options
+  // Load Dropdown Options dynamically from attendance entries
   Future<void> _loadFilterData() async {
-    setState(() => isLoadingFilters = true);
-    try {
-      final results = await Future.wait([
-        _fetchSites(),
-        _fetchSupervisors(),
-        _fetchCoordinators(),
-        _fetchContractors(),
-      ]);
-      setState(() {
-        siteOptions = results[0];
-        supervisorOptions = results[1];
-        coordinatorOptions = results[2];
-        contractorOptions = results[3];
-        isLoadingFilters = false;
-      });
-    } catch (_) {
-      setState(() => isLoadingFilters = false);
-    }
+    await _generateReport();
   }
 
   Future<List<_DropdownOption>> _fetchSites() async {
@@ -498,18 +494,10 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }
 
-      // Resolve selected site label if selectedSiteId is active
-      String? selectedSiteLabel;
-      if (selectedSiteId != null) {
-        final match = siteOptions.firstWhere(
-          (opt) => opt.id == selectedSiteId,
-          orElse: () => _DropdownOption(id: selectedSiteId!, label: selectedSiteId!),
-        );
-        selectedSiteLabel = match.label;
-      }
 
-      // ── Step 2: For each parent doc fetch the workers subcollection ───────
-      final List<Map<String, dynamic>> flatWorkerEntries = [];
+
+      // ── Step 2: Fetch flat worker entries for selected Date Range ───────
+      final List<Map<String, dynamic>> dateMatchingEntries = [];
 
       await Future.wait(parentDocsMap.values.map((parentDoc) async {
         final parentData = Map<String, dynamic>.from(parentDoc.data() ?? {});
@@ -525,22 +513,6 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         // 1. Date Range Filter Check
         if (!_isDateInRange(parentDate, startDate, endDate)) {
           return;
-        }
-
-        // 2. Site Filter Check
-        if (selectedSiteId != null) {
-          final pSiteId = parentSiteId.toLowerCase().trim();
-          final pSiteName = parentSiteName.toLowerCase().trim();
-          final selId = selectedSiteId!.toLowerCase().trim();
-          final selLabel = (selectedSiteLabel ?? selectedSiteId!).toLowerCase().trim();
-
-          final matchesSite = pSiteId == selId ||
-                              pSiteName == selId ||
-                              pSiteId == selLabel ||
-                              pSiteName == selLabel ||
-                              pSiteName.contains(selId) ||
-                              pSiteName.contains(selLabel);
-          if (!matchesSite) return;
         }
 
         final docCoord = parentData['coordinatorName']?.toString() ??
@@ -572,10 +544,9 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
 
         if (workersSnap.docs.isEmpty) {
-          // Check if parentDoc itself is a flat entry document
           final hasWorkerName = parentData.containsKey('workerName') || parentData.containsKey('name');
           if (hasWorkerName) {
-            flatWorkerEntries.add({
+            dateMatchingEntries.add({
               'siteId':          parentSiteId,
               'siteName':        parentSiteName,
               'date':            parentDate,
@@ -606,11 +577,16 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
 
         for (final workerDoc in workersSnap.docs) {
           final wData = Map<String, dynamic>.from(workerDoc.data());
-          flatWorkerEntries.add({
+          final wCoord = wData['coordinatorName']?.toString() ?? wData['coordinator']?.toString();
+          final effectiveCoord = (wCoord != null && wCoord.trim().isNotEmpty && wCoord.trim() != '-')
+              ? wCoord.trim()
+              : parentCoordinator;
+
+          dateMatchingEntries.add({
             'siteId':          parentSiteId,
             'siteName':        parentSiteName,
             'date':            parentDate,
-            'coordinatorName': parentCoordinator,
+            'coordinatorName': effectiveCoord,
             'workerName':         wData['workerName']?.toString() ?? wData['name']?.toString() ?? '-',
             'contractorName':     wData['contractor']?.toString() ?? wData['contractorName']?.toString() ?? wData['subContractor']?.toString() ?? '-',
             'category':           wData['category']?.toString() ?? '-',
@@ -634,7 +610,128 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }));
 
-      // ── Step 3: Fetch sub_contractors for salary fallback mapping ─────────
+      // ── Step 3: Compute Dynamic Dependent Filter Dropdown Options ──────────
+
+      // 3a. Site Options: Sites present in dateMatchingEntries
+      final Map<String, String> siteMap = {};
+      for (final e in dateMatchingEntries) {
+        final sId = e['siteId']?.toString().trim() ?? '';
+        final sName = e['siteName']?.toString().trim() ?? '';
+        final key = sId.isNotEmpty && sId != '-' ? sId : sName;
+        final label = _cleanSiteName(sName.isNotEmpty && sName != '-' ? sName : sId);
+        if (key.isNotEmpty && key != '-') {
+          siteMap[key] = label;
+        }
+      }
+      final newSiteOptions = siteMap.entries.map((kv) => _DropdownOption(id: kv.key, label: kv.value)).toList()
+        ..sort((a, b) => a.label.compareTo(b.label));
+
+      if (selectedSiteId != null && !newSiteOptions.any((opt) => opt.id == selectedSiteId)) {
+        selectedSiteId = null;
+        selectedSiteName = null;
+      }
+
+      // 3b. Supervisor Options: Supervisors present for selected date & selected site
+      List<Map<String, dynamic>> siteFilteredEntries = dateMatchingEntries;
+      if (selectedSiteId != null) {
+        final selId = selectedSiteId!.toLowerCase().trim();
+        final selLabel = (selectedSiteName ?? selectedSiteId!).toLowerCase().trim();
+        siteFilteredEntries = siteFilteredEntries.where((e) {
+          final pSiteId = (e['siteId'] ?? '').toString().toLowerCase().trim();
+          final pSiteName = (e['siteName'] ?? '').toString().toLowerCase().trim();
+          return pSiteId == selId || pSiteName == selId || pSiteId == selLabel || pSiteName == selLabel || pSiteName.contains(selId) || pSiteName.contains(selLabel);
+        }).toList();
+      }
+
+      final Set<String> uniqueSupervisors = {};
+      for (final e in siteFilteredEntries) {
+        final sup = (e['supervisorName'] ?? e['supervisor'])?.toString().trim();
+        if (sup != null && sup.isNotEmpty && sup != '-') {
+          uniqueSupervisors.add(sup);
+        }
+      }
+      final newSupervisorOptions = uniqueSupervisors.map((s) => _DropdownOption(id: s, label: s)).toList()
+        ..sort((a, b) => a.label.compareTo(b.label));
+
+      if (selectedSupervisorName != null && !newSupervisorOptions.any((opt) => opt.id == selectedSupervisorName)) {
+        selectedSupervisorName = null;
+      }
+
+      // 3c. Coordinator Options: Coordinators present for selected date, site & supervisor
+      List<Map<String, dynamic>> supFilteredEntries = siteFilteredEntries;
+      if (selectedSupervisorName != null && selectedSupervisorName!.isNotEmpty) {
+        final selSup = selectedSupervisorName!.toLowerCase().trim();
+        supFilteredEntries = supFilteredEntries.where((e) {
+          final sup = (e['supervisorName'] ?? e['supervisor'] ?? '').toString().toLowerCase().trim();
+          return sup == selSup || sup.contains(selSup) || selSup.contains(sup);
+        }).toList();
+      }
+
+      final Set<String> uniqueCoordinators = {};
+      for (final e in supFilteredEntries) {
+        final c = (e['coordinatorName'] ?? e['coordinator'])?.toString().trim();
+        if (c != null && c.isNotEmpty && c != '-') {
+          uniqueCoordinators.add(c);
+        }
+      }
+      final newCoordinatorOptions = uniqueCoordinators.map((c) => _DropdownOption(id: c, label: c)).toList()
+        ..sort((a, b) => a.label.compareTo(b.label));
+
+      if (selectedCoordinatorName != null && !newCoordinatorOptions.any((opt) => opt.id == selectedCoordinatorName)) {
+        selectedCoordinatorName = null;
+      }
+
+      // 3d. Sub Contractor Options: Contractors present for selected date, site, supervisor & coordinator
+      List<Map<String, dynamic>> coordFilteredEntries = supFilteredEntries;
+      if (selectedCoordinatorName != null && selectedCoordinatorName!.isNotEmpty) {
+        final selCoord = selectedCoordinatorName!.toLowerCase().trim();
+        coordFilteredEntries = coordFilteredEntries.where((e) {
+          final c = (e['coordinatorName'] ?? e['coordinator'])?.toString().trim().toLowerCase() ?? '';
+          return c == selCoord || c.contains(selCoord) || selCoord.contains(c);
+        }).toList();
+      }
+
+      final Set<String> uniqueContractors = {};
+      for (final e in coordFilteredEntries) {
+        final sc = (e['contractorName'] ?? e['subContractor'])?.toString().trim();
+        if (sc != null && sc.isNotEmpty && sc != '-') {
+          uniqueContractors.add(sc);
+        }
+      }
+      final newContractorOptions = uniqueContractors.map((sc) => _DropdownOption(id: sc, label: sc)).toList()
+        ..sort((a, b) => a.label.compareTo(b.label));
+
+      if (selectedSubContractorName != null && !newContractorOptions.any((opt) => opt.id == selectedSubContractorName)) {
+        selectedSubContractorName = null;
+      }
+
+      // Update dropdown options
+      siteOptions = newSiteOptions;
+      supervisorOptions = newSupervisorOptions;
+      coordinatorOptions = newCoordinatorOptions;
+      contractorOptions = newContractorOptions;
+
+      // ── Step 4: Final filtering on entries for report display ──────────────
+      List<Map<String, dynamic>> entries = coordFilteredEntries;
+
+      if (selectedSubContractorName != null && selectedSubContractorName!.isNotEmpty) {
+        final selSub = selectedSubContractorName!.toLowerCase().trim();
+        entries = entries.where((e) {
+          final sc = (e['contractorName'] ?? e['subContractor'] ?? '').toString().trim().toLowerCase();
+          return sc == selSub || sc.contains(selSub) || selSub.contains(sc);
+        }).toList();
+      }
+      if (selectedLabourType != null && selectedLabourType != 'All') {
+        entries = entries.where((e) {
+          final lt = (e['labourType'])?.toString().trim().toLowerCase() ?? '';
+          final isDW = lt == 'dw' || lt.contains('daily') || lt == 'daily wage';
+          if (selectedLabourType == 'Daily Wage (DW)') return isDW;
+          if (selectedLabourType == 'Sub Contractor (SC)') return !isDW;
+          return true;
+        }).toList();
+      }
+
+      // ── Step 5: Fetch sub_contractors for salary fallback mapping ─────────
       final subContractorsSnap =
           await FirebaseFirestore.instance.collection('sub_contractors').get();
       final subContractorSalaryById = <String, double>{};
@@ -655,46 +752,18 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }
 
-      // ── Step 4: Client-side filtering ────────────────────────────────────
-      List<Map<String, dynamic>> entries = flatWorkerEntries;
-
-      if (selectedSupervisorName != null && selectedSupervisorName!.isNotEmpty) {
-        final selSup = selectedSupervisorName!.toLowerCase().trim();
-        entries = entries.where((e) {
-          final sup = (e['supervisorName'] ?? e['supervisor'] ?? '').toString().toLowerCase().trim();
-          return sup == selSup || sup.contains(selSup) || selSup.contains(sup);
-        }).toList();
-      }
-      if (selectedCoordinatorName != null && selectedCoordinatorName!.isNotEmpty) {
-        final selCoord = selectedCoordinatorName!.toLowerCase().trim();
-        entries = entries.where((e) {
-          final c = (e['coordinatorName'] ?? e['coordinator'])?.toString().trim().toLowerCase() ?? '';
-          return c == selCoord || c.contains(selCoord) || selCoord.contains(c);
-        }).toList();
-      }
-      if (selectedSubContractorName != null && selectedSubContractorName!.isNotEmpty) {
-        final selSub = selectedSubContractorName!.toLowerCase().trim();
-        entries = entries.where((e) {
-          final sc = (e['contractorName'] ?? e['subContractor'] ?? '').toString().trim().toLowerCase();
-          return sc == selSub || sc.contains(selSub) || selSub.contains(sc);
-        }).toList();
-      }
-      if (selectedLabourType != null && selectedLabourType != 'All') {
-        entries = entries.where((e) {
-          final lt = (e['labourType'])?.toString().trim().toLowerCase() ?? '';
-          final isDW = lt == 'dw' || lt.contains('daily') || lt == 'daily wage';
-          if (selectedLabourType == 'Daily Wage (DW)') return isDW;
-          if (selectedLabourType == 'Sub Contractor (SC)') return !isDW;
-          return true;
-        }).toList();
-      }
-
-      // ── Step 5: Build report rows ─────────────────────────────────────────
+      // ── Step 6: Build report rows ─────────────────────────────────────────
       _processReportData(entries, subContractorSalaryById, subContractorSalaryByName);
 
-      setState(() => isLoading = false);
+      setState(() {
+        isLoading = false;
+        isLoadingFilters = false;
+      });
     } catch (e) {
-      setState(() => isLoading = false);
+      setState(() {
+        isLoading = false;
+        isLoadingFilters = false;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1519,17 +1588,28 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
 
   Widget _buildSummaryKpiBanner(List<Map<String, dynamic>> rows) {
     final totals = _ReportTotals.fromRows(rows);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Media Query Breakpoints
+    final isExtraSmall = screenWidth < 360;
+    final isCompactMobile = screenWidth < 400;
+
+    final titleFontSize = isExtraSmall ? 11.5 : (isCompactMobile ? 12.5 : 13.5);
+    final badgeFontSize = isExtraSmall ? 10.5 : (isCompactMobile ? 11.5 : 12.5);
+    final iconSize = isExtraSmall ? 16.0 : (isCompactMobile ? 18.0 : 20.0);
+    final containerPadding = isExtraSmall ? 10.0 : (isCompactMobile ? 12.0 : 16.0);
+
     return Container(
+      padding: EdgeInsets.all(containerPadding),
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
         border: Border.all(color: primaryColor.withValues(alpha: 0.15)),
@@ -1540,23 +1620,33 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.analytics_outlined, size: 18, color: primaryColor),
-                  const SizedBox(width: 6),
-                  Text(
-                    'REPORT TOTALS & SUMMARY',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                      letterSpacing: 0.5,
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.analytics_outlined, size: iconSize, color: primaryColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'REPORT TOTALS & SUMMARY',
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isExtraSmall ? 8 : 10,
+                  vertical: isExtraSmall ? 3 : 4,
+                ),
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -1564,7 +1654,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
                 child: Text(
                   '${totals.totalRecords} Records',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: badgeFontSize,
                     fontWeight: FontWeight.bold,
                     color: primaryColor,
                   ),
@@ -1572,21 +1662,19 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Center(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildKpiBadge('Total Subs', '${totals.totalSubContractors}', Icons.badge_outlined, Colors.indigo),
-                  _buildKpiBadge('Total Workers', '${totals.totalWorkers}', Icons.people_outline, Colors.blue),
-                  _buildKpiBadge('Total Hours', '${(totals.totalHours + totals.totalOtHours).toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
-                  _buildKpiBadge('OT Amount', '₹${totals.totalOtAmount.toStringAsFixed(2)}', Icons.more_time, Colors.deepOrange),
-                  _buildKpiBadge('Meals & Bus', '₹${(totals.totalMealsAmount + totals.totalBusAmount).toStringAsFixed(2)}', Icons.directions_bus_outlined, Colors.teal),
-                  _buildKpiBadge('Grand Total', '₹${totals.totalEarnedSalary.toStringAsFixed(2)}', Icons.account_balance_wallet_outlined, Colors.green, isBold: true),
-                ],
-              ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                _buildKpiBadge('Total Subs', '${totals.totalSubContractors}', Icons.badge_outlined, Colors.indigo),
+                _buildKpiBadge('Total Workers', '${totals.totalWorkers}', Icons.people_outline, Colors.blue),
+                _buildKpiBadge('Total Hours', '${(totals.totalHours + totals.totalOtHours).toStringAsFixed(1)} hrs', Icons.access_time, Colors.orange),
+                _buildKpiBadge('OT Amount', '₹${totals.totalOtAmount.toStringAsFixed(2)}', Icons.more_time, Colors.deepOrange),
+                _buildKpiBadge('Meals & Bus', '₹${(totals.totalMealsAmount + totals.totalBusAmount).toStringAsFixed(2)}', Icons.directions_bus_outlined, Colors.teal),
+                _buildKpiBadge('Grand Total', '₹${totals.totalEarnedSalary.toStringAsFixed(2)}', Icons.account_balance_wallet_outlined, Colors.green, isBold: true),
+              ],
             ),
           ),
         ],
@@ -1595,32 +1683,47 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
   }
 
   Widget _buildKpiBadge(String label, String value, IconData icon, Color color, {bool isBold = false}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isExtraSmall = screenWidth < 360;
+
+    final labelFontSize = isExtraSmall ? 10.5 : 11.5;
+    final valueFontSize = isExtraSmall ? 13.0 : 14.5;
+    final badgeIconSize = isExtraSmall ? 16.0 : 18.0;
+
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: isExtraSmall ? 10 : 12,
+        vertical: isExtraSmall ? 6 : 8,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1.2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 5),
+          Icon(icon, size: badgeIconSize, color: color),
+          const SizedBox(width: 6),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 label,
-                style: TextStyle(fontSize: 9, color: mutedColor, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: labelFontSize,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
+              const SizedBox(height: 2),
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isBold ? FontWeight.w800 : FontWeight.bold,
+                  fontSize: valueFontSize,
+                  fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
                   color: color,
                 ),
               ),
@@ -1697,12 +1800,8 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
           totalCellBuilder: () => Text('${totals.totalRecords} Recs', style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
         CustomTableColumn<Map<String, dynamic>>(
-          header: 'Site Code',
-          cellBuilder: (r, index) => Text(r['siteId']?.toString() ?? '-'),
-        ),
-        CustomTableColumn<Map<String, dynamic>>(
           header: 'Site Name',
-          cellBuilder: (r, index) => Text(r['siteName']?.toString() ?? '-'),
+          cellBuilder: (r, index) => Text(_cleanSiteName(r['siteName']?.toString() ?? r['siteId']?.toString())),
         ),
         CustomTableColumn<Map<String, dynamic>>(
           header: 'Supervisor',
@@ -1820,7 +1919,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         ),
         CustomTableColumn<Map<String, dynamic>>(
           header: 'Site Name',
-          cellBuilder: (r, index) => Text(r['siteName']?.toString() ?? '-'),
+          cellBuilder: (r, index) => Text(_cleanSiteName(r['siteName']?.toString())),
         ),
         CustomTableColumn<Map<String, dynamic>>(
           header: 'Worker Name',
@@ -1901,7 +2000,7 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         ),
         CustomTableColumn<Map<String, dynamic>>(
           header: 'Site Name',
-          cellBuilder: (r, index) => Text(r['siteName']?.toString() ?? '-'),
+          cellBuilder: (r, index) => Text(_cleanSiteName(r['siteName']?.toString())),
         ),
         CustomTableColumn<Map<String, dynamic>>(
           header: 'Sub Contractor',
@@ -3950,6 +4049,10 @@ class _SiteAttendanceCardItem extends StatefulWidget {
 class _SiteAttendanceCardItemState extends State<_SiteAttendanceCardItem> {
   bool _isExpanded = true;
 
+  String _cleanSiteName(String name) {
+    return name.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final site = widget.site;
@@ -4017,21 +4120,13 @@ class _SiteAttendanceCardItemState extends State<_SiteAttendanceCardItem> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Site Code: ${site.siteCode}',
+                          _cleanSiteName(site.siteName.isNotEmpty ? site.siteName : site.siteCode),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 15,
                           ),
                         ),
-                        if (site.siteName != site.siteCode && site.siteName.isNotEmpty)
-                          Text(
-                            site.siteName,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 11,
-                            ),
-                          ),
                       ],
                     ),
                   ),
