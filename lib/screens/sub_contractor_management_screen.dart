@@ -136,12 +136,20 @@ class _SubContractorManagementScreenState
                     itemCount: contractors.length,
                     itemBuilder: (context, index) {
                       final contractor = contractors[index];
+                      final normType = SubContractor.normaliseLabourType(contractor.labourType);
+                      final isDailyWage = normType == 'Daily Wages';
+                      final typeBgColor = isDailyWage ? const Color(0xFFE3F2FD) : const Color(0xFFF3E5F5);
+                      final typeFgColor = isDailyWage ? const Color(0xFF1565C0) : const Color(0xFF7B1FA2);
+                      final typeBorderColor = isDailyWage ? const Color(0xFF90CAF9) : const Color(0xFFCE93D8);
+                      final displayTypeLabel = isDailyWage ? 'Daily Wage' : 'Sub Contractor';
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: typeBorderColor, width: 1),
                         ),
-                        elevation: 6,
+                        elevation: 4,
                         child: ListTile(
                           onTap: () {
                             Navigator.push(
@@ -159,18 +167,37 @@ class _SubContractorManagementScreenState
                           leading: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: typeBgColor,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.engineering, color: primaryColor),
+                            child: Icon(isDailyWage ? Icons.payments_outlined : Icons.engineering, color: typeFgColor),
                           ),
-                          title: Text(
-                            '${contractor.name} (${contractor.contractorId})',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${contractor.name} (${contractor.contractorId})',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: typeBgColor,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: typeBorderColor, width: 0.8),
+                                ),
+                                child: Text(
+                                  displayTypeLabel,
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: typeFgColor),
+                                ),
+                              ),
+                            ],
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 2),
                               Text(contractor.category),
                               Text('Mobile: ${contractor.mobileNumber}'),
                               Text(

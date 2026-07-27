@@ -814,6 +814,7 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: coordinatorController,
+              onChanged: (_) => setState(() {}),
               onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
               decoration: InputDecoration(
                 labelText: 'Project Coordinator',
@@ -828,10 +829,14 @@ class _DailyLabourEntryScreenState extends State<DailyLabourEntryScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: isSavingCoordinator ? null : _saveHeaderInfo,
+                onPressed: (isSavingCoordinator || coordinatorController.text.trim().isEmpty)
+                    ? null
+                    : _saveHeaderInfo,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
+                  disabledBackgroundColor: Colors.grey[350],
                   foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.grey[600],
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),

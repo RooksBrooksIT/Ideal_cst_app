@@ -235,11 +235,25 @@ class _WorkersManagementScreenState extends State<WorkersManagementScreen> {
   }
 
   Widget _buildModernContractorCard(SubContractor contractor) {
+    final String normType = SubContractor.normaliseLabourType(contractor.labourType);
+    final bool isDailyWage = normType == 'Daily Wages';
+    final Color typeBgColor = isDailyWage ? const Color(0xFFE3F2FD) : const Color(0xFFF3E5F5);
+    final Color typeFgColor = isDailyWage ? const Color(0xFF1565C0) : const Color(0xFF7B1FA2);
+    final Color typeBorderColor = isDailyWage ? const Color(0xFF90CAF9) : const Color(0xFFCE93D8);
+    final IconData typeIcon = isDailyWage ? Icons.payments_outlined : Icons.engineering_outlined;
+    final String displayTypeLabel = isDailyWage ? 'Daily Wage' : 'Sub Contractor';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border(
+          left: BorderSide(
+            color: typeFgColor,
+            width: 4,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -275,12 +289,12 @@ class _WorkersManagementScreenState extends State<WorkersManagementScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.1),
+                        color: typeFgColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(Icons.handyman, color: primaryColor, size: 28),
+                      child: Icon(typeIcon, color: typeFgColor, size: 26),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,25 +303,61 @@ class _WorkersManagementScreenState extends State<WorkersManagementScreen> {
                             contractor.name,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                              fontSize: 17,
                               color: Color(0xFF1E1E2D),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              contractor.category,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.orange,
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  contractor.category,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange,
+                                  ),
+                                ),
                               ),
-                            ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: typeBgColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: typeBorderColor, width: 0.8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: typeFgColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      displayTypeLabel,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: typeFgColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
