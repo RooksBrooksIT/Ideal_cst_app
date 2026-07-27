@@ -215,6 +215,23 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
     return raw;
   }
 
+  String _toComparableDate(String? raw) {
+    if (raw == null || raw.isEmpty || raw == '-') return '9999-99-99';
+    final trimmed = raw.trim();
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(trimmed)) {
+      return trimmed;
+    }
+    if (RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(trimmed)) {
+      final parts = trimmed.split('/');
+      return '${parts[2]}-${parts[1]}-${parts[0]}';
+    }
+    final dt = DateTime.tryParse(trimmed);
+    if (dt != null) {
+      return DateFormat('yyyy-MM-dd').format(dt);
+    }
+    return trimmed;
+  }
+
   String _cleanSiteName(String? raw) {
     if (raw == null || raw.trim().isEmpty || raw == '-') return '-';
     var cleaned = raw.trim();
@@ -610,6 +627,38 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         }
       }));
 
+      // Sort dateMatchingEntries orderwise: Date ascending -> Coordinator -> Site -> Supervisor -> SubContractor -> Worker
+      dateMatchingEntries.sort((a, b) {
+        final dateA = _toComparableDate(a['date']?.toString());
+        final dateB = _toComparableDate(b['date']?.toString());
+        final cDate = dateA.compareTo(dateB);
+        if (cDate != 0) return cDate;
+
+        final coordA = (a['coordinatorName'] ?? a['coordinator'] ?? '').toString();
+        final coordB = (b['coordinatorName'] ?? b['coordinator'] ?? '').toString();
+        final cCoord = coordA.compareTo(coordB);
+        if (cCoord != 0) return cCoord;
+
+        final siteA = (a['siteName'] ?? a['siteId'] ?? '').toString();
+        final siteB = (b['siteName'] ?? b['siteId'] ?? '').toString();
+        final cSite = siteA.compareTo(siteB);
+        if (cSite != 0) return cSite;
+
+        final supA = (a['supervisorName'] ?? a['supervisor'] ?? '').toString();
+        final supB = (b['supervisorName'] ?? b['supervisor'] ?? '').toString();
+        final cSup = supA.compareTo(supB);
+        if (cSup != 0) return cSup;
+
+        final subA = (a['contractorName'] ?? a['subContractor'] ?? '').toString();
+        final subB = (b['contractorName'] ?? b['subContractor'] ?? '').toString();
+        final cSub = subA.compareTo(subB);
+        if (cSub != 0) return cSub;
+
+        final wA = (a['workerName'] ?? '').toString();
+        final wB = (b['workerName'] ?? '').toString();
+        return wA.compareTo(wB);
+      });
+
       // ── Step 3: Compute Dynamic Dependent Filter Dropdown Options ──────────
 
       // 3a. Site Options: Sites present in dateMatchingEntries
@@ -930,6 +979,38 @@ class _SiteLabourReportsScreenState extends State<SiteLabourReportsScreen> {
         'remarks':         e['remarks']?.toString() ?? '',
       });
     }
+
+    // Ensure rows are sorted orderwise: Date ascending -> Coordinator -> Site -> Supervisor -> SubContractor -> Worker
+    rows.sort((a, b) {
+      final dateA = _toComparableDate(a['date']?.toString());
+      final dateB = _toComparableDate(b['date']?.toString());
+      final cDate = dateA.compareTo(dateB);
+      if (cDate != 0) return cDate;
+
+      final coordA = (a['coordinatorName'] ?? '').toString();
+      final coordB = (b['coordinatorName'] ?? '').toString();
+      final cCoord = coordA.compareTo(coordB);
+      if (cCoord != 0) return cCoord;
+
+      final siteA = (a['siteName'] ?? a['siteId'] ?? '').toString();
+      final siteB = (b['siteName'] ?? b['siteId'] ?? '').toString();
+      final cSite = siteA.compareTo(siteB);
+      if (cSite != 0) return cSite;
+
+      final supA = (a['supervisorName'] ?? '').toString();
+      final supB = (b['supervisorName'] ?? '').toString();
+      final cSup = supA.compareTo(supB);
+      if (cSup != 0) return cSup;
+
+      final subA = (a['subContractor'] ?? '').toString();
+      final subB = (b['subContractor'] ?? '').toString();
+      final cSub = subA.compareTo(subB);
+      if (cSub != 0) return cSub;
+
+      final wA = (a['workerName'] ?? '').toString();
+      final wB = (b['workerName'] ?? '').toString();
+      return wA.compareTo(wB);
+    });
 
     // ── Filter rows by report type ────────────────────────────────────────
     if (selectedReportType == 'Daily Wage Report') {
