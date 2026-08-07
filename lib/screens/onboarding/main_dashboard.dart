@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ideal_cst/screens/auth/organisation_login_page.dart';
 import 'package:ideal_cst/screens/auth/manager_login_page.dart';
 import 'package:ideal_cst/screens/auth/supervisor_login_page.dart';
+import 'package:ideal_cst/screens/auth/receptionist_login_page.dart';
 
 class AppColors {
   static const primaryColor = Color(0xFF003768);
@@ -134,6 +135,18 @@ class _MainDashboardState extends State<MainDashboard>
                                       icon: Icons.supervisor_account_rounded,
                                       color: const Color(0xFF4527A0), // Deep Purple
                                       destination: const Supervisor_LoginPage(),
+                                    ),
+                                    SizedBox(
+                                      height: screenWidth > 600 ? 24 : 16,
+                                    ),
+                                    DashboardCard(
+                                      theme: theme,
+                                      title: 'Receptionist',
+                                      subtitle:
+                                          'Manage visitor entries and front desk activities',
+                                      icon: Icons.support_agent_rounded,
+                                      color: const Color(0xFFD84315), // Warm Terracotta/Deep Amber
+                                      destination: const ReceptionistLoginPage(),
                                     ),
                                   ],
                                 ),
