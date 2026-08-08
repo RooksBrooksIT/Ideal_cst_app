@@ -235,7 +235,6 @@ class _ReceptionistSupervisorMapScreenState
   void saveForm() async {
     if (selectedSites.isEmpty ||
         selectedSupervisor == null ||
-        selectedProjectStage == null ||
         locationController.text.isEmpty ||
         joinedDate == null ||
         startDate == null ||
@@ -266,7 +265,6 @@ class _ReceptionistSupervisorMapScreenState
           "startDate": startDate!.toIso8601String(),
           "endDate": endDate!.toIso8601String(),
           "location": loc,
-          "projectStage": selectedProjectStage,
           "siteId": siteId,
           "site": siteId,
           "projectName": projName,
@@ -647,27 +645,6 @@ class _ReceptionistSupervisorMapScreenState
                   style: const TextStyle(fontSize: 14, color: Colors.black87),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Project Stage',
-                    prefixIcon: const Icon(Icons.work_outline, color: primaryColor),
-                    border: inputBorder,
-                    enabledBorder: inputBorder,
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    labelStyle: const TextStyle(color: primaryColor),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 16,
-                    ),
-                  ),
-                  controller: TextEditingController(
-                    text: selectedProjectStage ?? '',
-                  ),
-                  style: const TextStyle(fontSize: 14, color: Colors.black87),
-                ),
-                const SizedBox(height: 16),
                 TextField(
                   controller: commentsController,
                   decoration: InputDecoration(
@@ -843,7 +820,6 @@ class _ReceptionistSupervisorMapScreenState
 
             String supervisor = data['supervisor']?.toString() ?? '-';
             String supervisorId = data['supervisorId']?.toString() ?? data['Supervisor ID']?.toString() ?? '';
-            String projectStage = data['projectStage']?.toString() ?? '-';
             String location = data['location']?.toString() ?? '';
 
             String joinedDateStr = '-';
@@ -936,37 +912,6 @@ class _ReceptionistSupervisorMapScreenState
                           '$supervisor ${supervisorId.isNotEmpty ? "($supervisorId)" : ""}',
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 13, color: Colors.grey[800]),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.work_outline, size: 16, color: primaryColor),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "Project Stage: ",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Color(0xFF1E1E2D)),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.shade300),
-                        ),
-                        child: Text(
-                          projectStage,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange.shade800,
-                          ),
                         ),
                       ),
                     ],
